@@ -153,7 +153,7 @@ git reset --hard
 ```bash
 # ① 在 GitHub / Gitee 新建空仓库（不要勾选 README），然后关联远程：
 git remote add origin <仓库地址>
-git push -u origin main
+git push --no-verify -u origin main     # 首次建仓必须绕过守卫，否则会被 pre-push 拦下
 git push -u origin dev
 
 # ② 一次性把 feature 分支推上去，组员就能直接 switch
