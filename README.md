@@ -59,7 +59,12 @@
 ├── assets/
 │   ├── images/           # 名画贴图（组员6 替换程序化示意贴图）
 │   └── models/           # glb 雕塑模型（组员6）
-├── docs/7人分工文档.md   # 详细分工与里程碑
+├── .gitattributes        # 统一 LF 换行 + 二进制素材声明
+├── .githooks/pre-push    # 推送守卫：禁止直接 push main
+├── .github/              # PR 模板
+├── docs/
+│   ├── 7人分工文档.md     # 详细分工与里程碑
+│   └── Git-快速上手.md    # 组员日常 Git 命令手册（照着抄）
 └── README.md
 ```
 
