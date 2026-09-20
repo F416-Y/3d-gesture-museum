@@ -1,0 +1,31 @@
+# ============================================================
+# 云墨美术馆 · Git 属性配置
+# 目的：统一换行、避免 Windows/macOS 组员之间的「整文件 diff」
+# ============================================================
+
+# 仓库内一律存 LF；Windows 上由编辑器自行处理
+* text=auto eol=lf
+
+# Windows 脚本保持 CRLF，否则 .bat/.ps1 可能出错
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制素材：禁止换行转换与文本 diff
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.webp   binary
+*.gif    binary
+*.ico    binary
+*.glb    binary
+*.gltf   binary
+*.bin    binary
+*.task   binary
+*.wasm   binary
+*.mp4    binary
+*.woff   binary
+*.woff2  binary
+
+# Git 自动生成的文件不参与合并
+package-lock.json  -diff

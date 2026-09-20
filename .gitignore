@@ -1,0 +1,24 @@
+# 依赖与构建
+node_modules/
+dist/
+build/
+.vite/
+
+# 编辑器与系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# 本地临时文件
+*.log
+.tmp/
+temp/
+
+# 素材约定（组员6 必读）：
+#   名画贴图与 glb 模型**直接入库**，保证组员 clone 后开箱即跑、Pages 部署零配置。
+#   单文件 < 5MB → 直接提交；确实超过 5MB → 才考虑 Git LFS。
+#   注意：若启用 LFS，必须全体组员都装了 git-lfs 再推，否则别人拉下来只有指针文件。
+#   详见 docs/Git-快速上手.md「素材大小约定」。
