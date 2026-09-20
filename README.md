@@ -7,7 +7,7 @@
 - 3D 渲染：[Three.js](https://threejs.org/) r147（WebGL，浏览器直接运行）
 - 手势识别：[MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker) Hands（纯前端，调用电脑摄像头）
 - 前端壳：[Vue 3](https://vuejs.org/) + [Vite](https://vitejs.dev/) + [Vue Router](https://router.vuejs.org/) + [Pinia](https://pinia.vuejs.org/)
-- 后端数据：[LeanCloud](https://www.leancloud.cn/) BaaS（用户系统 / 评论 / 收藏，按量免费）
+- 后端数据：[Supabase](https://www.Supabase.cn/) BaaS（用户系统 / 评论 / 收藏， generous 免费额度）
 - 工程形态：Vite 构建，开发期 `npm run dev`，生产构建产物为纯静态文件，可部署到 GitHub Pages
 
 ---
@@ -21,7 +21,7 @@
 | 二楼 · 文明对话厅 | 西侧连廊：蒙娜丽莎、星月夜（中西对话） |
 | 前庭 | 马踏飞燕（铜奔马） |
 | 交互 | 手势漫游 / 键盘备选 / 点击查看 · 展品鉴赏弹窗（作者·年代·形制·馆藏·赏析）· 展厅切换提示 · 重置视角 |
-| 用户系统 | 登录 / 注册（LeanCloud `_User`） |
+| 用户系统 | 登录 / 注册（Supabase `_User`） |
 | 社交 | 展品收藏 · 展品评论 |
 | 路由 | 多展馆直达 `/#/hall/plaza` `/#/hall/hall1` `/#/hall/hall2` |
 
@@ -51,8 +51,8 @@
 # 1. 克隆后安装依赖
 npm install
 
-# 2.（可选）配置 LeanCloud 凭证
-# 复制 .env.example 为 .env.local，填入 AppID / AppKey / ServerURL
+# 2.（可选）配置 Supabase 凭证
+# 复制 .env.example 为 .env.local，填入 Project URL / Anon Key
 # 不填也能跑，只是登录/收藏/评论功能不可用
 
 # 3. 本地开发
@@ -89,7 +89,7 @@ npm run build
 │   ├── main.js           # Vue 入口
 │   ├── router/           # 多展馆路由
 │   ├── stores/user.js    # 当前登录用户（Pinia）
-│   ├── services/         # LeanCloud 初始化 + 收藏/评论数据层
+│   ├── services/         # Supabase 初始化 + 收藏/评论数据层
 │   ├── views/            # 登录页、收藏夹页、博物馆视图
 │   └── styles/           # Vue 壳样式
 ├── assets/
@@ -98,7 +98,7 @@ npm run build
 ├── package.json          # 依赖与脚本
 ├── vite.config.js        # Vite 配置（base 相对路径，适配 Pages 子目录）
 ├── scripts/postbuild.mjs # 构建后复制 js/css/assets 到 dist/
-├── .env.example          # LeanCloud 凭证模板
+├── .env.example          # Supabase 凭证模板
 ├── .gitattributes
 ├── .githooks/pre-push    # 推送守卫：禁止直接 push main
 ├── .github/
@@ -118,7 +118,7 @@ npm run build
 | 4 | 展品系统工程师 | `js/config.js` + `js/exhibit.js` + `src/services/social.js` | 展品数据、鉴赏文案、热点拾取、弹窗、收藏/评论接入 |
 | 5 | UI 视觉设计师 | `css/style.css` + `js/ui.js` + `src/views/*.vue` + `src/styles/vue-shell.css` | 3D 场景内界面 + Vue 登录/收藏页视觉 |
 | 6 | 素材美工 | `assets/` | 真实名画贴图、glb 模型、资源轻量化 |
-| 7 | 整合与文档（组长） | `js/main.js` + `src/` + README | Vue 工程搭建、路由、LeanCloud 接入、部署、分工报告 |
+| 7 | 整合与文档（组长） | `js/main.js` + `src/` + README | Vue 工程搭建、路由、Supabase 接入、部署、分工报告 |
 
 ## 模块间依赖
 
@@ -137,24 +137,54 @@ Vue 壳（`src/`）只读取引擎暴露的 API，**不反向写入引擎状态*
 - `src/services/social.js` 读取 `window.MuseumConfig.exhibits` 做收藏映射
 - `src/views/MuseumView.vue` 监听路由参数变化，触发展厅传送
 
-## 用户系统、评论与收藏（LeanCloud）
+## 用户系统、评论与收藏（Supabase）
 
-凭证配置：
+### 1. 组长创建 Supabase 项目
+
+1. 打开 [supabase.com](https://supabase.com) → 用 GitHub 账号登录 → New project
+2. 记下 **Project URL** 和 **anon public** API Key
+3. Auth → Providers → Email：关闭 **Confirm email**（课程演示不需要邮件验证）
+4. 把凭证填入 `.env.local`：
 
 ```bash
 cp .env.example .env.local
-# 编辑 .env.local，填入从 leancloud.cn 应用设置中获取的值
+# 编辑 .env.local
+VITE_SUPABASE_URL=https://xxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
 ```
 
-数据表：
+### 2. 创建数据表
 
-| Class | 字段 | 说明 |
+在 Supabase Table Editor 里创建两张表（启用 RLS）：
+
+**favorites**
+| 列名 | 类型 | 说明 |
 |---|---|---|
-| `_User` | 内置 | 登录/注册/会话 |
-| `Favorite` | `user`（Pointer）, `exhibitId` | 展品收藏 |
-| `Comment` | `user`（Pointer）, `exhibitId`, `content` | 展品评论 |
+| `id` | uuid / default gen_random_uuid() | 主键 |
+| `user_id` | uuid | 关联 auth.users |
+| `exhibit_id` | text | 展品 id（对应 js/config.js 里的 id） |
+| `created_at` | timestamp / default now() | — |
 
-未配置 LeanCloud 时，相关功能自动降级，工程仍可运行。
+**comments**
+| 列名 | 类型 | 说明 |
+|---|---|---|
+| `id` | uuid | 主键 |
+| `user_id` | uuid | 关联 auth.users |
+| `exhibit_id` | text | 展品 id |
+| `content` | text | 评论内容 |
+| `created_at` | timestamp / default now() | — |
+
+### 3. 行级安全策略（RLS）
+
+两张表都添加：
+
+- `Enable read access for all users`：SELECT 对 `true` 放行（所有人可读评论/收藏数）
+- `Enable insert for authenticated users only`：INSERT 要求 `auth.role() = 'authenticated'`
+- `Enable delete for own rows only`：DELETE 要求 `auth.uid() = user_id`
+
+> 本项目用「用户名」登录，内部会转换成 `用户名@cloudink.local` 的邮箱注册 Supabase Auth。用户名仅用于展示，不发送真实邮件。
+
+未配置 Supabase 时，相关功能自动降级，博物馆仍可正常浏览。
 
 ## 多展馆路由
 
@@ -184,7 +214,7 @@ cp .env.example .env.local
 2. 手势识别依赖光照条件与摄像头画质，光照不足时建议开灯并保持手部在取景框内。
 3. 主楼二层为纯外观，不可进入（参观动线为：前庭 → 一楼大厅 → 西侧连廊）。
 4. MediaPipe 模型首次加载需联网，约数秒。
-5. 评论/收藏依赖 LeanCloud 云端服务，离线或凭证未配置时不可用。
+5. 评论/收藏依赖 Supabase 云端服务，离线或凭证未配置时不可用。
 
 ## 技术栈版本
 
@@ -192,6 +222,6 @@ cp .env.example .env.local
 - Vue Router `^4.4.5`
 - Pinia `^2.2.6`
 - Vite `^6.0.3`
-- LeanCloud Storage `^4.15.1`
+- Supabase Storage `^4.15.1`
 - Three.js `0.147.0`（UMD，SRI 锁定）
 - @mediapipe/tasks-vision `0.10.0`（UMD；WASM 与 hand_landmarker.task 由运行时从官方 CDN 加载）

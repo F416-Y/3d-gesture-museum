@@ -1,17 +1,18 @@
-// LeanCloud 初始化（用户系统 / 评论 / 收藏的云端数据层）
-// 凭证来自 .env.local（见 .env.example），未配置时相关功能优雅降级
-import LC from "leancloud-storage";
+// 后端服务入口：Supabase 初始化
+// 未配置凭证时自动降级，登录/收藏/评论功能不可用，但博物馆仍能正常浏览
+import { createClient } from "@supabase/supabase-js";
 
-const appId = import.meta.env.VITE_LC_APP_ID;
-const appKey = import.meta.env.VITE_LC_APP_KEY;
-const serverURL = import.meta.env.VITE_LC_SERVER_URL;
+const url = import.meta.env.VITE_SUPABASE_URL;
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+let supabase = null;
 let ready = false;
-if (appId && appKey && serverURL) {
-  LC.init({ appId, appKey, serverURL });
+
+if (url && key) {
+  supabase = createClient(url, key);
   ready = true;
 } else {
-  console.warn("[云墨] 未配置 LeanCloud 凭证（.env.local），用户/评论/收藏功能暂不可用");
+  console.warn("[云墨] 未配置 Supabase 凭证（.env.local），用户/评论/收藏功能暂不可用");
 }
 
-export { LC, ready };
+export { supabase, ready };
