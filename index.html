@@ -82,6 +82,9 @@
   <!-- ===== 提示条 ===== -->
   <div id="toast" class="toast"></div>
 
+    <!-- ===== Vue 应用挂载点（登录/收藏/展厅路由，src/ 下代码） ===== -->
+  <div id="app"></div>
+
   <!-- 第三方依赖：Three.js r147（UMD，SRI 锁定） -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js" integrity="sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C" crossorigin="anonymous"></script>
   <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（WASM 与 hand_landmarker.task 由代码运行时从官方 CDN 加载） -->
@@ -114,5 +117,7 @@
   <script src="./js/exhibit.js"></script>
   <script src="./js/ui.js"></script>
   <script src="./js/main.js"></script>
+  <!-- Vue 入口（Vite 模块，最后加载，不干扰上方引擎脚本） -->
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
