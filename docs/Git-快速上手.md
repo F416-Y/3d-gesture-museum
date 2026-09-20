@@ -1,7 +1,7 @@
-# 云墨美术馆 · Git 协作"照着抄"手册
+# 云墨美术馆 · Git 协作"照着抄"手册（Vue 工程版）
 
 > 给全组 7 个人的操作手册。不用理解原理，按顺序敲命令即可。
-> 配套：分支模型见 [7人分工文档.md](./7人分工文档.md) 第三节。
+> 配套：角色任务清单见 [组员上手指南.md](./组员上手指南.md)。
 
 ---
 
@@ -15,7 +15,8 @@ main          ← 稳定版 / 演示发布版；只接受来自 dev 的合并，
        ├── feature/gesture   （组员3）手势识别
        ├── feature/exhibit   （组员4）展品与弹窗
        ├── feature/ui        （组员5）界面视觉
-       └── feature/assets    （组员6）素材
+       ├── feature/assets    （组员6）素材
+       └── feature/main      （组员7）整合与部署
 ```
 
 **每人只在自己那条 feature 分支上改，只改自己负责的文件。**
@@ -31,27 +32,54 @@ git config --global user.name "你的名字"
 git config --global user.email "你的邮箱"
 ```
 
-> 邮箱建议用 GitHub/Gitee 的注册邮箱，否则仓库的贡献记录里看不到你。
+> 邮箱建议用 GitHub 的注册邮箱，否则仓库的贡献记录里看不到你。
 
-**2. 克隆仓库**
+**2. 安装 Node.js**
+
+到 [nodejs.org](https://nodejs.org/) 下载 LTS 版，安装后检查：
 
 ```bash
-git clone <组长给你的仓库地址>
+node -v   # v20.x.x 或 v22.x.x
+npm -v    # 10.x.x
+```
+
+**3. 克隆仓库**
+
+```bash
+git clone https://github.com/F416-Y/3d-gesture-museum.git
+# GitHub 连不上时备用：git clone https://gitee.com/yun-yun-wai-fu/3d-gesture-museum.git
+
 cd 3d-gesture-museum
 ```
 
-**3. 确认推送守卫生效**
+**4. 安装依赖**
+
+```bash
+npm install
+```
+
+> 卡住就换国内镜像：`npm install --registry=https://registry.npmmirror.com`
+
+**5. 启动项目**
+
+```bash
+npm run dev
+```
+
+打开终端显示的地址（如 `http://localhost:5173`）。
+
+**6. 确认推送守卫生效**
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-> 仓库里已经配好，克隆后确认一次。装好后直接 `git push origin main` 会被拦下来，这是**故意设计的**。
+> 装好后直接 `git push origin main` 会被拦下来，这是**故意设计的**。
 
-**4. 切到自己的分支**
+**7. 切到自己的分支**
 
 ```bash
-git switch feature/scene      # 换成你自己那条，见上面分支表
+git switch feature/scene      # 换成你自己的分支
 ```
 
 ---
@@ -92,7 +120,7 @@ git push origin feature/scene
 | `style` | 纯视觉/格式，不改逻辑 | `style(ui): 弹窗字号与行距调整` |
 | `docs` | 文档 | `docs: 补充素材来源与版权说明` |
 | `asset` | 素材替换 | `asset: 替换千里江山图高清贴图` |
-| `chore` | 杂项与配置 | `chore: 更新 .gitignore` |
+| `chore` | 杂项与配置 | `chore: 更新 vite base 路径` |
 
 模块名用文件名去后缀：`scene` / `player` / `gesture` / `exhibit` / `ui` / `assets` / `main`。
 
@@ -138,7 +166,25 @@ git rm --cached -r .
 git reset --hard
 ```
 
-**5. 素材大小约定（组员6 必看）**
+**5. npm run dev 报错 / 页面空白**
+
+```bash
+# 先清缓存重装
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
+```
+
+Windows 用 PowerShell 时删目录：
+
+```powershell
+Remove-Item -Recurse -Force node_modules
+Remove-Item package-lock.json
+npm install
+npm run dev
+```
+
+**6. 素材大小约定（组员6 必看）**
 
 - **单文件 < 5MB → 直接入库**：仓库已不再忽略 `assets/images`、`assets/models`。
 - 单张贴图建议压到 **500KB 以内**（长边 2048px、JPG 质量 80 足够展厅使用）。
@@ -151,21 +197,29 @@ git reset --hard
 ## 六、组长：建仓与首次发布
 
 ```bash
-# ① 在 GitHub / Gitee 新建空仓库（不要勾选 README），然后关联远程：
+# ① 在 GitHub 新建空仓库（不要勾选 README），然后关联远程：
 git remote add origin <仓库地址>
-git push --no-verify -u origin main     # 首次建仓必须绕过守卫，否则会被 pre-push 拦下
+
+# ② 首次必须把 main 推上去（绕过本地守卫）
+git push --no-verify -u origin main
+
+# ③ 推 dev 和全部 feature 分支
 git push -u origin dev
+git push origin feature/scene feature/player feature/gesture feature/exhibit feature/ui feature/assets feature/main
 
-# ② 一次性把 feature 分支推上去，组员就能直接 switch
-git push origin feature/scene feature/player feature/gesture feature/exhibit feature/ui feature/assets
-
-# ③ 开启 Pages：Settings → Pages → Source 选分支 main / 根目录
-#    发布地址形如 https://<用户名>.github.io/3d-gesture-museum/
+# ④ 组员 clone 后让他们执行 npm install
 ```
 
-> 本项目是原生 HTML/CSS/JS，**没有任何构建步骤**，Pages 选 main 分支根目录即可。
+**部署 GitHub Pages**：
 
-**发布节奏**：`dev` 上全组验收通过 → PR 合入 `main` → Pages 自动更新 → 答辩用这条链接。
+1. 仓库必须是**公开**的（免费 Pages 只支持公开仓库）。
+2. 推荐用 GitHub Actions 自动构建 `dist/` 并发布到 `gh-pages` 分支。
+3. 也可以手动：`npm run build` 后把 `dist/` 目录推到 `gh-pages` 分支。
+4. Pages 链接形如：`https://<用户名>.github.io/3d-gesture-museum/#/`
+
+> 本项目使用 Vite 构建，**不要**直接把 main 分支根目录设 Pages 源，否则 Vue 路由和资源路径会出问题。
+
+**发布节奏**：`dev` 上全组验收通过 → PR 合入 `main` → 触发 Pages 构建 → 用 Pages 链接答辩。
 
 **仓库设置建议（组长）**：Settings → Branches → 保护 `main`，勾选
 「Require a pull request before merging」，把"禁止直接 push"从本地约定升级为服务端强制。
