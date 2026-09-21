@@ -99,10 +99,10 @@ git config core.hooksPath .githooks
 
 > 装好后直接 `git push origin main` 会被拦下来，这是**故意设计的**。
 
-**7. 切到自己的分支**
+**7. 为第一个子任务开分支**
 
 ```bash
-git switch feature/scene      # 换成你自己的分支
+git switch -c feature/scene-collision-1     # 换成 2.3 对照表里属于你的那条
 ```
 
 ---
