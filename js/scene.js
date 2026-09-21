@@ -527,6 +527,107 @@ window.MuseumScene = (function () {
     parent.add(g);
     return g;
   }
+  /* ============================================================
+   * 园区绿化与铺装（组长 · 外观）
+   * 原实现：两片 PlaneGeometry(90, 26) 放在 x=±21，实际覆盖 x∈[-66,66]，
+   *   在 x∈[-24,24] 重叠且越出围墙 22m，等效一块 48×26 的大绿毯，
+   *   重叠处同高共面还会 z-fighting 闪烁。
+   * 现改为：两块规整草坪（带 0.3m 石材镶边）+ 前庭铺装分带 + 围墙内侧灌木绿篱。
+   * 注意：草坪内新增的小乔木与石凳已代登记碰撞体（标记为「组长代登记」），
+   *       待组员1 在接缝子任务里复核。
+   * ============================================================ */
+  function buildLawn(root, x0, x1, z0, z1) {
+    var w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+
+    // 草地
+    var lawn = new _g.Mesh(new _g.PlaneGeometry(w, d), mat(0x6f7a56, { roughness: 1 }));
+    lawn.rotation.x = -Math.PI / 2;
+    lawn.position.set(cx, 0.02, cz);
+    lawn.receiveShadow = true;
+    root.add(lawn);
+
+    // 石材镶边（0.3m 宽，四条）
+    var edgeMat = mat(0xb9b0a0, { roughness: 0.9 });
+    buildBox(root, w + 0.6, 0.12, 0.3, cx, 0.06, z0 - 0.15, edgeMat);
+    buildBox(root, w + 0.6, 0.12, 0.3, cx, 0.06, z1 + 0.15, edgeMat);
+    buildBox(root, 0.3, 0.12, d + 0.6, x0 - 0.15, 0.06, cz, edgeMat);
+    buildBox(root, 0.3, 0.12, d + 0.6, x1 + 0.15, 0.06, cz, edgeMat);
+
+    // 草坪内点景一：小乔木 3 株
+    [[cx - w * 0.28, cz - d * 0.22], [cx + w * 0.30, cz + d * 0.04], [cx - w * 0.06, cz + d * 0.30]].forEach(function (p) {
+      var trunk = new _g.Mesh(new _g.CylinderGeometry(0.12, 0.17, 2.2, 8), mat(0x5d4a3a));
+      trunk.position.set(p[0], 1.1, p[1]);
+      trunk.castShadow = true;
+      root.add(trunk);
+      var crown = new _g.Mesh(new _g.SphereGeometry(1.15, 10, 8), mat(0x63704f, { roughness: 1 }));
+      crown.position.set(p[0], 2.85, p[1]);
+      crown.castShadow = true;
+      root.add(crown);
+      obstacles.push({ type: "circle", x: p[0], z: p[1], r: 0.6 });  // 组长代登记，待组员1 复核
+    });
+
+    // 草坪内点景二：灌木丛 3 组（每组 3 球，不投影以省开销）
+    [[cx + w * 0.18, cz - d * 0.34], [cx - w * 0.34, cz + d * 0.18], [cx + w * 0.34, cz + d * 0.30]].forEach(function (p) {
+      [[0, 0, 0.62], [0.58, 0.1, 0.46], [-0.5, -0.2, 0.5]].forEach(function (b) {
+        var s = new _g.Mesh(new _g.SphereGeometry(b[2], 9, 7), mat(0x5c6748, { roughness: 1 }));
+        s.position.set(p[0] + b[0], b[2] * 0.85, p[1] + b[1]);
+        s.scale.y = 0.82;
+        root.add(s);
+      });
+    });
+
+    // 草坪内点景三：石凳 1 条
+    var benchX = x1 - 1.6, benchZ = cz + d * 0.40;
+    buildBox(root, 1.8, 0.16, 0.5, benchX, 0.42, benchZ, mat(0xa8a297, { roughness: 0.9 }));
+    buildBox(root, 0.3, 0.34, 0.42, benchX - 0.6, 0.17, benchZ, mat(0x9a9488, { roughness: 0.9 }));
+    buildBox(root, 0.3, 0.34, 0.42, benchX + 0.6, 0.17, benchZ, mat(0x9a9488, { roughness: 0.9 }));
+    obstacles.push({ type: "circle", x: benchX, z: benchZ, r: 0.75 });  // 组长代登记，待组员1 复核
+  }
+
+  function buildLawns(root) {
+    buildLawn(root, -38, -14, -6, 14);
+    buildLawn(root, 14, 38, -6, 14);
+  }
+
+  /* 前庭铺装分带：z 14~40 三条横向色带 + 中轴两侧浅色镶边 */
+  function paveForecourt(root) {
+    [[14, 22, 0xe6dfd1], [22, 30, 0xd3cbbc], [30, 40, 0xe6dfd1]].forEach(function (b) {
+      var m = new _g.Mesh(new _g.PlaneGeometry(88, b[1] - b[0]), mat(b[2], { roughness: 0.95 }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(0, 0.022, (b[0] + b[1]) / 2);
+      m.receiveShadow = true;
+      root.add(m);
+    });
+    [-1, 1].forEach(function (s) {
+      var e = new _g.Mesh(new _g.PlaneGeometry(1, 42), mat(0xcfc6b6, { roughness: 0.95 }));
+      e.rotation.x = -Math.PI / 2;
+      e.position.set(s * 3, 0.025, 4);
+      root.add(e);
+    });
+  }
+
+  /* 围墙内侧灌木绿篱（低矮，不登记碰撞体） */
+  function buildHedge(root) {
+    var bushMat = mat(0x5c6748, { roughness: 1 });
+    function bush(x, z, r) {
+      var s = new _g.Mesh(new _g.SphereGeometry(r, 9, 7), bushMat);
+      s.position.set(x, r * 0.8, z);
+      s.scale.set(1, 0.8, 1);
+      root.add(s);
+    }
+    // 北墙内侧
+    for (var x = -42; x <= 42; x += 4) bush(x, -42.4, 0.55 + (Math.abs(x) % 8 === 0 ? 0.15 : 0));
+    // 东西墙内侧
+    [-42.4, 42.4].forEach(function (wx) {
+      for (var z = -42; z <= 42; z += 4) {
+        if (Math.abs(z) < 45) bush(wx, z, 0.55 + (Math.abs(z) % 8 === 0 ? 0.15 : 0));
+      }
+    });
+    // 南墙内侧（门洞 x ±4.6 左右各留出，避开入口）
+    [-1, 1].forEach(function (side) {
+      for (var sx = 8; sx <= 42; sx += 4) bush(side * sx, 42.4, 0.55);
+    });
+  }
   function buildPlaza(root) {
     // 地面（石板米白）
     var ground = new _g.Mesh(new _g.PlaneGeometry(90, 90), mat(0xd8d2c4, { roughness: 0.95 }));
@@ -534,14 +635,14 @@ window.MuseumScene = (function () {
     ground.receiveShadow = true;
     root.add(ground);
 
-    // 草坪（两侧灰绿）
-    var lawnGeo = new _g.PlaneGeometry(90, 26);
-    [-1, 1].forEach(function (side) {
-      var lawn = new _g.Mesh(lawnGeo, mat(0x70795a, { roughness: 1 }));
-      lawn.rotation.x = -Math.PI / 2;
-      lawn.position.set(side * 21, 0.02, 6);
-      root.add(lawn);
-    });
+    // 草坪：两块规整草坪 + 石材镶边 + 点景（原为两片 90×26 重叠并越出围墙，已重写）
+    buildLawns(root);
+
+    // 前庭铺装分带（治空旷）
+    paveForecourt(root);
+
+    // 围墙内侧灌木绿篱
+    buildHedge(root);
 
     // 中轴道路
     var road = new _g.Mesh(new _g.PlaneGeometry(5, 42), mat(0x57514a, { roughness: 1 }));
