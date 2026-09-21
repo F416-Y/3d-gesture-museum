@@ -53,3 +53,34 @@ jobs:
           test -f dist/css/style.css
           test -d dist/assets
           echo "产物检查通过"
+
+  guards:
+    name: 安全与体积守卫
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 密钥扫描（提交内容里不能出现 token / 私钥）
+        run: |
+          # 排除 .github 自身（规则文本本身就包含这些关键字）
+          if grep -rnE "eyJhbGciOi|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|BEGIN [A-Z ]*PRIVATE KEY|service_role" \
+               --exclude-dir=.git --exclude-dir=.github --exclude-dir=node_modules --exclude-dir=dist . ; then
+            echo "::error::发现疑似密钥或令牌，请立即移除并轮换"
+            exit 1
+          fi
+          echo "密钥扫描通过"
+      - name: 大文件守卫（单个跟踪文件不超过 5MB）
+        run: |
+          big=""
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            s=$(wc -c < "$f")
+            if [ "$s" -gt 5242880 ]; then
+              big="$big"$'\n'"  $f ($((s / 1024))KB)"
+            fi
+          done < <(git ls-files)
+          if [ -n "$big" ]; then
+            echo "::error::以下文件超过 5MB，请压缩或启用 Git LFS"
+            echo "$big"
+            exit 1
+          fi
+          echo "体积检查通过"
