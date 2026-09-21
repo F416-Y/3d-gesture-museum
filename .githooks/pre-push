@@ -1,7 +1,7 @@
 #!/bin/sh
 # ============================================================
 # 云墨美术馆 · 推送守卫
-# 规则：main 只接受来自 dev 的合并，禁止直接 push（见 docs/Git-快速上手.md）
+# 规则：main 是唯一主线，只接受 PR 合并，禁止直接 push（见 docs/Git-快速上手.md）
 # 首次建仓 / 正式发布确实需要直推时：git push --no-verify origin main
 # ============================================================
 
@@ -19,9 +19,10 @@ if [ "$blocked" = "1" ]; then
   echo "  ✗ 已阻止：不允许直接 push 到 main"
   echo ""
   echo "    正确流程："
-  echo "      1) git switch dev && git pull origin dev"
-  echo "      2) 在 feature/* 上开发 → 提 PR 合入 dev"
-  echo "      3) 组长在 dev 验证通过后，PR 合入 main 再发布"
+  echo "      1) git switch main && git pull origin main"
+  echo "      2) git switch feature/你的分支 && git merge main"
+  echo "      3) 提交后 push 你的 feature 分支，再提 PR（base 默认就是 main）"
+  echo "      4) 组长 review 通过后才会合并"
   echo ""
   echo "    首次建仓、或组长正式发布时确实要直推："
   echo "      git push --no-verify origin main"
