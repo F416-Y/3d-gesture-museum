@@ -210,7 +210,7 @@ git push --no-verify -u origin main
 
 # ③ 推 dev 和全部 feature 分支
 git push -u origin dev
-git push origin feature/scene feature/player feature/gesture feature/exhibit feature/ui feature/assets feature/main
+git push origin feature/scene feature/player feature/gesture feature/exhibit feature/ui feature/assets
 
 # ④ 组员 clone 后让他们执行 npm install
 ```
