@@ -1,0 +1,55 @@
+name: CI
+
+# 什么时候跑：向 main 提 PR 时、main 被更新后、以及手动触发
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: 引擎冒烟测试 + 语法检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: 安装依赖
+        run: npm ci
+      - name: 引擎脚本语法检查（js/*.js）
+        run: |
+          for f in js/*.js; do
+            echo "check $f"
+            node --check "$f"
+          done
+      - name: 场景冒烟测试（真实执行 scene.js 的 init）
+        run: node scripts/smoke-scene.mjs
+
+  build:
+    name: 生产构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: 安装依赖
+        run: npm ci
+      - name: 构建
+        run: npm run build
+      - name: 构建产物完整性
+        run: |
+          test -f dist/index.html
+          test -f dist/js/scene.js
+          test -f dist/css/style.css
+          test -d dist/assets
+          echo "产物检查通过"
