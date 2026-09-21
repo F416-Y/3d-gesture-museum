@@ -8,8 +8,9 @@
 ## 一、分支模型（一图看懂）
 
 ```
-main          ← 稳定版 / 演示发布版；只接受来自 dev 的合并，禁止直接 push（本地钩子会拦）
-  └── dev     ← 开发汇总线；所有功能最终合到这里，组长在这里验收
+main          ← ★ 仓库默认分支 · 稳定版 / 答辩演示发布版
+                 只接受来自 dev 的合并；任何人禁止直接 push（.githooks/pre-push 会拦）
+  └── dev     ← 集成分支（可以理解为「组长的分支」）：所有 feature/* 的 PR 都合到这里，在这里跑通、验收
        ├── feature/scene     （组员1）场景接缝（碰撞体/热点/展厅区域）
        ├── feature/player    （组员2）漫游与碰撞
        ├── feature/gesture   （组员3）手势识别
@@ -21,6 +22,14 @@ main          ← 稳定版 / 演示发布版；只接受来自 dev 的合并，
 ```
 
 **组长也走分支**：所有代码都经 `feature/* → PR → dev`。组长只是多一项权限——把 `dev` 合并进 `main`。
+
+**三个层次各管什么**
+
+| 分支 | 干什么 | 谁往里写 |
+|---|---|---|
+| `main` | 稳定版 / 答辩演示版；仓库默认分支 | 只有组长在里程碑时从 `dev` 合并（第 1 周末、第 2 周末、演示前） |
+| `dev` | 集成线：全组的活儿汇到这里并跑通，也是所有 PR 的目标分支 | 各人经 PR 合入；组长 review 并合并 |
+| `feature/*` | 你自己的干活分支，随便提交，不影响别人 | 你自己 |
 
 
 **每人只在自己那条 feature 分支上改，只改自己负责的文件。**
@@ -57,6 +66,9 @@ git clone https://github.com/F416-Y/3d-gesture-museum.git
 # GitHub 连不上时备用：git clone https://gitee.com/yun-yun-wai-fu/3d-gesture-museum.git
 
 cd 3d-gesture-museum
+
+# 克隆后你落在默认分支 main 上：先切到 dev 再开工（别在 main 上写代码）
+git switch dev
 ```
 
 **4. 安装依赖**
