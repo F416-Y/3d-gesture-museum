@@ -15,10 +15,12 @@ main          ← 稳定版 / 演示发布版；只接受来自 dev 的合并，
        ├── feature/gesture   （组员3）手势识别
        ├── feature/exhibit   （组员4）展品与弹窗
        ├── feature/ui        （组员5）界面视觉
-       └── feature/assets    （组员6）素材
+       ├── feature/assets    （组员6）素材
+       ├── feature/main      （组长）整合 / 文档 / 部署
+       └── feature/scene-look（组长）场景外观
 ```
 
-组长**不另开分支**：`js/main.js`、`src/`、场景外观、文档与部署都由组长直接提交 `dev`（`dev` 是集成分支）。
+**组长也走分支**：所有代码都经 `feature/* → PR → dev`。组长只是多一项权限——把 `dev` 合并进 `main`。
 
 
 **每人只在自己那条 feature 分支上改，只改自己负责的文件。**
@@ -210,7 +212,7 @@ git push --no-verify -u origin main
 
 # ③ 推 dev 和全部 feature 分支
 git push -u origin dev
-git push origin feature/scene feature/player feature/gesture feature/exhibit feature/ui feature/assets
+git push origin feature/scene feature/scene-look feature/main feature/player feature/gesture feature/exhibit feature/ui feature/assets
 
 # ④ 组员 clone 后让他们执行 npm install
 ```
