@@ -10,16 +10,21 @@
 ```
 main          ← 稳定版 / 演示发布版；只接受来自 dev 的合并，禁止直接 push（本地钩子会拦）
   └── dev     ← 开发汇总线；所有功能最终合到这里，组长在这里验收
-       ├── feature/scene     （组员1）场景与建筑
+       ├── feature/scene     （组员1）场景接缝（碰撞体/热点/展厅区域）
        ├── feature/player    （组员2）漫游与碰撞
        ├── feature/gesture   （组员3）手势识别
        ├── feature/exhibit   （组员4）展品与弹窗
        ├── feature/ui        （组员5）界面视觉
-       ├── feature/assets    （组员6）素材
-       └── feature/main      （组员7）整合与部署
+       └── feature/assets    （组员6）素材
 ```
 
+组长**不另开分支**：`js/main.js`、`src/`、场景外观、文档与部署都由组长直接提交 `dev`（`dev` 是集成分支）。
+
+
 **每人只在自己那条 feature 分支上改，只改自己负责的文件。**
+
+> 唯一的例外是 `js/scene.js`：组长负责**外观**、组员1 负责**接缝**，两人共管。
+> 动手前先群里说一声、错开时间改；该文件交叉 review；冲突由后动手的人解决。
 
 ---
 
@@ -95,7 +100,7 @@ git pull origin dev
 git switch feature/scene
 git merge dev
 
-# ③ 写代码……（只改自己负责的文件）
+# ③ 写代码……（只改自己负责的文件；scene.js 是共管文件，动手前先群里说一声）
 
 # ④ 提交
 git add -A
@@ -138,7 +143,7 @@ git add 冲突文件
 git commit             # 完成合并
 ```
 
-> 只要遵守"只改自己的文件"，冲突基本不会发生。改不动就喊组长，**别硬删别人的代码**。
+> 只要遵守"只改自己的文件"，冲突基本不会发生。唯一的共管文件是 `js/scene.js`（组长外观 / 组员1 接缝）：两人错开时间改，动手前先 `git pull --rebase origin dev`。改不动就喊组长，**别硬删别人的代码**。
 
 **2. 不小心在 main 上改了东西**
 
