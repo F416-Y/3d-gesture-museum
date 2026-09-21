@@ -10,14 +10,12 @@
 ```
 main          ← ★ 仓库默认分支 · 唯一主线 · 稳定版 / 答辩演示发布版
                  只接受 PR 合并；任何人禁止直接 push（本地 pre-push 钩子拦、GitHub 分支保护也拦）
-  ├── feature/scene     （组员1）场景接缝（碰撞体/热点/展厅区域）
-  ├── feature/player    （组员2）漫游与碰撞
-  ├── feature/gesture   （组员3）手势识别
-  ├── feature/exhibit   （组员4）展品与弹窗
-  ├── feature/ui        （组员5）界面视觉
-  ├── feature/assets    （组员6）素材
-  ├── feature/main      （组长）整合 / 文档 / 部署
-  └── feature/scene-look（组长）场景外观
+  └── feature/<模块>-<子任务>-<组员序号>      一个子任务一条，合完即删
+        例：feature/scene-collision-1    （组员1 · 碰撞体登记）
+            feature/player-collision-2   （组员2 · 碰撞检测）
+            feature/ui-tokens-5          （组员5 · 色板与字体规范）
+            feature/scene-look-7         （组长 · 场景外观）
+        完整清单见 组员上手指南.md 2.3 节
 ```
 
 **组长也走分支**：所有代码都经 `feature/* → PR → main`。区别只在于——组长的 review 是唯一能放行 PR 的（由 `CODEOWNERS` + 分支保护保证）。
@@ -27,7 +25,7 @@ main          ← ★ 仓库默认分支 · 唯一主线 · 稳定版 / 答辩�
 | 分支 | 干什么 | 谁往里写 |
 |---|---|---|
 | `main` | **唯一主线**：稳定版 / 答辩演示版，也是仓库默认分支 | 只能经 PR 合入，且必须组长批准（组长自己的改动也走分支，但可直接合并） |
-| `feature/*` | 你自己的干活分支，随便提交，不影响别人 | 你自己 |
+| `feature/*` | 一个子任务一条（`feature/<模块>-<子任务>-<序号>`），做完就合并、合并后删掉 | 你自己 |
 
 **发布靠 tag，不靠分支**：里程碑和答辩前由组长打标签冻结演示版，例如
 
@@ -116,20 +114,24 @@ git switch feature/scene      # 换成你自己的分支
 git switch main
 git pull origin main
 
-# ② 把自己的分支接到最新 main 上
-git switch feature/scene
-git merge main
+# ② 为本次子任务新开一条分支（名字带你的序号，照 2.3 的对照表取）
+git switch -c feature/scene-collision-1
 
 # ③ 写代码……（只改自己负责的文件；scene.js 是共管文件，动手前先群里说一声）
 
 # ④ 提交
 git add -A
-git commit -m "feat(scene): 主楼增加匾额与挑檐细节"
+git commit -m "feat(scene): 登记前庭与围墙的碰撞体"
 
-# ⑤ 推到自己分支
-git push origin feature/scene
+# ⑤ 推到远端（-u 挂钩后，之后直接 git push 即可）
+git push -u origin feature/scene-collision-1
 
-# ⑥ 去网页提 Pull Request：feature/scene → main（base 默认就是 main），等组长 review 合并
+# ⑥ 去网页提 Pull Request：feature/scene-collision-1 → main（base 默认就是 main），等组长 review 合并
+
+# ⑦ 合并后清理这条分支，下一个子任务重新从 main 切
+git switch main && git pull
+git branch -d feature/scene-collision-1
+git push origin --delete feature/scene-collision-1
 ```
 
 ---
@@ -228,8 +230,7 @@ git remote add origin <仓库地址>
 # ② 首次必须把 main 推上去（绕过本地守卫）
 git push --no-verify -u origin main
 
-# ③ 推全部 feature 分支（只有 main 一条主线，不再有 dev）
-git push origin feature/scene feature/scene-look feature/main feature/player feature/gesture feature/exhibit feature/ui feature/assets
+# ③ feature 分支不用预先建：每个组员按子任务用 git switch -c 现开现推
 
 # ④ 组员 clone 后让他们执行 npm install
 ```
