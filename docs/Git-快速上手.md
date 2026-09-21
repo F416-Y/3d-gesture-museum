@@ -70,7 +70,6 @@ npm -v    # 10.x.x
 
 ```bash
 git clone https://github.com/F416-Y/3d-gesture-museum.git
-# GitHub 连不上时备用：git clone https://gitee.com/yun-yun-wai-fu/3d-gesture-museum.git
 
 cd 3d-gesture-museum
 
