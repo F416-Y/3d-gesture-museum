@@ -1114,7 +1114,8 @@ window.MuseumScene = (function () {
     galleryWall.receiveShadow = true;
     g.add(galleryWall);
     buildBox(g, 0.46, 0.18, 15.2, -12.35, 4.23, -2, mat(0x6d5544, { roughness: 0.75 }));
-    // 展墙不单独登记碰撞体：被西外墙碰撞体 x[-13,-10.6] 完全包含，登记了也撞不到（组员1 复核结论）。
+    // 展墙不单独登记碰撞体：被西外墙碰撞体 x[-13,-10.6] 完全包含，登记了也撞不到
+    //（组员1 复核结论，PR #1）。注意：若日后收窄西外墙碰撞体，需重新评估展墙是否单独登记。
 
     // 展墙挂画（蒙娜丽莎、星月夜 → 文明对话厅）
     addPainting(g, { x: -12.62, y: 2.5, z: -4.5, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "monalisa");
