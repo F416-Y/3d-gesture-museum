@@ -8,28 +8,35 @@
 ## 一、分支模型（一图看懂）
 
 ```
-main          ← ★ 仓库默认分支 · 稳定版 / 答辩演示发布版
-                 只接受来自 dev 的合并；任何人禁止直接 push（.githooks/pre-push 会拦）
-  └── dev     ← 集成分支（可以理解为「组长的分支」）：所有 feature/* 的 PR 都合到这里，在这里跑通、验收
-       ├── feature/scene     （组员1）场景接缝（碰撞体/热点/展厅区域）
-       ├── feature/player    （组员2）漫游与碰撞
-       ├── feature/gesture   （组员3）手势识别
-       ├── feature/exhibit   （组员4）展品与弹窗
-       ├── feature/ui        （组员5）界面视觉
-       ├── feature/assets    （组员6）素材
-       ├── feature/main      （组长）整合 / 文档 / 部署
-       └── feature/scene-look（组长）场景外观
+main          ← ★ 仓库默认分支 · 唯一主线 · 稳定版 / 答辩演示发布版
+                 只接受 PR 合并；任何人禁止直接 push（本地 pre-push 钩子拦、GitHub 分支保护也拦）
+  ├── feature/scene     （组员1）场景接缝（碰撞体/热点/展厅区域）
+  ├── feature/player    （组员2）漫游与碰撞
+  ├── feature/gesture   （组员3）手势识别
+  ├── feature/exhibit   （组员4）展品与弹窗
+  ├── feature/ui        （组员5）界面视觉
+  ├── feature/assets    （组员6）素材
+  ├── feature/main      （组长）整合 / 文档 / 部署
+  └── feature/scene-look（组长）场景外观
 ```
 
-**组长也走分支**：所有代码都经 `feature/* → PR → dev`。组长只是多一项权限——把 `dev` 合并进 `main`。
+**组长也走分支**：所有代码都经 `feature/* → PR → main`。区别只在于——组长的 review 是唯一能放行 PR 的（由 `CODEOWNERS` + 分支保护保证）。
 
 **三个层次各管什么**
 
 | 分支 | 干什么 | 谁往里写 |
 |---|---|---|
-| `main` | 稳定版 / 答辩演示版；仓库默认分支 | 只有组长在里程碑时从 `dev` 合并（第 1 周末、第 2 周末、演示前） |
-| `dev` | 集成线：全组的活儿汇到这里并跑通，也是所有 PR 的目标分支 | 各人经 PR 合入；组长 review 并合并 |
+| `main` | **唯一主线**：稳定版 / 答辩演示版，也是仓库默认分支 | 只能经 PR 合入，且必须组长批准（组长自己的改动也走分支，但可直接合并） |
 | `feature/*` | 你自己的干活分支，随便提交，不影响别人 | 你自己 |
+
+**发布靠 tag，不靠分支**：里程碑和答辩前由组长打标签冻结演示版，例如
+
+```bash
+git tag -a v1.0-demo -m "答辩演示版"
+git push origin v1.0-demo
+```
+
+谁要拿那一版，`git switch --detach v1.0-demo` 即可。
 
 
 **每人只在自己那条 feature 分支上改，只改自己负责的文件。**
@@ -67,8 +74,8 @@ git clone https://github.com/F416-Y/3d-gesture-museum.git
 
 cd 3d-gesture-museum
 
-# 克隆后你落在默认分支 main 上：先切到 dev 再开工（别在 main 上写代码）
-git switch dev
+# 克隆后你就在唯一的 main 上（不用切分支）；但别在 main 上直接写代码
+# 日常开发请切到自己的 feature 分支，见下一节
 ```
 
 **4. 安装依赖**
@@ -106,13 +113,13 @@ git switch feature/scene      # 换成你自己的分支
 ## 三、每日流程（最重要）
 
 ```bash
-# ① 开工前：同步 dev 最新代码（90% 的冲突都是因为漏了这一步）
-git switch dev
-git pull origin dev
+# ① 开工前：同步 main 最新代码（90% 的冲突都是因为漏了这一步）
+git switch main
+git pull origin main
 
-# ② 把自己的分支接到最新 dev 上
+# ② 把自己的分支接到最新 main 上
 git switch feature/scene
-git merge dev
+git merge main
 
 # ③ 写代码……（只改自己负责的文件；scene.js 是共管文件，动手前先群里说一声）
 
@@ -123,7 +130,7 @@ git commit -m "feat(scene): 主楼增加匾额与挑檐细节"
 # ⑤ 推到自己分支
 git push origin feature/scene
 
-# ⑥ 去网页提 Pull Request：feature/scene → dev，等组长 review 合并
+# ⑥ 去网页提 Pull Request：feature/scene → main（base 默认就是 main），等组长 review 合并
 ```
 
 ---
@@ -150,14 +157,14 @@ git push origin feature/scene
 **1. 冲突了怎么办**
 
 ```bash
-git merge dev          # 提示 CONFLICT
+git merge main         # 提示 CONFLICT
 # 打开冲突文件，找到 <<<<<<< ======= >>>>>>> 三处标记，
 # 手动改成想要的样子并删掉这些标记
 git add 冲突文件
 git commit             # 完成合并
 ```
 
-> 只要遵守"只改自己的文件"，冲突基本不会发生。唯一的共管文件是 `js/scene.js`（组长外观 / 组员1 接缝）：两人错开时间改，动手前先 `git pull --rebase origin dev`。改不动就喊组长，**别硬删别人的代码**。
+> 只要遵守"只改自己的文件"，冲突基本不会发生。唯一的共管文件是 `js/scene.js`（组长外观 / 组员1 接缝）：两人错开时间改，动手前先 `git pull --rebase origin main`。改不动就喊组长，**别硬删别人的代码**。
 
 **2. 不小心在 main 上改了东西**
 
@@ -168,7 +175,7 @@ git switch -c feature/你的分支    # 把当前改动搬到新分支
 
 **3. 推送被 pre-push 钩子拦了**
 
-说明你正想直接推 main，**这是对的拦截**。走流程：先合到 `dev`，再由组长合入 `main`。
+说明你正想直接推 main，**这是对的拦截**。走流程：在自己的 feature 分支上提交 → push 那条分支 → 提 PR 到 `main`。
 只有首次建仓或正式发布时才用：
 
 ```bash
@@ -222,8 +229,7 @@ git remote add origin <仓库地址>
 # ② 首次必须把 main 推上去（绕过本地守卫）
 git push --no-verify -u origin main
 
-# ③ 推 dev 和全部 feature 分支
-git push -u origin dev
+# ③ 推全部 feature 分支（只有 main 一条主线，不再有 dev）
 git push origin feature/scene feature/scene-look feature/main feature/player feature/gesture feature/exhibit feature/ui feature/assets
 
 # ④ 组员 clone 后让他们执行 npm install
@@ -238,7 +244,7 @@ git push origin feature/scene feature/scene-look feature/main feature/player fea
 
 > 本项目使用 Vite 构建，**不要**直接把 main 分支根目录设 Pages 源，否则 Vue 路由和资源路径会出问题。
 
-**发布节奏**：`dev` 上全组验收通过 → PR 合入 `main` → 触发 Pages 构建 → 用 Pages 链接答辩。
+**发布节奏**：PR 合入 `main` → 组长本地跑通验收 → 打 tag（如 `v1.0-demo`）→ 触发 Pages 构建 → 用 Pages 链接答辩。
 
 **仓库设置建议（组长）**：Settings → Branches → 保护 `main`，勾选
 「Require a pull request before merging」，把"禁止直接 push"从本地约定升级为服务端强制。

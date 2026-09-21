@@ -1,0 +1,6 @@
+# 云墨美术馆 · 代码归属
+# 作用：配合 GitHub 分支保护里的「Require review from Code Owners」，
+#       使任何 PR 都必须由组长批准才能合入 main。
+# 若组长换人，改这里的账号即可。
+
+*       @F416-Y
