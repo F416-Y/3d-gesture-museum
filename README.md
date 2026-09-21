@@ -78,7 +78,7 @@ npm run build
 ├── css/style.css         # 3D 场景内 UI 视觉（组员5）
 ├── js/
 │   ├── config.js         # 展品数据 + 鉴赏文案 + 全局参数（组员4 / 全体共用）
-│   ├── scene.js          # 园区·建筑·展厅·灯光（组员1）
+│   ├── scene.js          # 园区·建筑·展厅·灯光（组长·外观）＋ 碰撞体/热点/展厅区域（组员1·接缝）
 │   ├── player.js         # 漫游·碰撞·展厅判定（组员2）
 │   ├── gesture.js        # MediaPipe 手势识别与映射（组员3）
 │   ├── exhibit.js        # 展品热点·拾取·弹窗联动（组员4）
@@ -112,13 +112,13 @@ npm run build
 
 | 成员 | 角色 | 负责文件 | 核心职责 |
 |---|---|---|---|
-| 1 | 3D 场景主程 | `js/scene.js` | 园区建筑外观、室内展厅、灯光氛围 |
+| 1 | 3D 场景逻辑与接缝 | `js/scene.js`（接缝部分） | 碰撞体登记、展品热点坐标、展厅区域判定、连廊可达性、性能、素材适配 |
 | 2 | 漫游交互工程师 | `js/player.js` | 第一人称移动、碰撞检测、展厅判定、路由传送点配合 |
 | 3 | 手势 AI 工程师 | `js/gesture.js` | 摄像头手势识别与手势映射（项目亮点） |
 | 4 | 展品系统工程师 | `js/config.js` + `js/exhibit.js` + `src/services/social.js` | 展品数据、鉴赏文案、热点拾取、弹窗、收藏/评论接入 |
 | 5 | UI 视觉设计师 | `css/style.css` + `js/ui.js` + `src/views/*.vue` + `src/styles/vue-shell.css` | 3D 场景内界面 + Vue 登录/收藏页视觉 |
 | 6 | 素材美工 | `assets/` | 真实名画贴图、glb 模型、资源轻量化 |
-| 7 | 整合与文档（组长） | `js/main.js` + `src/` + README | Vue 工程搭建、路由、Supabase 接入、部署、分工报告 |
+| 7 | 整合 · 场景外观（组长） | `js/main.js` + `js/scene.js`（外观）+ `src/` + README | 园区与主楼外观、连廊观感、灯光雾效、Vue 工程搭建、路由、Supabase 接入、部署、分工报告 |
 
 ## 模块间依赖
 
