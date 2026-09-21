@@ -136,10 +136,9 @@ git push -u origin feature/scene-collision-1
 
 # ⑥ 去网页提 Pull Request：feature/scene-collision-1 → main（base 默认就是 main），等组长 review 合并
 
-# ⑦ 合并后清理这条分支，下一个子任务重新从 main 切
+# ⑦ 合并后：分支保留（不删），但下一个子任务要从最新的 main 新开一条
 git switch main && git pull
-git branch -d feature/scene-collision-1
-git push origin --delete feature/scene-collision-1
+git switch -c feature/下一个子任务-你的序号
 ```
 
 ---
