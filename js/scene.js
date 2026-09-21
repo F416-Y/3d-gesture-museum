@@ -582,6 +582,62 @@ window.MuseumScene = (function () {
     buildBox(root, 0.3, 0.34, 0.42, benchX - 0.6, 0.17, benchZ, mat(0x9a9488, { roughness: 0.9 }));
     buildBox(root, 0.3, 0.34, 0.42, benchX + 0.6, 0.17, benchZ, mat(0x9a9488, { roughness: 0.9 }));
     obstacles.push({ type: "circle", x: benchX, z: benchZ, r: 0.75 });  // 组长代登记，待组员1 复核
+
+    /* ---------- 以下为 Plan C 园景与户外展场（组长 · 外观） ---------- */
+
+    // 园景一：中式石灯 2 座（草坪内缘对称）
+    [-1, 1].forEach(function (sg) {
+      var lx = cx + sg * w * 0.22, lz = cz - d * 0.30;
+      buildBox(root, 0.62, 0.2, 0.62, lx, 0.1, lz, mat(0xa8a297, { roughness: 0.9 }));
+      buildBox(root, 0.26, 1.4, 0.26, lx, 0.9, lz, mat(0xa8a297, { roughness: 0.9 }));
+      buildBox(root, 0.46, 0.5, 0.46, lx, 1.85, lz, mat(0x9c968a, { roughness: 0.85 }));
+      obstacles.push({ type: "circle", x: lx, z: lz, r: 0.5 });   // 组长代登记，待组员1 复核
+    });
+
+    // 园景二：太湖石组（3 块示意，组员6 可换真实模型）
+    var rockX = cx - w * 0.30, rockZ = cz - d * 0.34;
+    [[0, 0.55, 0.75], [0.78, 0.36, 0.5], [-0.62, 0.3, 0.44]].forEach(function (rk) {
+      var rock = new _g.Mesh(new _g.DodecahedronGeometry(rk[1], 0), mat(0x8f8a7e, { roughness: 0.95 }));
+      rock.position.set(rockX + rk[0], rk[1] * 0.85, rockZ);
+      rock.rotation.y = rk[0];
+      rock.scale.set(1, rk[2] / rk[1], 0.8);
+      rock.castShadow = true;
+      root.add(rock);
+    });
+    obstacles.push({ type: "circle", x: rockX, z: rockZ, r: 1.1 });  // 组长代登记，待组员1 复核
+
+    // 园景三：竹丛（细杆 + 窄冠）
+    var bambooX = cx + w * 0.34, bambooZ = cz - d * 0.16;
+    for (var bi = 0; bi < 7; bi++) {
+      var bx = bambooX + (bi % 3) * 0.34 - 0.34, bz = bambooZ + Math.floor(bi / 3) * 0.36;
+      var pole = new _g.Mesh(new _g.CylinderGeometry(0.045, 0.055, 3.0 + (bi % 3) * 0.45, 6), mat(0x7c8a53, { roughness: 0.9 }));
+      pole.position.set(bx, 1.5 + (bi % 3) * 0.22, bz);
+      root.add(pole);
+      var leaf = new _g.Mesh(new _g.ConeGeometry(0.42, 1.1, 6), mat(0x5f7043, { roughness: 1 }));
+      leaf.position.set(bx, 3.3 + (bi % 3) * 0.25, bz);
+      root.add(leaf);
+    }
+    obstacles.push({ type: "circle", x: bambooX, z: bambooZ, r: 0.7 });  // 组长代登记，待组员1 复核
+
+    // 户外展场：三座石展座（顶上为示意雕塑，组员6 可换 glb）
+    [[-0.5, -0.12], [0.05, 0.14], [0.6, -0.06]].forEach(function (o) {
+      var px = cx + o[0] * w * 0.5, pz = cz + o[1] * d;
+      buildBox(root, 1.2, 0.7, 1.2, px, 0.35, pz, mat(0x8a8578, { roughness: 0.9 }));
+      var art = new _g.Mesh(new _g.TorusGeometry(0.34, 0.1, 8, 18), mat(0x4f5a3c, { roughness: 0.45, metalness: 0.5 }));
+      art.position.set(px, 1.05, pz);
+      art.rotation.x = 0.5;
+      art.castShadow = true;
+      root.add(art);
+      obstacles.push({ type: "circle", x: px, z: pz, r: 0.85 });  // 组长代登记，待组员1 复核
+    });
+
+    // 连接小径：从中轴道路通向草坪（石板 2.5m 宽）
+    var side = x1 > 0 ? 1 : -1;
+    var path = new _g.Mesh(new _g.PlaneGeometry(24, 2.5), mat(0xcfc6b6, { roughness: 0.95 }));
+    path.rotation.x = -Math.PI / 2;
+    path.position.set(side * 14.5, 0.026, 15.0);
+    path.receiveShadow = true;
+    root.add(path);
   }
 
   function buildLawns(root) {
@@ -758,20 +814,21 @@ window.MuseumScene = (function () {
       group.add(step);
     });
 
-    // 一层主体墙（22 x 3.8 x 14）
+    // 一层主体墙（22 x 4.8 x 14）——单层高敞大殿，已去掉二楼
+    // 墙身标高 0.65~5.45，墙顶板 5.475~5.825
     var wallMat = mat(0xefe9dc, { roughness: 0.9, side: _g.DoubleSide });
-    buildBox(group, 22, 3.8, 0.35, 0, 2.55, -2, wallMat);   // 顶板（兼挑檐内侧）
-    buildBox(group, 22, 0.35, 14, 0, 4.55, -2, wallMat);    // 一层楼板/二层地面
-    buildBox(group, 0.35, 3.8, 14, -10.82, 2.55, -2, wallMat); // 西墙
-    buildBox(group, 0.35, 3.8, 14, 10.82, 2.55, -2, wallMat);  // 东墙
-    buildBox(group, 22, 3.8, 0.35, 0, 2.55, -9.82, wallMat);   // 北墙
+    buildBox(group, 22, 4.8, 0.35, 0, 3.05, -2, wallMat);   // 顶板（兼挑檐内侧）
+    buildBox(group, 22, 0.35, 14, 0, 5.65, -2, wallMat);    // 一层顶板
+    buildBox(group, 0.35, 4.8, 14, -10.82, 3.05, -2, wallMat); // 西墙
+    buildBox(group, 0.35, 4.8, 14, 10.82, 3.05, -2, wallMat);  // 东墙
+    buildBox(group, 22, 4.8, 0.35, 0, 3.05, -9.82, wallMat);   // 北墙
     // 南墙（大门开口）：左墙 + 右墙 + 门上横墙
-    buildBox(group, 9, 3.8, 0.35, -6.5, 2.55, 5.82, wallMat);
-    buildBox(group, 9, 3.8, 0.35, 6.5, 2.55, 5.82, wallMat);
-    buildBox(group, 4, 1.0, 0.35, 0, 4.05, 5.82, wallMat);
+    buildBox(group, 9, 4.8, 0.35, -6.5, 3.05, 5.82, wallMat);
+    buildBox(group, 9, 4.8, 0.35, 6.5, 3.05, 5.82, wallMat);
+    buildBox(group, 4, 1.45, 0.35, 0, 4.725, 5.82, wallMat);
 
-    // 一层立柱（红柱，正门廊）
-    var colGeo = new _g.CylinderGeometry(0.18, 0.22, 3.9, 10);
+    // 一层立柱（红柱，正门廊）——高度随墙身一起加高
+    var colGeo = new _g.CylinderGeometry(0.18, 0.22, 4.9, 10);
     var colMat = mat(0x9c3a2c, { roughness: 0.55 });
     [-6.8, -2.6, 2.6, 6.8].forEach(function (x) {
       var col = new _g.Mesh(colGeo, colMat);
@@ -781,40 +838,42 @@ window.MuseumScene = (function () {
       obstacles.push({ type: "circle", x: x, z: 7.0, r: 0.4 });
     });
 
-    // 二层外观（不可进入，纯外观）
-    buildBox(group, 20.4, 2.6, 12.4, 0, 6.0, -2, wallMat);
-    // 二层窗户：原坐标落在 z=-3.9 / -0.1，位于实心二层体内部（20.4×2.6×12.4 的 z 跨度 -8.2~4.2），
-    // 等于被埋进墙里——从广场看二层就是一面白板。现贴到南北立面外侧，并改成木格花窗。
+    // 已去掉二楼：原二层体块（20.4×2.6×12.4）与 8 樘二层窗全部移除，
+    // 木格花窗下移到一层墙身上部（高侧窗），单层大殿的标准做法。
     var winMat = canvasMat(drawLattice(), { roughness: 0.55 });
-    [[-6.6, 4.28], [-2.2, 4.28], [2.2, 4.28], [6.6, 4.28],
-     [-6.6, -8.28], [-2.2, -8.28], [2.2, -8.28], [6.6, -8.28]].forEach(function (p) {
-      buildBox(group, 2.5, 1.5, 0.16, p[0], 6.15, p[1], winMat);
+    // 北立面 4 樘高侧窗
+    [-6.6, -2.2, 2.2, 6.6].forEach(function (wx) {
+      buildBox(group, 2.5, 1.5, 0.16, wx, 4.4, -10.01, winMat);
     });
-    // 一层南立面（正门两侧）花窗
+    // 南立面门两侧各 1 樘（中间留给门洞与匾额）
+    [-6.6, 6.6].forEach(function (wx) {
+      buildBox(group, 2.5, 1.5, 0.16, wx, 4.4, 6.01, winMat);
+    });
+    // 南立面门两侧下部花窗
     [-6.2, 6.2].forEach(function (wx) {
       buildBox(group, 2.2, 1.8, 0.16, wx, 2.6, 6.01, winMat);
     });
 
     // 挑檐 + 四坡屋顶（瓦面 / 飞檐翘角 / 正脊 / 鸱吻）
-    buildRoof(group, { x: 0, z: -2, y: 7.25, w: 24.4, d: 16.2, h: 3.5, eave: 1.5, ridge: 8.0 });
+    buildRoof(group, { x: 0, z: -2, y: 5.65, w: 24.4, d: 16.2, h: 3.5, eave: 1.5, ridge: 8.0 });
 
     // 门楣 + 匾额（正门上方）
     // 原实现：匾额平面在 z=5.9，正好落在南墙墙身（5.645~5.995）内部，等于埋进墙体，
     // 看着像一张贴在墙上的纸。现外移出墙面，并加木框、门楣与檐下灯笼。
-    buildBox(group, 5.4, 0.24, 0.5, 0, 4.98, 6.03, mat(0x6d5544, { roughness: 0.7 }));
+    buildBox(group, 5.4, 0.24, 0.5, 0, 5.15, 6.03, mat(0x6d5544, { roughness: 0.7 }));
     var plaqueFrame = new _g.Mesh(new _g.BoxGeometry(3.9, 1.34, 0.18), mat(0x8a6a45, { roughness: 0.55, metalness: 0.15 }));
-    plaqueFrame.position.set(0, 4.34, 6.02);
+    plaqueFrame.position.set(0, 4.5, 6.02);
     plaqueFrame.castShadow = true;
     group.add(plaqueFrame);
     var plaque = new _g.Mesh(
       new _g.PlaneGeometry(3.4, 0.95),
       canvasMat(drawPlaque("云墨美术馆"), { side: _g.DoubleSide })
     );
-    plaque.position.set(0, 4.34, 6.12);
+    plaque.position.set(0, 4.5, 6.12);
     group.add(plaque);
     // 檐下灯笼一对
-    buildLantern(group, -3.0, 6.5, 6.6, 0.95);
-    buildLantern(group, 3.0, 6.5, 6.6, 0.95);
+    buildLantern(group, -3.0, 4.85, 6.6, 0.95);
+    buildLantern(group, 3.0, 4.85, 6.6, 0.95);
 
     /* ---------- 室内一层（中国绘画厅） ---------- */
     // 室内地面（木地板）
