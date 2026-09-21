@@ -97,7 +97,15 @@ npm run dev
 git config core.hooksPath .githooks
 ```
 
-> 装好后直接 `git push origin main` 会被拦下来，这是**故意设计的**。
+> 装好后会启用三道守卫，都是**故意设计的**，在提交/推送那一刻就拦：
+>
+> | 守卫 | 拦什么 |
+> |---|---|
+> | `pre-commit` | 在 `main` 上直接提交；提交 `.env` / `node_modules` / `dist` / `.idea`；单个文件 > 5MB |
+> | `commit-msg` | 提交信息不符合 `类型(模块): 一句话` 格式 |
+> | `pre-push` | 直接 push 到 `main` |
+>
+> 确实需要绕过某一次：`git commit --no-verify` / `git push --no-verify`。合并提交（`git merge`）会自动放行，所以组长能正常把 PR 合进 `main`。
 
 **7. 为第一个子任务开分支**
 

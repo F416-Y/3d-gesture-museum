@@ -1,0 +1,41 @@
+#!/bin/sh
+# ============================================================
+# 云墨美术馆 · 提交信息校验（commit-msg）
+# 格式：<类型>(<模块>): 一句话
+# 类型：feat / fix / style / docs / asset / chore / ci / test / refactor
+# 放行：合并提交、Revert、变基用的 fixup!/squash!
+# 绕过：git commit --no-verify
+# ============================================================
+
+msgfile="$1"
+first=$(head -n 1 "$msgfile" | tr -d '\r')
+
+if [ -z "$first" ]; then
+  echo ""
+  echo "  x 提交信息为空。格式：类型(模块): 一句话"
+  echo ""
+  exit 1
+fi
+
+case "$first" in
+  Merge*|Revert*|fixup!*|squash!*) exit 0 ;;
+esac
+
+if echo "$first" | grep -Eq '^(feat|fix|style|docs|asset|chore|ci|test|refactor)(\([a-zA-Z0-9_-]+\))?: .+'; then
+  exit 0
+fi
+
+echo ""
+echo "  x 提交信息格式不对（正确格式：类型(模块): 一句话）"
+echo ""
+echo "    你写的：$first"
+echo ""
+echo "    合法类型：feat fix style docs asset chore ci test refactor"
+echo "    例子："
+echo "      feat(scene): 登记前庭与围墙的碰撞体"
+echo "      fix(player): 撞墙后不再穿模"
+echo "      docs: 补充素材来源与授权说明"
+echo ""
+echo "    确实要绕过这一次：git commit --no-verify"
+echo ""
+exit 1

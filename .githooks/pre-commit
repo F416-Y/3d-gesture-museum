@@ -1,0 +1,67 @@
+#!/bin/sh
+# ============================================================
+# 云墨美术馆 · 提交守卫（pre-commit）
+# 归属：组长（组员7）
+# 作用：在「提交」那一刻就挡住三类最常见的坑——
+#   1. 直接在 main 上改代码（应该新开 feature/<模块>-<子任务>-<序号>）
+#   2. 把不该进仓库的东西提交进去（.env / node_modules / dist / .idea）
+#   3. 提交超过 5MB 的大文件（应先压缩，或启用 Git LFS）
+# 合并提交（git merge）放行，否则组长无法把 PR 合进 main。
+# 确实需要绕过时：git commit --no-verify
+# ============================================================
+
+gitdir=$(git rev-parse --git-dir)
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+fail=0
+
+# ---------- 1. 不许在 main 上直接提交 ----------
+if [ "$branch" = "main" ] && [ ! -f "$gitdir/MERGE_HEAD" ]; then
+  echo ""
+  echo "  x 已阻止：不允许在 main 上直接提交"
+  echo ""
+  echo "    main 是唯一主线，只接受 PR 合并。正确做法："
+  echo "      git switch -c feature/<模块>-<子任务>-<你的序号>    # 改动会跟着过去"
+  echo "      git add -A && git commit -m \"feat(scene): ...\""
+  echo ""
+  echo "    分支名对照表见 docs/组员上手指南.md 第 2.3 节。"
+  echo ""
+  fail=1
+fi
+
+# ---------- 2. 不该提交的文件 ----------
+for f in $staged; do
+  case "$f" in
+    .env|.env.local|node_modules/*|dist/*|.idea/*|.vscode/*|*.log|*.bak)
+      echo ""
+      echo "  x 已阻止：不该提交的文件 -> $f"
+      echo "    凭证类文件只留在本地；构建产物与依赖不该入库。"
+      echo ""
+      fail=1
+      ;;
+  esac
+done
+
+# ---------- 3. 大文件 ----------
+for f in $staged; do
+  if [ -f "$f" ]; then
+    size=$(wc -c < "$f" | tr -d ' ')
+    if [ "$size" -gt 5242880 ]; then
+      echo ""
+      echo "  x 已阻止：$f 有 $((size / 1048576))MB，超过 5MB 上限"
+      echo "    先压缩（贴图长边 <=2048px、JPG 质量 80；模型 <=5MB），或启用 Git LFS。"
+      echo "    详见 docs/Git-快速上手.md「素材大小约定」。"
+      echo ""
+      fail=1
+    fi
+  fi
+done
+
+if [ "$fail" != "0" ]; then
+  echo "  若确实需要绕过这一次：git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+exit 0
