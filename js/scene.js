@@ -1,6 +1,7 @@
 /* ============================================================
  * scene.js —— 园区 · 建筑 · 展厅 · 灯光
- * 归属：组员1（3D 场景主程）
+ * 归属：组长 —— 外观（园区 / 建筑 / 连廊 / 材质 / 灯光）
+ *       组员1 —— 接缝（碰撞体 / 展品热点 / 展厅区域 / 性能）
  * ------------------------------------------------------------
  * 职责：
  *   1. 搭建「云墨美术馆」园区：地面、草坪、道路、围墙、门柱、行道树
@@ -296,6 +297,79 @@ window.MuseumScene = (function () {
     return cv.canvas;
   }
 
+  /* ---------- 外观专用：程序化材质贴图（组长补） ---------- */
+
+  /* 筒瓦纹理（屋顶坡面，组员6 换真实瓦贴图时替换这里即可） */
+  function drawTile() {
+    var cv = makeCanvas(256, 256);
+    var ctx = cv.ctx;
+    ctx.fillStyle = "#484139";
+    fillRect(ctx, 0, 0, 256, 256);
+    for (var x = 0; x < 256; x += 16) {
+      var lg = ctx.createLinearGradient(x, 0, x + 16, 0);
+      lg.addColorStop(0, "rgba(0,0,0,0.44)");
+      lg.addColorStop(0.42, "rgba(255,246,232,0.12)");
+      lg.addColorStop(0.58, "rgba(255,246,232,0.06)");
+      lg.addColorStop(1, "rgba(0,0,0,0.44)");
+      ctx.fillStyle = lg;
+      fillRect(ctx, x, 0, 16, 256);
+    }
+    ctx.strokeStyle = "rgba(0,0,0,0.28)";
+    ctx.lineWidth = 2;
+    for (var y = 10; y < 256; y += 26) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+    }
+    return cv.canvas;
+  }
+
+  /* 灰砖墙纹理（围墙 / 院墙） */
+  function drawBrick() {
+    var cv = makeCanvas(256, 256);
+    var ctx = cv.ctx;
+    ctx.fillStyle = "#8e8878";
+    fillRect(ctx, 0, 0, 256, 256);
+    var bw = 62, bh = 24, gap = 4;
+    for (var row = 0, y = 0; y < 256; y += bh + gap, row++) {
+      var offset = row % 2 ? -(bw + gap) / 2 : 0;
+      for (var x = offset; x < 256 + bw; x += bw + gap) {
+        var s = 196 + Math.floor(Math.random() * 26);
+        ctx.fillStyle = "rgb(" + s + "," + (s - 5) + "," + (s - 20) + ")";
+        fillRect(ctx, x, y, bw, bh);
+        ctx.fillStyle = "rgba(90,80,66,0.12)";
+        fillRect(ctx, x, y + bh - 3, bw, 3);
+      }
+    }
+    return cv.canvas;
+  }
+
+  /* 木格花窗（新中式视觉关键元素，替换原来纯黑窗洞） */
+  function drawLattice() {
+    var cv = makeCanvas(256, 320);
+    var ctx = cv.ctx;
+    ctx.fillStyle = "#17140f";
+    fillRect(ctx, 0, 0, 256, 320);
+    var warm = ctx.createRadialGradient(128, 150, 16, 128, 150, 190);
+    warm.addColorStop(0, "rgba(255,214,150,0.42)");
+    warm.addColorStop(1, "rgba(255,214,150,0.02)");
+    ctx.fillStyle = warm;
+    fillRect(ctx, 0, 0, 256, 320);
+    ctx.strokeStyle = "#7a5f46";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, 248, 312);
+    ctx.lineWidth = 5;
+    for (var i = 1; i <= 3; i++) {
+      ctx.beginPath(); ctx.moveTo(i * 64, 0); ctx.lineTo(i * 64, 320); ctx.stroke();
+    }
+    for (var j = 1; j <= 4; j++) {
+      ctx.beginPath(); ctx.moveTo(0, j * 64); ctx.lineTo(256, j * 64); ctx.stroke();
+    }
+    ctx.strokeStyle = "#8d6c4e";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(256, 320); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(256, 0); ctx.lineTo(0, 320); ctx.stroke();
+    return cv.canvas;
+  }
+
   /* ============================================================
    * 材质工厂（新中式色板）
    * ============================================================ */
@@ -325,6 +399,134 @@ window.MuseumScene = (function () {
   /* ============================================================
    * 组件：园区
    * ============================================================ */
+  /* ============================================================
+   * 新中式屋顶：四坡瓦面 + 檐口 + 飞檐翘角 + 正脊 + 鸱吻
+   * 原实现用 CylinderGeometry(…, 4) 拼方锥：没有出檐、没有翘角，
+   * 而且屋顶面阔还小于墙身，从广场看楼体边缘是露出来的。
+   * opt: { x, z, y(檐口下沿), w(世界 x 向面阔), d(世界 z 向进深),
+   *        h(举高), eave(出檐), ridge(正脊长), axis('x'|'z'，正脊走向) }
+   * ============================================================ */
+  function buildRoof(parent, opt) {
+    var g = new _g.Group();
+    var w = opt.w, d = opt.d;
+    var rotY = 0;
+    if (opt.axis === "z") {
+      rotY = Math.PI / 2;
+      var swap = w; w = d; d = swap;
+    }
+    var a = w / 2, b = d / 2, h = opt.h;
+    var c = Math.max(0.001, (opt.ridge === undefined ? w - d : opt.ridge) / 2);
+    var eave = opt.eave === undefined ? 1.5 : opt.eave;
+
+    // 檐口板：悬出墙身，同时遮住屋顶与墙之间的缝
+    buildBox(g, w + eave * 2, 0.3, d + eave * 2, 0, 0.15, 0, mat(0x4b423a, { roughness: 0.9 }));
+
+    // 坡面：手写四边形，保证是「矩形四坡顶」而不是方锥
+    var A = [-a, 0.3, -b], B = [a, 0.3, -b], C = [a, 0.3, b], D = [-a, 0.3, b];
+    var P = [-c, 0.3 + h, 0], Q = [c, 0.3 + h, 0];
+    var tris = [
+      A, B, Q, A, Q, P,   // 北坡
+      D, C, P, C, Q, P,   // 南坡
+      B, Q, C,            // 东坡
+      P, A, D,            // 西坡
+    ];
+    var pos = [], uv = [];
+    for (var i = 0; i < tris.length; i++) {
+      var v = tris[i];
+      pos.push(v[0], v[1], v[2]);
+      uv.push((v[0] + a) / (2 * a), (v[2] + b) / (2 * b));
+    }
+    var geo = new _g.BufferGeometry();
+    geo.setAttribute("position", new _g.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new _g.Float32BufferAttribute(uv, 2));
+    geo.computeVertexNormals();
+
+    var tileTex = new _g.CanvasTexture(drawTile());
+    tileTex.encoding = _g.sRGBEncoding;
+    tileTex.wrapS = tileTex.wrapT = _g.RepeatWrapping;
+    tileTex.repeat.set(3, 1.6);
+    var roofMesh = new _g.Mesh(geo, new _g.MeshStandardMaterial({
+      map: tileTex, roughness: 0.72, metalness: 0.05, side: _g.DoubleSide,
+    }));
+    roofMesh.castShadow = true;
+    roofMesh.receiveShadow = true;
+    g.add(roofMesh);
+
+    // 正脊 + 两端鸱吻
+    buildBox(g, c * 2 + 0.5, 0.34, 0.4, 0, 0.42 + h, 0, mat(0x39332d, { roughness: 0.85 }));
+    [-1, 1].forEach(function (s) {
+      var kiss = new _g.Mesh(new _g.BoxGeometry(0.3, 0.62, 0.3), mat(0x39332d, { roughness: 0.85 }));
+      kiss.position.set(s * (c + 0.18), 0.72 + h, 0);
+      kiss.rotation.z = -s * 0.22;
+      kiss.castShadow = true;
+      g.add(kiss);
+    });
+
+    // 飞檐翘角：四角向外挑出并上扬，新中式屋顶的辨识点
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (corner) {
+      var tip = new _g.Group();
+      tip.position.set(corner[0] * a, 0.32, corner[1] * b);
+      tip.rotation.y = Math.atan2(-corner[1], corner[0]);
+      var wing = new _g.Mesh(new _g.BoxGeometry(eave + 0.9, 0.22, 0.5), mat(0x453d35, { roughness: 0.85 }));
+      wing.position.set((eave + 0.9) / 2 - 0.25, 0.06, 0);
+      wing.rotation.z = 0.3;
+      wing.castShadow = true;
+      tip.add(wing);
+      var finial = new _g.Mesh(new _g.SphereGeometry(0.17, 10, 8), mat(0x8a6a45, { roughness: 0.6, metalness: 0.25 }));
+      finial.position.set(eave + 0.5, 0.42, 0);
+      tip.add(finial);
+      g.add(tip);
+    });
+
+    g.position.set(opt.x || 0, opt.y || 0, opt.z || 0);
+    g.rotation.y = rotY;
+    parent.add(g);
+    return g;
+  }
+
+  /* 檐下灯笼（自带微弱自发光，暖色点缀） */
+  function buildLantern(parent, x, y, z, scale) {
+    var g = new _g.Group();
+    var cord = new _g.Mesh(new _g.CylinderGeometry(0.02, 0.02, 0.8, 6), mat(0x2b2721));
+    cord.position.y = 0.4;
+    g.add(cord);
+    var body = new _g.Mesh(
+      new _g.SphereGeometry(0.34, 14, 12),
+      new _g.MeshStandardMaterial({
+        color: 0xc4342a, emissive: 0xff8a3c, emissiveIntensity: 0.55, roughness: 0.6,
+      })
+    );
+    body.scale.set(1, 0.82, 1);
+    g.add(body);
+    var cap = new _g.Mesh(new _g.CylinderGeometry(0.13, 0.13, 0.06, 10), mat(0x8a6a45, { metalness: 0.3, roughness: 0.5 }));
+    cap.position.y = 0.28;
+    g.add(cap);
+    var tassel = new _g.Mesh(new _g.CylinderGeometry(0.03, 0.01, 0.26, 6), mat(0xc9a37a));
+    tassel.position.y = -0.34;
+    g.add(tassel);
+    g.scale.setScalar(scale || 1);
+    g.position.set(x, y, z);
+    parent.add(g);
+    return g;
+  }
+
+  /* 连廊美人靠（扶手 + 坐板 + 望柱 + 横枨），带 floorY 以适配抬高 0.73 的廊面 */
+  function buildRailing(parent, x, z0, z1, side, floorY) {
+    var g = new _g.Group();
+    var wood = mat(0x7a3b2e, { roughness: 0.7 });
+    var len = Math.abs(z1 - z0);
+    var cz = (z0 + z1) / 2;
+    buildBox(g, 0.16, 0.14, len, x, floorY + 1.05, cz, wood);
+    buildBox(g, 0.46, 0.1, len, x + side * 0.18, floorY + 0.6, cz, mat(0x6d5544, { roughness: 0.75 }));
+    buildBox(g, 0.09, 0.09, len, x, floorY + 0.84, cz, wood);
+    var n = Math.max(2, Math.round(len / 1.7));
+    for (var i = 0; i <= n; i++) {
+      var z = cz + (len / 2) * (i / n * 2 - 1);
+      buildBox(g, 0.13, 1.05, 0.13, x, floorY + 0.525, z, wood);
+    }
+    parent.add(g);
+    return g;
+  }
   function buildPlaza(root) {
     // 地面（石板米白）
     var ground = new _g.Mesh(new _g.PlaneGeometry(90, 90), mat(0xd8d2c4, { roughness: 0.95 }));
@@ -365,10 +567,11 @@ window.MuseumScene = (function () {
     var beam = new _g.Mesh(new _g.BoxGeometry(11.6, 0.6, 0.8), mat(0x6d5544, { roughness: 0.7 }));
     beam.position.set(0, 3.7, 42.2);
     root.add(beam);
-    var gateRoof = new _g.Mesh(new _g.CylinderGeometry(6.2, 6.8, 0.5, 4), mat(0x3f3a35, { roughness: 0.8 }));
-    gateRoof.rotation.y = Math.PI / 4;
-    gateRoof.position.set(0, 4.15, 42.2);
-    root.add(gateRoof);
+    // 门楼屋顶：原为一块扁平四棱台，现改为瓦面四坡顶 + 飞檐翘角
+    buildRoof(root, { x: 0, z: 42.2, y: 3.95, w: 12.6, d: 2.8, h: 1.2, eave: 1.0, ridge: 8.0 });
+    // 檐下灯笼一对
+    buildLantern(root, -3.6, 2.95, 42.2, 1);
+    buildLantern(root, 3.6, 2.95, 42.2, 1);
 
     // 行道树（道路两侧）
     for (var i = 0; i < 4; i++) {
@@ -387,10 +590,16 @@ window.MuseumScene = (function () {
   }
 
   function buildWall(root, cx, cz, len, rotY) {
-    var wall = new _g.Mesh(new _g.BoxGeometry(len, 2.1, 0.4), mat(0xd0c8b6, { roughness: 0.9 }));
+    var wall = new _g.Mesh(new _g.BoxGeometry(len, 2.1, 0.4), canvasMat(drawBrick(), { roughness: 0.95 }));
     wall.position.set(cx, 1.05, cz);
     wall.rotation.y = rotY;
     root.add(wall);
+    // 墙帽（压顶瓦）：原来围墙是一整块光板，缺收头
+    var cap = new _g.Mesh(new _g.BoxGeometry(len, 0.22, 0.72), mat(0x4b423a, { roughness: 0.85 }));
+    cap.position.set(cx, 2.21, cz);
+    cap.rotation.y = rotY;
+    cap.castShadow = true;
+    root.add(cap);
     if (Math.abs(rotY) < 0.01) {
       // 横向墙（南北）：z 固定，阻挡 x 轴活动
       obstacles.push({ type: "rect", x0: cx - len / 2, z0: cz - 0.4, x1: cx + len / 2, z1: cz + 0.4 });
@@ -403,9 +612,13 @@ window.MuseumScene = (function () {
   function buildWallWithGap(root) {
     var half = 41.5;
     [-1, 1].forEach(function (side) {
-      var wall = new _g.Mesh(new _g.BoxGeometry(half, 2.1, 0.4), mat(0xd0c8b6, { roughness: 0.9 }));
+      var wall = new _g.Mesh(new _g.BoxGeometry(half, 2.1, 0.4), canvasMat(drawBrick(), { roughness: 0.95 }));
       wall.position.set(side * (half / 2 + 4.6), 1.05, 44);
       root.add(wall);
+      var cap2 = new _g.Mesh(new _g.BoxGeometry(half, 0.22, 0.72), mat(0x4b423a, { roughness: 0.85 }));
+      cap2.position.set(side * (half / 2 + 4.6), 2.21, 44);
+      cap2.castShadow = true;
+      root.add(cap2);
       // 南墙左右段碰撞（中间 ±4.6 留门洞）
       obstacles.push({
         type: "rect",
@@ -469,27 +682,38 @@ window.MuseumScene = (function () {
 
     // 二层外观（不可进入，纯外观）
     buildBox(group, 20.4, 2.6, 12.4, 0, 6.0, -2, wallMat);
-    // 二层窗户
-    var winMat = mat(0x2c2a26, { roughness: 0.4 });
-    [[-5, 6.2, -3.9], [5, 6.2, -3.9], [-5, 6.2, -0.1], [5, 6.2, -0.1]].forEach(function (p) {
-      buildBox(group, 2.6, 1.5, 0.12, p[0], p[1], p[2], winMat);
+    // 二层窗户：原坐标落在 z=-3.9 / -0.1，位于实心二层体内部（20.4×2.6×12.4 的 z 跨度 -8.2~4.2），
+    // 等于被埋进墙里——从广场看二层就是一面白板。现贴到南北立面外侧，并改成木格花窗。
+    var winMat = canvasMat(drawLattice(), { roughness: 0.55 });
+    [[-6.6, 4.28], [-2.2, 4.28], [2.2, 4.28], [6.6, 4.28],
+     [-6.6, -8.28], [-2.2, -8.28], [2.2, -8.28], [6.6, -8.28]].forEach(function (p) {
+      buildBox(group, 2.5, 1.5, 0.16, p[0], 6.15, p[1], winMat);
+    });
+    // 一层南立面（正门两侧）花窗
+    [-6.2, 6.2].forEach(function (wx) {
+      buildBox(group, 2.2, 1.8, 0.16, wx, 2.6, 6.01, winMat);
     });
 
-    // 挑檐 + 四坡屋顶
-    buildBox(group, 23.4, 0.28, 15.4, 0, 7.25, -2, mat(0x3f3a35, { roughness: 0.8 }));
-    var roof = new _g.Mesh(new _g.CylinderGeometry(4.4, 14.2, 2.6, 4), mat(0x3f3a35, { roughness: 0.8 }));
-    roof.rotation.y = Math.PI / 4;
-    roof.position.set(0, 8.75, -2);
-    roof.castShadow = true;
-    group.add(roof);
+    // 挑檐 + 四坡屋顶（瓦面 / 飞檐翘角 / 正脊 / 鸱吻）
+    buildRoof(group, { x: 0, z: -2, y: 7.25, w: 24.4, d: 16.2, h: 3.5, eave: 1.5, ridge: 8.0 });
 
-    // 匾额（正门上方）
+    // 门楣 + 匾额（正门上方）
+    // 原实现：匾额平面在 z=5.9，正好落在南墙墙身（5.645~5.995）内部，等于埋进墙体，
+    // 看着像一张贴在墙上的纸。现外移出墙面，并加木框、门楣与檐下灯笼。
+    buildBox(group, 5.4, 0.24, 0.5, 0, 4.98, 6.03, mat(0x6d5544, { roughness: 0.7 }));
+    var plaqueFrame = new _g.Mesh(new _g.BoxGeometry(3.9, 1.34, 0.18), mat(0x8a6a45, { roughness: 0.55, metalness: 0.15 }));
+    plaqueFrame.position.set(0, 4.34, 6.02);
+    plaqueFrame.castShadow = true;
+    group.add(plaqueFrame);
     var plaque = new _g.Mesh(
-      new _g.PlaneGeometry(3.6, 1.0),
+      new _g.PlaneGeometry(3.4, 0.95),
       canvasMat(drawPlaque("云墨美术馆"), { side: _g.DoubleSide })
     );
-    plaque.position.set(0, 4.28, 5.9);
+    plaque.position.set(0, 4.34, 6.12);
     group.add(plaque);
+    // 檐下灯笼一对
+    buildLantern(group, -3.0, 6.5, 6.6, 0.95);
+    buildLantern(group, 3.0, 6.5, 6.6, 0.95);
 
     /* ---------- 室内一层（中国绘画厅） ---------- */
     // 室内地面（木地板）
@@ -509,18 +733,30 @@ window.MuseumScene = (function () {
     addPainting(group, { x: 0, y: 2.55, z: -9.35, ry: 0 }, 3.4, 2.2, "qianlijiangshan");            // 北墙·千里江山
     addPainting(group, { x: -5.6, y: 2.55, z: -9.35, ry: 0 }, 2.2, 1.5, "fuchunshanjv");          // 北墙·富春山居
     addPainting(group, { x: 5.6, y: 2.55, z: -9.35, ry: 0 }, 2.2, 1.5, "qingmingshanghe");        // 北墙·清明上河
-    addPainting(group, { x: -10.35, y: 2.55, z: -4.5, ry: -Math.PI / 2 }, 2.2, 1.5, "hanxizai");    // 西墙·韩熙载
-    addPainting(group, { x: -10.35, y: 2.55, z: 0.8, ry: -Math.PI / 2 }, 2.2, 1.5, "luoshenfu");    // 西墙·洛神赋
+    // 西墙两幅：原 ry=-π/2 使画面法线朝向西墙内部（背对观众、画面镜像），
+    // 改为朝东（室内）并给射灯一组朝室内的偏移
+    addPainting(group, { x: -10.35, y: 2.55, z: -4.5, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.2, 1.5, "hanxizai");    // 西墙·韩熙载
+    addPainting(group, { x: -10.35, y: 2.55, z: 0.8, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.2, 1.5, "luoshenfu");    // 西墙·洛神赋
 
-    // 室内照明
-    var light1 = new _g.PointLight(0xffe6c4, 0.85, 26, 2);
-    light1.position.set(0, 4.2, -2);
+    // 顶棚梁格（藻井感）：原来一层顶板是一整块素面
+    var beamXs = [-9, -3, 3, 9];
+    for (var bi = 0; bi < beamXs.length; bi++) {
+      buildBox(group, 0.32, 0.32, 13.4, beamXs[bi], 4.34, -2, mat(0xd9d2c4, { roughness: 0.85 }));
+    }
+    var beamZs = [-8.5, -4.2, 0.1, 4.4];
+    for (var bj = 0; bj < beamZs.length; bj++) {
+      buildBox(group, 21.4, 0.32, 0.32, 0, 4.34, beamZs[bj], mat(0xd9d2c4, { roughness: 0.85 }));
+    }
+
+    // 室内照明：主灯压中轴，两盏偏暖洗墙灯，拉开明暗层次
+    var light1 = new _g.PointLight(0xffe6c4, 0.7, 24, 2);
+    light1.position.set(0, 4.0, -2);
     group.add(light1);
-    var light2 = new _g.PointLight(0xffe6c4, 0.5, 18, 2);
-    light2.position.set(-6, 4.0, -6);
+    var light2 = new _g.PointLight(0xffd9a8, 0.45, 16, 2);
+    light2.position.set(-6, 3.6, -6);
     group.add(light2);
-    var light3 = new _g.PointLight(0xffe6c4, 0.5, 18, 2);
-    light3.position.set(6, 4.0, -6);
+    var light3 = new _g.PointLight(0xffd9a8, 0.45, 16, 2);
+    light3.position.set(6, 3.6, -6);
     group.add(light3);
 
     /* ---------- 西侧连廊（文明对话厅 · 二楼展品移此，可到达） ---------- */
@@ -638,12 +874,23 @@ window.MuseumScene = (function () {
     addFrameBox(parent, t, h + t * 2, w + t * 2, pos.x, pos.y, pos.z - 0.02, pos.ry, frameMat);
 
     // 说明牌（画下）
-    addSign(parent, pos.x, pos.y - h / 2 - 0.75, pos.z, ex.title + " · " + ex.dynasty);
+    addSign(parent, pos.x, pos.y - h / 2 - 0.4, pos.z, ex.title + " · " + ex.dynasty);
 
-    // 射灯
-    var spot = new _g.SpotLight(0xffe9c9, 0.55, 9, Math.PI / 6, 0.5, 1.6);
-    spot.position.set(pos.x, pos.y + h / 2 + 1.0, pos.z);
+    // 射灯：必须显式设置 target 并把 target 加入场景图。
+    // three.js 的 SpotLight 不设 target 时会一直照向世界原点 (0,0,0)——
+    // 上一版每幅画都挂了射灯，但实际没有一盏照在画上。
+    // lamp：灯具相对画面的水平偏移（默认 [0, 0.9]，即朝展厅内侧）
+    var lampDx = pos.lamp ? pos.lamp[0] : 0;
+    var lampDz = pos.lamp ? pos.lamp[1] : 0.9;
+    var lampY = pos.y + h / 2 + 1.0;
+    var spot = new _g.SpotLight(0xffe9c9, 0.95, 10, Math.PI / 7, 0.55, 1.4);
+    spot.position.set(pos.x + lampDx, lampY, pos.z + lampDz);
+    spot.target.position.set(pos.x, pos.y, pos.z);
     parent.add(spot);
+    parent.add(spot.target);
+    var fixture = new _g.Mesh(new _g.CylinderGeometry(0.1, 0.06, 0.28, 10), mat(0x2f2b26, { roughness: 0.5, metalness: 0.3 }));
+    fixture.position.set(pos.x + lampDx, lampY, pos.z + lampDz);
+    parent.add(fixture);
 
     registerSpot({ exhibitId: exhibitId, x: pos.x, y: pos.y, z: pos.z, radius: 2.8 });
   }
@@ -693,16 +940,26 @@ window.MuseumScene = (function () {
     }
     // 内侧为博物馆西墙，外侧立柱 + 顶
 
-    // 顶
-    buildBox(g, 5.0, 0.25, 15.2, -14.5, 4.15, -2, mat(0x3f3a35, { roughness: 0.8 }));
-    var roof = new _g.Mesh(new _g.CylinderGeometry(2.0, 3.4, 1.1, 4), mat(0x3f3a35, { roughness: 0.8 }));
-    roof.rotation.y = Math.PI / 4;
-    roof.position.set(-14.5, 4.95, -2);
-    g.add(roof);
+    // 廊顶：改为瓦面四坡顶 + 飞檐，与主楼同一套语汇（正脊顺走廊方向）
+    buildRoof(g, { x: -14.5, z: -2, y: 4.15, w: 5.0, d: 15.2, h: 1.35, eave: 0.9, ridge: 12.0, axis: "z" });
 
-    // 西墙挂画（蒙娜丽莎、星月夜 → 文明对话厅）
-    addPainting(g, { x: -12.3, y: 2.35, z: -4.5, ry: Math.PI / 2 }, 2.4, 1.6, "monalisa");
-    addPainting(g, { x: -12.3, y: 2.35, z: 0.6, ry: Math.PI / 2 }, 2.4, 1.6, "starrynight");
+    // 美人靠栏杆（沿外侧柱列，坐面高出廊面 0.6）
+    buildRailing(g, -16.8, -7.4, 3.6, 1, 0.73);
+
+    // 展墙：原来这两幅画悬在半空、背后没有墙，画背朝着参观者。
+    // 现沿走廊内侧立一道展墙，画挂在墙上、法线朝西面向走廊。
+    var galleryWall = new _g.Mesh(new _g.BoxGeometry(0.3, 3.5, 15.2), mat(0xefe9dc, { roughness: 0.9 }));
+    galleryWall.position.set(-12.35, 2.48, -2);
+    galleryWall.castShadow = true;
+    galleryWall.receiveShadow = true;
+    g.add(galleryWall);
+    buildBox(g, 0.46, 0.18, 15.2, -12.35, 4.23, -2, mat(0x6d5544, { roughness: 0.75 }));
+    // 新增碰撞体：连廊展墙（组员1 复核用，坐标系与其它 obstacles 一致）
+    obstacles.push({ type: "rect", x0: -12.5, z0: -9.6, x1: -12.2, z1: 5.6 });
+
+    // 展墙挂画（蒙娜丽莎、星月夜 → 文明对话厅）
+    addPainting(g, { x: -12.62, y: 2.5, z: -4.5, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "monalisa");
+    addPainting(g, { x: -12.62, y: 2.5, z: 0.6, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "starrynight");
 
     // 廊内照明
     var light = new _g.PointLight(0xffe6c4, 0.7, 16, 2);
@@ -791,12 +1048,12 @@ window.MuseumScene = (function () {
       // 园区（plaza）
       buildPlaza(scene);
 
-      // 全场景光照
-      var ambient = new _g.AmbientLight(0xffffff, 0.42);
+      // 全场景光照：环境光压一档、天光提亮，明暗关系更清楚
+      var ambient = new _g.AmbientLight(0xffffff, 0.3);
       scene.add(ambient);
-      var hemi = new _g.HemisphereLight(0xfff4e0, 0x40352a, 0.55);
+      var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 0.62);
       scene.add(hemi);
-      var sun = new _g.DirectionalLight(0xfff0d8, 1.05);
+      var sun = new _g.DirectionalLight(0xfff0d8, 1.15);
       sun.position.set(14, 22, 18);
       sun.castShadow = true;
       sun.shadow.mapSize.width = 1024;
@@ -805,7 +1062,12 @@ window.MuseumScene = (function () {
       sun.shadow.camera.far = 60;
       scene.add(sun);
 
-      scene.fog = new _g.Fog(0xd9d4c8, 40, 110);
+      // 背光面补光（太阳在东南向，主楼北侧原为死黑）
+      var fill = new _g.DirectionalLight(0xdfe6f2, 0.3);
+      fill.position.set(-16, 14, -20);
+      scene.add(fill);
+
+      scene.fog = new _g.Fog(0xd9d4c8, 52, 135);
     },
 
     update: function () {

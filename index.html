@@ -15,7 +15,7 @@
   1. three.min.js      —— 3D 渲染核心（r147 UMD 全局 THREE）
   2. vision_bundle.js  —— MediaPipe 手部关键点识别（全局 FilesetResolver / HandLandmarker）
   3. js/config.js      —— 展品数据 + 全局配置（组员4 / 全体共用）
-  4. js/scene.js       —— 园区建筑与展厅场景（组员1）
+  4. js/scene.js       —— 园区建筑与展厅场景（组长·外观 / 组员1·接缝）
   5. js/player.js      —— 第一人称漫游与碰撞（组员2）
   6. js/gesture.js     —— 手势识别与手势映射（组员3）
   7. js/exhibit.js     —— 展品热点与鉴赏弹窗（组员4）
@@ -82,6 +82,9 @@
   <!-- ===== 提示条 ===== -->
   <div id="toast" class="toast"></div>
 
+    <!-- ===== Vue 应用挂载点（登录/收藏/展厅路由，src/ 下代码） ===== -->
+  <div id="app"></div>
+
   <!-- 第三方依赖：Three.js r147（UMD，SRI 锁定） -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js" integrity="sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C" crossorigin="anonymous"></script>
   <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（WASM 与 hand_landmarker.task 由代码运行时从官方 CDN 加载） -->
@@ -114,5 +117,7 @@
   <script src="./js/exhibit.js"></script>
   <script src="./js/ui.js"></script>
   <script src="./js/main.js"></script>
+  <!-- Vue 入口（Vite 模块，最后加载，不干扰上方引擎脚本） -->
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

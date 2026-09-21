@@ -1,0 +1,57 @@
+/* ===== Vue 壳样式（与 css/style.css 隔离，互不影响） ===== */
+
+/* 全屏覆盖页（登录/收藏）时隐藏 3D 场景 DOM */
+body.vue-overlay #stage,
+body.vue-overlay #topbar,
+body.vue-overlay #toolbar,
+body.vue-overlay #help,
+body.vue-overlay #camwrap,
+body.vue-overlay #toast { display: none !important; }
+
+body.vue-overlay { background: #f5f0e8; }
+
+/* 顶部右侧导航 */
+.vue-nav {
+  position: fixed; top: 14px; right: 16px; z-index: 60;
+  display: flex; gap: 14px; align-items: center;
+  font-size: 14px;
+}
+.vue-nav a { text-decoration: none; color: #5a4a3a; }
+.nav-halls { display: flex; gap: 4px; background: rgba(255,253,248,.88); border-radius: 8px; padding: 4px; box-shadow: 0 2px 10px rgba(60,40,20,.12); }
+.nav-halls a { padding: 6px 12px; border-radius: 6px; }
+.nav-halls a.router-link-active { background: #9e2b25; color: #fff; }
+.nav-user { display: flex; gap: 8px; align-items: center; background: rgba(255,253,248,.88); border-radius: 8px; padding: 6px 10px; box-shadow: 0 2px 10px rgba(60,40,20,.12); }
+.nav-name { color: #9e2b25; font-weight: 600; }
+.nav-btn { padding: 6px 12px; border: none; border-radius: 6px; background: #9e2b25; color: #fff !important; cursor: pointer; font-size: 14px; }
+.nav-btn:hover { background: #7d211d; }
+.nav-fav { padding: 6px 4px; }
+
+/* 覆盖页与卡片 */
+.overlay-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; }
+.card { width: 360px; max-width: 92vw; background: #fffdf8; border-radius: 12px; padding: 28px 28px 20px; box-shadow: 0 8px 30px rgba(60,40,20,.15); }
+.card-wide { width: 480px; }
+.card-title { margin: 0 0 16px; font-size: 20px; color: #3a2c22; }
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.tabs button { flex: 1; padding: 8px 0; border: 1px solid #d8cbb8; background: transparent; border-radius: 6px; cursor: pointer; color: #5a4a3a; }
+.tabs button.active { background: #9e2b25; border-color: #9e2b25; color: #fff; }
+.card form label { display: block; margin-bottom: 12px; font-size: 14px; color: #5a4a3a; }
+.card input { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 9px 10px; border: 1px solid #d8cbb8; border-radius: 6px; font-size: 14px; background: #fff; }
+.form-error { color: #b3261e; font-size: 13px; margin: 0 0 10px; }
+.submit { width: 100%; padding: 10px 0; border: none; border-radius: 6px; background: #9e2b25; color: #fff; font-size: 15px; cursor: pointer; }
+.submit:disabled { opacity: .6; cursor: default; }
+.back-link { display: inline-block; margin-top: 14px; font-size: 13px; color: #8a7a68 !important; }
+.empty { color: #8a7a68; font-size: 14px; }
+.empty a { color: #9e2b25; }
+
+/* 收藏列表 */
+.fav-list { list-style: none; margin: 0; padding: 0; }
+.fav-list li { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.fav-item { flex: 1; text-align: left; padding: 10px 12px; border: 1px solid #e6dccc; border-radius: 8px; background: #fff; cursor: pointer; }
+.fav-item:hover { border-color: #9e2b25; }
+.fav-item b { display: block; color: #3a2c22; }
+.fav-item span { font-size: 12px; color: #8a7a68; }
+.fav-remove { width: 30px; height: 30px; border: none; border-radius: 6px; background: #f0e8da; color: #9e2b25; font-size: 16px; cursor: pointer; }
+
+@media (max-width: 720px) {
+  .vue-nav { flex-direction: column; align-items: flex-end; gap: 6px; }
+}
