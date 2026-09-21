@@ -540,7 +540,7 @@ window.MuseumScene = (function () {
     var w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
 
     // 草地
-    var lawn = new _g.Mesh(new _g.PlaneGeometry(w, d), mat(0x6f7a56, { roughness: 1 }));
+    var lawn = new _g.Mesh(new _g.PlaneGeometry(w, d), mat(0x5f7043, { roughness: 1 }));
     lawn.rotation.x = -Math.PI / 2;
     lawn.position.set(cx, 0.02, cz);
     lawn.receiveShadow = true;
@@ -630,7 +630,7 @@ window.MuseumScene = (function () {
   }
   function buildPlaza(root) {
     // 地面（石板米白）
-    var ground = new _g.Mesh(new _g.PlaneGeometry(90, 90), mat(0xd8d2c4, { roughness: 0.95 }));
+    var ground = new _g.Mesh(new _g.PlaneGeometry(90, 90), mat(0xc9c2b1, { roughness: 0.95 }));
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     root.add(ground);
@@ -1150,11 +1150,11 @@ window.MuseumScene = (function () {
       buildPlaza(scene);
 
       // 全场景光照：环境光压一档、天光提亮，明暗关系更清楚
-      var ambient = new _g.AmbientLight(0xffffff, 0.3);
+      var ambient = new _g.AmbientLight(0xffffff, 0.45);
       scene.add(ambient);
-      var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 0.62);
+      var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 0.75);
       scene.add(hemi);
-      var sun = new _g.DirectionalLight(0xfff0d8, 1.15);
+      var sun = new _g.DirectionalLight(0xfff0d8, 1.6);
       sun.position.set(14, 22, 18);
       sun.castShadow = true;
       sun.shadow.mapSize.width = 1024;
