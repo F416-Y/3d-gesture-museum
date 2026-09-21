@@ -30,9 +30,17 @@ window.MuseumMain = (function () {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
+    // 色调映射：把超过 1.0 的高光压回来，避免地面/墙面一片死白（此前中轴道路会被曝成浅灰）
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     MuseumUI.getStage().appendChild(renderer.domElement);
+
+    // 颜色管理：r147 默认 legacy 模式会把十六进制颜色当线性值，再经 sRGB 输出被整体提亮
+    //（道路材质 rgb(87,81,74) 会被渲染成 rgb(200,195,185)，草坪绿也会褪成灰绿）。
+    // 关闭 legacy 模式后，代码里写的色板 hex 才会按 sRGB 正确解释。
+    if (THREE.ColorManagement) THREE.ColorManagement.legacyMode = false;
 
     // 场景与相机
     scene = new THREE.Scene();
