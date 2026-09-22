@@ -136,13 +136,38 @@ window.MuseumGesture = (function () {
         console.log("[云墨美术馆] 已选中的摄像头：", track.label || "(无设备名)");
       }
       setTimeout(function () {
-        var hasFrame = video && video.readyState >= 2 && video.videoWidth > 0;
-        if (hasFrame || !video.srcObject) return;
-        console.warn(
-          "[云墨美术馆] 摄像头已授权但无画面：浏览器没拿到视频帧",
-          track && track.label ? "（设备：" + track.label + "）。" : "。",
-          "常见于内置容器或虚拟摄像头；请在 Chrome / Edge 打开，或用系统相机验证设备",
-        );
+        if (!video.srcObject) return;
+        var hasFrame = video.readyState >= 2 && video.videoWidth > 0;
+        if (!hasFrame) {
+          console.warn(
+            "[云墨美术馆] 摄像头已授权但无画面：浏览器没拿到视频帧",
+            track && track.label ? "（设备：" + track.label + "）。" : "。",
+            "常见于内置容器或虚拟摄像头；请在 Chrome / Edge 打开，或用系统相机验证设备",
+          );
+          return;
+        }
+        // 有帧不等于有画面：抽一帧量平均亮度，
+        // 区分「浏览器不画帧」（亮度正常）和「设备在出黑帧」（亮度≈0，物理遮挡/隐私模式）
+        try {
+          var probe = document.createElement("canvas");
+          probe.width = video.videoWidth;
+          probe.height = video.videoHeight;
+          var pctx = probe.getContext("2d", { willReadFrequently: true });
+          pctx.drawImage(video, 0, 0);
+          var px = pctx.getImageData(0, 0, probe.width, probe.height).data;
+          var sum = 0;
+          for (var i = 0; i < px.length; i += 4) { sum += px[i] + px[i + 1] + px[i + 2]; }
+          var mean = sum / (px.length / 4) / 3;
+          if (mean < 3) {
+            console.warn(
+              "[云墨美术馆] 摄像头在出黑帧（平均亮度 " + mean.toFixed(1) + "/255）：",
+              "最常见是笔记本物理遮挡片或 Lenovo Vantage 相机隐私模式；",
+              "打开系统「相机」应用确认，再检查机身滑片 / 按 Fn+F8 / 在 Vantage 里解除隐私模式",
+            );
+          }
+        } catch (probeErr) {
+          console.warn("[云墨美术馆] 黑帧检测失败：", probeErr && probeErr.message);
+        }
       }, 1000);
       // 预览播不出来不影响识别（detectForVideo 直接读视频轨），只记警告
       // 老浏览器 play() 不返回 Promise，所以先判一下再挂 catch
