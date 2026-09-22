@@ -7,9 +7,12 @@
  *   2. 对外 API 齐全：init / update / getHallAt / obstacles / spotMeshes / hallRegions
  *   3. 每个碰撞体结构合法（rect 四边有序、circle 半径 > 0）
  *   4. 每个展品热点都指向 js/config.js 里真实存在的展品 id
- *   5. 三个展厅的判定点返回正确 id
- *   6. 每盏射灯都挂了 target（否则 three.js 会照向世界原点）
- * 只查「不变量」，不锁定具体数量——组员1 增删碰撞体不会误报。
+ *   5. 每盏射灯都挂了 target
+ *   6. 展厅区域自洽（与具体方案无关）：
+ *      · config.halls 里每个展厅都必须有对应 hallRegions 区域（否则顶栏标签空白）
+ *      · 每个区域都要能在自身范围内被 getHallAt 命中（采样检查，抓坐标写错/被完全覆盖）
+ *      · hallRegions 里多出来的 id 只给警告（等 config 更新，不阻塞 PR）
+ * 设计原则：只查不变量，不锁死具体坐标与数量——换方案不用改测试。
  * 用法：node scripts/smoke-scene.mjs
  * ============================================================ */
 import fs from "node:fs";
@@ -25,6 +28,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 
 const problems = [];
+const warnings = [];
 
 function makeCtx() {
   return {
@@ -83,18 +87,21 @@ try {
         if (o.isMesh) meshes++;
         if (o.isSpotLight) { spotTotal++; if (o.target && o.target.parent) spotWithTarget++; }
       });
-      var ids = (window.MuseumConfig.exhibits || []).map(function (e) { return e.id; });
+      var regions = [];
+      for (var id in MuseumScene.hallRegions) {
+        var r = MuseumScene.hallRegions[id];
+        regions.push({ id: id, type: r.type, x: r.x, z: r.z, radius: r.r,
+                       x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 });
+      }
       return {
         obstacles: MuseumScene.obstacles,
         spots: MuseumScene.spotMeshes,
-        halls: Object.keys(MuseumScene.hallRegions),
+        regions: regions,
+        cfgHalls: (window.MuseumConfig.halls || []).map(function (h) { return h.id; }),
+        exhibitIds: (window.MuseumConfig.exhibits || []).map(function (e) { return e.id; }),
         apiOk: typeof MuseumScene.init === "function" && typeof MuseumScene.update === "function" &&
                typeof MuseumScene.getHallAt === "function" && Array.isArray(MuseumScene.obstacles) &&
                Array.isArray(MuseumScene.spotMeshes),
-        exhibitIds: ids,
-        hallCenter: MuseumScene.getHallAt(0, 0),
-        hallPlaza: MuseumScene.getHallAt(0, 20),
-        hallCorridor: MuseumScene.getHallAt(-14.5, 0),
         meshes: meshes,
         spotTotal: spotTotal,
         spotWithTarget: spotWithTarget
@@ -109,7 +116,7 @@ try {
 const num = (v) => typeof v === "number" && isFinite(v);
 
 if (!result.apiOk) problems.push("MuseumScene 对外 API 不完整（需要 init / update / getHallAt / obstacles / spotMeshes）");
-if (!result.halls || result.halls.length < 1) problems.push("hallRegions 为空：玩家无法判断自己在哪个展厅");
+if (!result.regions.length) problems.push("hallRegions 为空：玩家无法判断自己在哪个展厅");
 
 Array.prototype.forEach.call(result.obstacles, (o, i) => {
   if (o.type === "rect") {
@@ -129,18 +136,63 @@ Array.prototype.forEach.call(result.spots, (s, i) => {
   if (!num(s.x) || !num(s.y) || !num(s.z) || !num(s.radius) || s.radius <= 0) problems.push("spotMeshes[" + i + "] 坐标或半径非法：" + JSON.stringify(s));
 });
 
-if (result.hallCenter !== "hall1") problems.push("getHallAt(0,0) 应为 hall1，实际：" + result.hallCenter);
-if (result.hallPlaza !== "plaza") problems.push("getHallAt(0,20) 应为 plaza，实际：" + result.hallPlaza);
-if (result.hallCorridor !== "hall2") problems.push("getHallAt(-14.5,0) 应为 hall2，实际：" + result.hallCorridor);
 if (result.spotTotal > 0 && result.spotWithTarget !== result.spotTotal) {
   problems.push("有 " + (result.spotTotal - result.spotWithTarget) + " 盏射灯没挂 target（会照向世界原点，画打不亮）");
 }
 if (result.meshes < 50) problems.push("场景只有 " + result.meshes + " 个 mesh，疑似外观构建失败");
 
-console.log("场景冒烟测试");
-console.log("  mesh " + result.meshes + " ｜ 碰撞体 " + result.obstacles.length + " ｜ 展品热点 " + result.spots.length + " ｜ 射灯带 target " + result.spotWithTarget + "/" + result.spotTotal);
-console.log("  展厅判定 (0,0)=" + result.hallCenter + "  (0,20)=" + result.hallPlaza + "  (-14.5,0)=" + result.hallCorridor);
+/* ---------- 展厅区域自洽（与具体方案无关） ---------- */
+const regionIds = result.regions.map((r) => r.id);
+const hallAt = (x, z) => vm.runInContext("MuseumScene.getHallAt(" + x + ", " + z + ")", sandbox);
 
+result.cfgHalls.forEach((id) => {
+  if (!regionIds.includes(id)) {
+    problems.push("config.halls 里的「" + id + "」没有对应 hallRegions 区域——玩家进到该厅时顶栏标签会是空的");
+  }
+});
+
+function samplePoints(r) {
+  const pts = [];
+  if (r.type === "circle") {
+    [0.3, 0.6, 0.9].forEach((k) => {
+      for (let a = 0; a < 8; a++) {
+        const th = (a / 8) * Math.PI * 2;
+        pts.push([r.x + Math.cos(th) * r.radius * k, r.z + Math.sin(th) * r.radius * k]);
+      }
+    });
+    pts.push([r.x, r.z]);
+  } else {
+    for (let i = 1; i <= 5; i++) {
+      for (let j = 1; j <= 5; j++) {
+        pts.push([r.x0 + ((r.x1 - r.x0) * i) / 6, r.z0 + ((r.z1 - r.z0) * j) / 6]);
+      }
+    }
+  }
+  return pts;
+}
+
+result.regions.forEach((r) => {
+  const hit = samplePoints(r).some(([x, z]) => hallAt(x, z) === r.id);
+  if (!hit) {
+    problems.push("区域「" + r.id + "」在自身范围内采样都命中不到自己——坐标写错，或被其它区域完全覆盖（玩家进不去这个展厅）");
+  }
+});
+
+const extra = regionIds.filter((id) => !result.cfgHalls.includes(id));
+if (extra.length) {
+  warnings.push("hallRegions 里有 " + extra.length + " 个区域尚未写进 config.halls（" + extra.join(", ") +
+                "）——补上之前，玩家进这些厅时顶栏标签会是空的；等 config 的 PR 合并后自动消失。");
+}
+
+console.log("场景冒烟测试");
+console.log("  mesh " + result.meshes + " ｜ 碰撞体 " + result.obstacles.length + " ｜ 展品热点 " + result.spots.length +
+            " ｜ 射灯带 target " + result.spotWithTarget + "/" + result.spotTotal);
+console.log("  展厅区域 " + result.regions.length + " 个：" + regionIds.join(", ") + " ｜ config.halls " + result.cfgHalls.length + " 个：" + result.cfgHalls.join(", "));
+
+if (warnings.length) {
+  console.log("");
+  warnings.forEach((w) => console.log("  ! 警告：" + w));
+}
 if (problems.length) {
   console.error("");
   console.error("x 冒烟测试未通过，共 " + problems.length + " 个问题：");
@@ -148,4 +200,4 @@ if (problems.length) {
   process.exit(1);
 }
 console.log("");
-console.log("OK 冒烟测试通过：引擎能正常初始化，接缝数据结构合法");
+console.log("OK 冒烟测试通过：引擎能正常初始化，接缝数据结构与展厅区域自洽");
