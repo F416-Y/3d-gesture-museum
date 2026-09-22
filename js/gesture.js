@@ -129,6 +129,21 @@ window.MuseumGesture = (function () {
     }).then(function (s) {
       stream = s;
       video.srcObject = s;
+      // 黑屏排查自检：打印实际被浏览器选中的设备（虚拟摄像头在这现形），
+      // 1 秒后仍无帧则给出可操作原因——授权成功但画面全黑时不用开盲盒
+      var track = s.getVideoTracks && s.getVideoTracks()[0];
+      if (track) {
+        console.log("[云墨美术馆] 已选中的摄像头：", track.label || "(无设备名)");
+      }
+      setTimeout(function () {
+        var hasFrame = video && video.readyState >= 2 && video.videoWidth > 0;
+        if (hasFrame || !video.srcObject) return;
+        console.warn(
+          "[云墨美术馆] 摄像头已授权但无画面：浏览器没拿到视频帧",
+          track && track.label ? "（设备：" + track.label + "）。" : "。",
+          "常见于内置容器或虚拟摄像头；请在 Chrome / Edge 打开，或用系统相机验证设备",
+        );
+      }, 1000);
       // 预览播不出来不影响识别（detectForVideo 直接读视频轨），只记警告
       // 老浏览器 play() 不返回 Promise，所以先判一下再挂 catch
       var played = video.play();
