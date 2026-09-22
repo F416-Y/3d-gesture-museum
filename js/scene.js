@@ -928,9 +928,9 @@ window.MuseumScene = (function () {
 
     /* —— 北墙挂画（花鸟三帧，暂以现有 id 占位）—— */
     // TODO(组员4 config 合并后换成 xieshengzhenqintu / wuniutu / molantu
-    addPainting(g, { x: -7, y: 2.55, z: -23.5, ry: 0 }, 2.2, 1.5, "qianlijiangshan"); // TODO: 写生珍禽图
-    addPainting(g, { x: 0, y: 2.55, z: -23.5, ry: 0 }, 3.4, 2.2, "fuchunshanjv");     // TODO: 五牛图
-    addPainting(g, { x: 7, y: 2.55, z: -23.5, ry: 0 }, 2.2, 1.5, "hanxizai");          // TODO: 墨兰图
+    addPainting(g, { x: -7, y: 2.55, z: -23.5, ry: 0 }, 2.2, 1.5, "xieshengzhenqintu");
+    addPainting(g, { x: 0, y: 2.55, z: -23.5, ry: 0 }, 3.4, 2.2, "wuniutu");
+    addPainting(g, { x: 7, y: 2.55, z: -23.5, ry: 0 }, 2.2, 1.5, "molantu");
 
     /* —— 室内基础照明 —— */
     var roomA = new _g.PointLight(0xffe6c4, 0.55, 20, 2);
@@ -1257,6 +1257,379 @@ window.MuseumScene = (function () {
   }
 
   /* ============================================================
+   * 江南文人国画博物馆 · 新建筑外观
+   * 归属：组长（组员7）
+   * 坐标依据：docs/江南院落平面-坐标版.md v1
+   * 约定：
+   *   - 本文件只负责外观几何、材质、灯光；
+   *   - 碰撞体 / hallRegions / 热点精细登记归组员1，组长在此处只
+   *     做最小必要登记（围墙、水池、庭院雕塑），便于自测走路。
+   * ============================================================ */
+
+  function buildJiangnanCompound(root) {
+    buildGround(root);
+    buildOuterCompound(root);
+    buildCourtyardAndHalls(root);
+  }
+
+  /* ---------- 地面与前庭铺装 ---------- */
+  function buildGround(root) {
+    // 基地整面（围墙内）
+    var ground = new _g.Mesh(
+      new _g.PlaneGeometry(88, 88),
+      mat(0xd9d4c8, { roughness: 0.95 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = 0.005;
+    ground.receiveShadow = true;
+    root.add(ground);
+
+    // 前庭铺装：序厅以南到南门
+    var fore = new _g.Mesh(
+      new _g.PlaneGeometry(88, 8),
+      mat(0xcfcec2, { roughness: 0.9 })
+    );
+    fore.rotation.x = -Math.PI / 2;
+    fore.position.set(0, 0.01, 38);
+    fore.receiveShadow = true;
+    root.add(fore);
+
+    // 中轴道路 5m 宽
+    var road = new _g.Mesh(
+      new _g.PlaneGeometry(5, 44),
+      mat(0xc4bdb0, { roughness: 0.9 })
+    );
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(0, 0.012, 20);
+    road.receiveShadow = true;
+    root.add(road);
+  }
+
+  /* ---------- 围墙、门楼、行道树 ---------- */
+  function buildOuterCompound(root) {
+    // 四面围墙（南墙留门洞）
+    buildWall(root, 0, -44, 88, 0);
+    buildWall(root, -44, 0, 88, Math.PI / 2);
+    buildWall(root, 44, 0, 88, Math.PI / 2);
+    buildWallWithGap(root);
+
+    // 门楼：门柱 + 横梁 + 小坡顶
+    var wood = mat(0x7a3b2e, { roughness: 0.7 });
+    var tile = mat(0x39332d, { roughness: 0.85 });
+    [-1, 1].forEach(function (s) {
+      buildBox(root, 0.9, 3.6, 0.9, s * 5.2, 1.8, 42.2, wood);
+    });
+    buildBox(root, 11.4, 0.55, 0.6, 0, 3.7, 42.2, wood);
+    buildBox(root, 12.2, 0.25, 0.9, 0, 4.15, 42.2, tile);
+
+    // 匾额
+    var plaque = new _g.Mesh(
+      new _g.PlaneGeometry(2.6, 0.9),
+      canvasMat(drawSign("云墨", "美术馆"), { side: _g.DoubleSide })
+    );
+    plaque.position.set(0, 3.75, 42.51);
+    root.add(plaque);
+
+    // 行道树 4 棵（新坐标）
+    [[-7.5, 35.5], [7.5, 35.5], [-7.5, 40], [7.5, 40]].forEach(function (p) {
+      buildTree(root, p[0], p[1]);
+    });
+  }
+
+  function buildTree(root, x, z) {
+    var trunk = new _g.Mesh(new _g.CylinderGeometry(0.18, 0.24, 2.6, 8), mat(0x5d4a3a));
+    trunk.position.set(x, 1.3, z);
+    trunk.castShadow = true;
+    root.add(trunk);
+    var crown = new _g.Mesh(new _g.SphereGeometry(1.35, 12, 9), mat(0x5f7043, { roughness: 1 }));
+    crown.position.set(x, 3.15, z);
+    crown.castShadow = true;
+    root.add(crown);
+    obstacles.push({ type: "circle", x: x, z: z, r: 0.8 });
+  }
+
+  /* ---------- 庭院 + 六厅 ---------- */
+  function buildCourtyardAndHalls(root) {
+    // 中央庭院地面（青砖铺地）
+    var court = new _g.Mesh(
+      new _g.PlaneGeometry(32, 22),
+      mat(0xcfc6b6, { roughness: 0.9 })
+    );
+    court.rotation.x = -Math.PI / 2;
+    court.position.set(0, 0.02, 11);
+    court.receiveShadow = true;
+    root.add(court);
+
+    // 水池
+    var pond = new _g.Mesh(
+      new _g.PlaneGeometry(14, 8),
+      new _g.MeshStandardMaterial({ color: 0x4a5a6a, roughness: 0.25, transparent: true, opacity: 0.85 })
+    );
+    pond.rotation.x = -Math.PI / 2;
+    pond.position.set(0, 0.03, 14);
+    root.add(pond);
+    buildBox(root, 14.8, 0.25, 8.8, 0, 0.125, 14, mat(0xa8a297, { roughness: 0.9 }));
+    obstacles.push({ type: "rect", x0: -7, z0: 10, x1: 7, z1: 18 });
+
+    // 太湖石组
+    buildRocks(root, -10, 6);
+    buildRocks(root, 10, 6);
+
+    // 竹丛
+    buildBamboo(root, -13.5, 2.5);
+    buildBamboo(root, 13.5, 2.5);
+    buildBamboo(root, -13.5, 19.5);
+    buildBamboo(root, 13.5, 19.5);
+
+    // 东西曲廊
+    buildCorridorSegment(root, -16, -13, 0, 22);
+    buildCorridorSegment(root, 13, 16, 0, 22);
+
+    // 六厅
+    buildHall0(root);
+    buildHall1(root);
+    buildHall2(root);     // 已存在的样板厅，保持调用
+    buildHall3(root);
+    buildHall4(root);
+    buildHall5(root);
+
+    // 庭院铜奔马
+    addPlazaSculpture(root, 0, 10, "matayafeiyan", "马踏飞燕 · 东汉");
+  }
+
+  function buildRocks(root, cx, cz) {
+    var stone = mat(0x8f8a7e, { roughness: 0.95 });
+    [[0, 0.55, 0.75], [0.78, 0.36, 0.5], [-0.62, 0.3, 0.44]].forEach(function (rk) {
+      var rock = new _g.Mesh(new _g.DodecahedronGeometry(rk[1], 0), stone);
+      rock.position.set(cx + rk[0], rk[1] * 0.85, cz);
+      rock.rotation.y = rk[0];
+      rock.scale.set(1, rk[2] / rk[1], 0.8);
+      rock.castShadow = true;
+      root.add(rock);
+    });
+    obstacles.push({ type: "circle", x: cx, z: cz, r: 1.1 });
+  }
+
+  function buildBamboo(root, cx, cz) {
+    for (var i = 0; i < 7; i++) {
+      var bx = cx + (i % 3) * 0.34 - 0.34;
+      var bz = cz + Math.floor(i / 3) * 0.36;
+      var pole = new _g.Mesh(new _g.CylinderGeometry(0.045, 0.055, 3.0 + (i % 3) * 0.45, 6), mat(0x7c8a53, { roughness: 0.9 }));
+      pole.position.set(bx, 1.5 + (i % 3) * 0.22, bz);
+      root.add(pole);
+      var leaf = new _g.Mesh(new _g.ConeGeometry(0.42, 1.1, 6), mat(0x5f7043, { roughness: 1 }));
+      leaf.position.set(bx, 3.3 + (i % 3) * 0.25, bz);
+      root.add(leaf);
+    }
+    obstacles.push({ type: "circle", x: cx, z: cz, r: 0.7 });
+  }
+
+  function buildCorridorSegment(root, x0, x1, z0, z1) {
+    var g = new _g.Group();
+    var w = x1 - x0, d = z1 - z0;
+    var cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    var floorY = 0.15;
+    var wood = mat(0x7a3b2e, { roughness: 0.7 });
+
+    // 廊面
+    var floor = new _g.Mesh(new _g.PlaneGeometry(w - 0.1, d - 0.1), canvasMat(drawWood(), { roughness: 0.7 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(cx, floorY, cz);
+    floor.receiveShadow = true;
+    g.add(floor);
+
+    // 柱
+    var n = Math.max(2, Math.round(d / 3.4));
+    for (var i = 0; i <= n; i++) {
+      var z = z0 + (d) * (i / n);
+      buildBox(g, 0.16, 2.9, 0.16, x0 + 0.25, floorY + 1.45, z, wood);
+      buildBox(g, 0.16, 2.9, 0.16, x1 - 0.25, floorY + 1.45, z, wood);
+    }
+
+    // 美人靠（靠庭院一侧）
+    var side = (cx < 0) ? 1 : -1; // 西廊靠东（+x），东廊靠西（-x）
+    buildRailing(g, x0 + (side > 0 ? 0.25 : w - 0.25), z0 + 0.2, z1 - 0.2, side, floorY);
+
+    // 廊墙（靠展厅一侧，漏窗）
+    var wallX = (cx < 0) ? x0 : x1;
+    var wallMat = mat(0xefe9dc, { roughness: 0.9, side: _g.DoubleSide });
+    for (var j = 0; j < 2; j++) {
+      var wz = z0 + 6 + j * 10;
+      buildBox(g, 0.2, 2.2, 1.2, wallX, floorY + 1.1, wz, wallMat);
+      var lattice = new _g.Mesh(new _g.PlaneGeometry(0.9, 0.9), canvasMat(drawLattice(), { roughness: 0.55 }));
+      lattice.position.set((cx < 0) ? wallX - 0.11 : wallX + 0.11, floorY + 1.3, wz);
+      lattice.rotation.y = (cx < 0) ? -Math.PI / 2 : Math.PI / 2;
+      g.add(lattice);
+    }
+
+    // 屋顶
+    buildRoof(g, { x: cx, z: cz, y: floorY + 2.9, w: w, d: d, h: 0.7, eave: 0.4, ridge: w - 1 });
+
+    root.add(g);
+  }
+
+  /* ---------- 通用矩形厅（白墙黛瓦，可指定入口墙与挂画） ---------- */
+  function buildRectHall(parent, opt) {
+    var g = new _g.Group();
+    var X0 = opt.x0, X1 = opt.x1, Z0 = opt.z0, Z1 = opt.z1;
+    var cx = (X0 + X1) / 2, cz = (Z0 + Z1) / 2;
+    var W = X1 - X0, D = Z1 - Z0;
+    var F = opt.floorY || 0.3;
+    var WH = opt.wallH || 4.2;
+    var TH = 0.35;
+    var wallMat = mat(0xefe9dc, { roughness: 0.9, side: _g.DoubleSide });
+
+    // 四墙（带门洞）
+    buildWallWithDoor(g, W, D, WH, TH, wallMat, opt.doorSide, opt.doorCenter, opt.doorWidth || 3, opt.doorHeight || 3);
+
+    // 木地板
+    var floor = new _g.Mesh(new _g.PlaneGeometry(W - 0.6, D - 0.6), canvasMat(drawWood(), { roughness: 0.7 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, F, 0);
+    floor.receiveShadow = true;
+    g.add(floor);
+
+    // 屋顶
+    var ridge = opt.ridge || (W - 2);
+    buildRoof(g, { x: 0, z: 0, y: WH + 0.15, w: W, d: D, h: opt.roofH || 1.6, eave: 1.0, ridge: ridge });
+
+    // 挂画
+    if (opt.paintings) {
+      opt.paintings.forEach(function (p) {
+        addPainting(g, { x: p.x, y: p.y, z: p.z, ry: p.ry || 0, lamp: p.lamp }, p.w, p.h, p.id);
+      });
+    }
+
+    g.position.set(cx, 0, cz);
+    parent.add(g);
+    return g;
+  }
+
+  function buildWallWithDoor(g, W, D, WH, TH, wallMat, side, center, dw, dh) {
+    var halfW = W / 2, halfD = D / 2;
+    // 北墙
+    buildBox(g, W, WH, TH, 0, WH / 2, -halfD, wallMat);
+    // 南墙
+    if (side === "s") {
+      var c = center; // 沿 x 的局部坐标
+      buildBox(g, halfW + c - dw / 2, WH, TH, c / 2 - W / 4 - dw / 4, WH / 2, halfD, wallMat);
+      buildBox(g, halfW - c - dw / 2, WH, TH, c / 2 + W / 4 + dw / 4, WH / 2, halfD, wallMat);
+      buildBox(g, dw, WH - dh, TH, c, dh + (WH - dh) / 2, halfD, wallMat);
+    } else {
+      buildBox(g, W, WH, TH, 0, WH / 2, halfD, wallMat);
+    }
+    // 西墙
+    if (side === "w") {
+      var cw = center; // 沿 z 的局部坐标
+      buildBox(g, TH, WH, halfD + cw - dw / 2, -halfW, WH / 2, cw / 2 - D / 4 - dw / 4, wallMat);
+      buildBox(g, TH, WH, halfD - cw - dw / 2, -halfW, WH / 2, cw / 2 + D / 4 + dw / 4, wallMat);
+      buildBox(g, TH, WH - dh, dw, -halfW, dh + (WH - dh) / 2, cw, wallMat);
+    } else {
+      buildBox(g, TH, WH, D, -halfW, WH / 2, 0, wallMat);
+    }
+    // 东墙
+    if (side === "e") {
+      var ce = center;
+      buildBox(g, TH, WH, halfD + ce - dw / 2, halfW, WH / 2, ce / 2 - D / 4 - dw / 4, wallMat);
+      buildBox(g, TH, WH, halfD - ce - dw / 2, halfW, WH / 2, ce / 2 + D / 4 + dw / 4, wallMat);
+      buildBox(g, TH, WH - dh, dw, halfW, dh + (WH - dh) / 2, ce, wallMat);
+    } else {
+      buildBox(g, TH, WH, D, halfW, WH / 2, 0, wallMat);
+    }
+  }
+
+  function buildHall0(parent) {
+    var g = buildRectHall(parent, {
+      x0: -10, x1: 10, z0: 24, z1: 34,
+      doorSide: "s", doorCenter: 0,
+      wallH: 4.6, roofH: 1.8, ridge: 14,
+    });
+    // 后母戊鼎展台
+    addPedestalLocal(g, 0, 0.3, 0, "houmuwuding", "后母戊鼎 · 商");
+  }
+
+  function buildHall1(parent) {
+    buildRectHall(parent, {
+      x0: -34, x1: -16, z0: -22, z1: -4,
+      doorSide: "e", doorCenter: -13,
+      wallH: 4.6, roofH: 1.8, ridge: 14,
+      paintings: [
+        { x: -25, y: 2.55, z: -21.5, w: 3.4, h: 2.2, id: "qianlijiangshan" },
+        { x: -30.5, y: 2.55, z: -21.5, w: 2.2, h: 1.5, id: "fuchunshanjv" },
+        { x: -19.5, y: 2.55, z: -21.5, w: 2.2, h: 1.5, id: "xishanxinglvtu" },
+      ],
+    });
+  }
+
+  function buildHall3(parent) {
+    buildRectHall(parent, {
+      x0: 16, x1: 34, z0: -22, z1: -4,
+      doorSide: "w", doorCenter: -13,
+      wallH: 4.6, roofH: 1.8, ridge: 14,
+      paintings: [
+        { x: 19.5, y: 2.55, z: -21.5, w: 3.4, h: 2.2, id: "hanxizai" },
+        { x: 25, y: 2.55, z: -21.5, w: 2.2, h: 1.5, id: "luoshenfu" },
+        { x: 30.5, y: 2.55, z: -21.5, w: 2.2, h: 1.5, id: "buniantu" },
+      ],
+    });
+    // 将军俑放在人物厅中央附近
+    addPedestalLocal(parent, 25, 0.3, -13, "jiangjunyong", "将军俑 · 秦");
+  }
+
+  function buildHall4(parent) {
+    buildRectHall(parent, {
+      x0: 16, x1: 32, z0: 6, z1: 20,
+      doorSide: "w", doorCenter: 13,
+      wallH: 4.2, roofH: 1.5, ridge: 12,
+    });
+    // 茶席长案
+    var g = new _g.Group();
+    g.position.set(24, 0.3, 13);
+    buildBox(g, 4, 0.1, 1.2, 0, 0.45, 0, mat(0x6d5544, { roughness: 0.75 }));
+    buildBox(g, 0.15, 0.45, 0.15, -1.8, 0.225, -0.45, mat(0x5d4a3a));
+    buildBox(g, 0.15, 0.45, 0.15, 1.8, 0.225, -0.45, mat(0x5d4a3a));
+    buildBox(g, 0.15, 0.45, 0.15, -1.8, 0.225, 0.45, mat(0x5d4a3a));
+    buildBox(g, 0.15, 0.45, 0.15, 1.8, 0.225, 0.45, mat(0x5d4a3a));
+    parent.add(g);
+  }
+
+  function buildHall5(parent) {
+    buildRectHall(parent, {
+      x0: -32, x1: -16, z0: 6, z1: 20,
+      doorSide: "e", doorCenter: 13,
+      wallH: 4.2, roofH: 1.5, ridge: 12,
+    });
+    // 临帖案几
+    var g = new _g.Group();
+    g.position.set(-24, 0.3, 13);
+    buildBox(g, 3.6, 0.1, 1.0, 0, 0.4, 0, mat(0x6d5544, { roughness: 0.75 }));
+    buildBox(g, 0.12, 0.4, 0.12, -1.6, 0.2, -0.4, mat(0x5d4a3a));
+    buildBox(g, 0.12, 0.4, 0.12, 1.6, 0.2, -0.4, mat(0x5d4a3a));
+    buildBox(g, 0.12, 0.4, 0.12, -1.6, 0.2, 0.4, mat(0x5d4a3a));
+    buildBox(g, 0.12, 0.4, 0.12, 1.6, 0.2, 0.4, mat(0x5d4a3a));
+    parent.add(g);
+  }
+
+  /* 局部坐标展台（不依赖 addPedestal 的硬编码 z=-2） */
+  function addPedestalLocal(parent, x, floorY, z, exhibitId, signText) {
+    var base = new _g.Mesh(new _g.BoxGeometry(1.5, 1.05, 1.5), mat(0x7a5c48, { roughness: 0.75 }));
+    base.position.set(x, floorY + 0.525, z);
+    base.castShadow = true;
+    parent.add(base);
+    obstacles.push({ type: "circle", x: x, z: z, r: 1.0 });
+
+    var artifact;
+    if (exhibitId === "houmuwuding") artifact = buildDing();
+    else artifact = buildWarrior();
+    artifact.position.set(x, floorY + 1.05, z);
+    artifact.castShadow = true;
+    parent.add(artifact);
+
+    addSign(parent, x, floorY + 1.05, z + 0.9, signText);
+    registerSpot({ exhibitId: exhibitId, x: x, y: floorY + 1.76, z: z, radius: 2.6 });
+  }
+
+  /* ============================================================
    * 展品热点登记
    * ============================================================ */
   function registerSpot(spot) {
@@ -1277,10 +1650,8 @@ window.MuseumScene = (function () {
       obstacles.length = 0;
       spotMeshes.length = 0;
 
-      // 主楼 + 连廊（hall1 / hall2）
-      var museum = buildMuseum(scene);
-      // 园区（plaza）
-      buildPlaza(scene);
+      // 江南文人国画博物馆 · 院落外观
+      buildJiangnanCompound(scene);
 
       // 全场景光照：环境光压一档、天光提亮，明暗关系更清楚
       var ambient = new _g.AmbientLight(0xffffff, 0.45);
@@ -1302,6 +1673,20 @@ window.MuseumScene = (function () {
       scene.add(fill);
 
       scene.fog = new _g.Fog(0xd9d4c8, 52, 135);
+      // 展厅区域判定（坐标冻结值，见 docs/江南院落平面-坐标版.md）
+      // 必须复用已有对象引用（return 已把它暴露出去），不能整表赋值
+      Object.keys(hallRegions).forEach(function (k) { delete hallRegions[k]; });
+      Object.assign(hallRegions, {
+        plaza:     { type: "circle", x: 0, z: 20, r: 34 },
+        hall0:     { type: "rect",  x0: -10, z0: 24,  x1: 10,  z1: 34 },
+        courtyard: { type: "rect",  x0: -16, z0: 0,   x1: 16,  z1: 22 },
+        hall1:     { type: "rect",  x0: -34, z0: -22, x1: -16, z1: -4 },
+        hall2:     { type: "rect",  x0: -12, z0: -24, x1: 12,  z1: -8 },
+        hall3:     { type: "rect",  x0: 16,  z0: -22, x1: 34,  z1: -4 },
+        hall4:     { type: "rect",  x0: 16,  z0: 6,   x1: 32,  z1: 20 },
+        hall5:     { type: "rect",  x0: -32, z0: 6,   x1: -16, z1: 20 },
+      });
+
     },
 
     update: function () {
