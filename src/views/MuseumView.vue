@@ -8,11 +8,18 @@
 import { watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 
-// 各展厅的入场传送点 [x, z, yaw]（yaw=0 面向 -Z 即建筑方向；坐标可由组员2 微调）
+// 各展厅的入场传送点 [x, z, yaw]
+// yaw=0 面向 -Z（北，朝建筑）；yaw=Math.PI 面向 +Z（南）
+// 坐标依据：docs/江南院落平面-坐标版.md §五（与 config.js 的 player.startPos 必须一致）
 const HALL_SPAWNS = {
-  plaza: [0, 26, 0],      // 前庭中轴（出生点同位置）
-  hall1: [0, 4, 0],       // 一楼 · 中国绘画厅 门内
-  hall2: [-14.3, 4, 0],   // 二楼 · 文明对话厅（西侧连廊）
+  plaza:     [0, 38, 0],          // 前庭（门内，避开序厅 z 24~34）
+  hall0:     [0, 30, 0],          // 序厅
+  courtyard: [0, 20, 0],          // 中央庭院
+  hall1:     [-25, -8, 0],        // 山水画展区
+  hall2:     [0, -10, 0],         // 花鸟画展区
+  hall3:     [25, -8, 0],         // 人物画展区
+  hall4:     [24, 16, Math.PI],   // 书斋 · 茶室（朝南看茶席）
+  hall5:     [-24, 16, Math.PI],  // 文创区 · 临帖休憩
 };
 
 const route = useRoute();

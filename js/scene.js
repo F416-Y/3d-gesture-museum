@@ -933,7 +933,193 @@ window.MuseumScene = (function () {
     hallRegions.hall1 = { type: "rect", x0: -10.5, z0: -9.5, x1: 10.5, z1: 5.5 };
     hallRegions.hall2 = { type: "rect", x0: -16.5, z0: -9.5, x1: -12.2, z1: 5.5 };
 
+    // ===== 江南院落样板厅：hall2 花鸟画展区（新方案 · 第一栋）=====
+    // TODO(组长): 其余五厅（hall0/hall1/hall3/hall4/hall5）与中央庭院
+    //   按 docs/江南院落平面-坐标版.md §二 逐厅实现；完成后按 §七 拆改清单
+    //   移除上方旧主楼与西侧连廊几何（当前为「样板厅 + 旧建筑」共存态）。
+    buildHall2(group);
+
     return group;
+  }
+
+  /* ============================================================
+   * 江南院落样板厅：hall2 花鸟画展区（新方案 · 第一栋样板）
+   * 归属：组长 —— 外观
+   * ------------------------------------------------------------
+   * 坐标（冻结值，见 docs/江南院落平面-坐标版.md §二）：
+   *   x −12~12、z −24~−8（24×16），入口朝南（z=−8 朝中央庭院）
+   * 风貌要素：
+   *   粉墙 0.35m 厚 / 黛瓦四坡顶（檐口 ≈4.6、出檐 1.2）/
+   *   东西山墙马头墙叠落三阶 / 南墙入口两侧木格长窗 2.2×2.4 /
+   *   屋顶北侧 6×4 天井 + 天光 SpotLight / 室内木地板（高 0.3）/
+   *   入口 2 级台阶 / 门廊 4 朱柱 + 小四坡顶 + 2 灯笼
+   * ------------------------------------------------------------
+   * 约定：
+   *   - 碰撞体 / hallRegions / 热点登记归组员1，本函数不主动 push
+   *     obstacles、不写 hallRegions；addPainting 自带的射灯与热点
+   *     为既有工具行为。
+   *   - 挂画暂用现有 id 占位，组员4 config 合并后换新 id（见 TODO）。
+   * ============================================================ */
+  function buildHall2(parent) {
+    var g = new _g.Group();
+    parent.add(g);
+
+    /* —— 常量（色板沿用全局，不得自创色值）—— */
+    var FLOOR = 0.3;          // 室内地坪（比室外高 0.3m）
+    var WALL_TOP = 4.45;      // 墙顶标高（檐口 4.6 − 檐口板半厚 0.15）
+    var TH = 0.35;            // 墙厚
+    var X0 = -12, X1 = 12;    // 面阔
+    var Z0 = -24, Z1 = -8;    // 进深（z0 北、z1 南）
+
+    var wallMat = mat(0xefe9dc, { roughness: 0.9, side: _g.DoubleSide });  // 粉墙
+    var capMat = mat(0x4b423a, { roughness: 0.85 });                       // 深压顶
+    var stoneMat = mat(0xb9b0a0, { roughness: 0.9 });                      // 浅灰石材
+    var tileMat = mat(0x484139, { roughness: 0.8 });                       // 深灰筒瓦
+
+    /* —— 墙体四围 —— */
+    // 北墙
+    buildBox(g, X1 - X0, WALL_TOP, TH, 0, WALL_TOP / 2, Z0, wallMat);
+    // 东西山墙（主体 0~4.45，马头墙在其上加高）
+    buildBox(g, TH, WALL_TOP, Z1 - Z0, X1, WALL_TOP / 2, (Z0 + Z1) / 2, wallMat);
+    buildBox(g, TH, WALL_TOP, Z1 - Z0, X0, WALL_TOP / 2, (Z0 + Z1) / 2, wallMat);
+    // 南墙：左段 + 右段 + 门上横墙（门洞 x −2~2，净高 3.0）
+    buildBox(g, 10, WALL_TOP, TH, -7, WALL_TOP / 2, Z1, wallMat);
+    buildBox(g, 10, WALL_TOP, TH, 7, WALL_TOP / 2, Z1, wallMat);
+    buildBox(g, 4, WALL_TOP - 3.0, TH, 0, 3.0 + (WALL_TOP - 3.0) / 2, Z1, wallMat);
+    // 南墙木格长窗（门洞两侧各一樘 2.2×2.4，落地，中心 x=±5.6）
+    var winMat = canvasMat(drawLattice(), { roughness: 0.55 });
+    [-5.6, 5.6].forEach(function (wx) {
+      buildBox(g, 2.2, 2.4, 0.16, wx, FLOOR + 1.2, Z1 - 0.09, winMat);
+    });
+
+    /* —— 马头墙（东西山墙叠落三阶，随屋面走向逐级升高）—— */
+    // 三段顶标高：低 5.3 / 次 6.1 / 中 6.9（中段与屋脊 6.9 齐平）。
+    // ASSUMPTION：坐标文档 §八「马头墙最高 5.5m」与四坡顶屋脊
+    //   （檐口 4.6 + 举高 2.0 → 脊 6.9）不可兼得；此处取「三阶均高出
+    //   屋面檐口、随坡升高」的视觉做法。若须严守 5.5m，需把屋顶举高
+    //   降到 ≤0.6（屋脊≈5.5），请组长定夺。
+    var horseTiers = [
+      { z0: -19, z1: -13, top: 6.9 },   // 中段（屋脊附近）
+      { z0: -22.5, z1: -19, top: 6.1 }, // 次段（北）
+      { z0: -13, z1: -9.5, top: 6.1 },  // 次段（南）
+      { z0: -24, z1: -22.5, top: 5.3 }, // 低段（北收头）
+      { z0: -9.5, z1: -8, top: 5.3 },   // 低段（南收头）
+    ];
+    [-1, 1].forEach(function (side) {
+      var x = side * 12;
+      for (var i = 0; i < horseTiers.length; i++) {
+        var t = horseTiers[i];
+        var cz = (t.z0 + t.z1) / 2, len = t.z1 - t.z0;
+        var h = t.top - WALL_TOP;
+        // 阶梯墙体（从墙顶向上叠）
+        buildBox(g, TH, h, len, x, WALL_TOP + h / 2, cz, wallMat);
+        // 压顶瓦：水平三向挑出（x 两侧各 0.3、z 两端各 0.15）
+        buildBox(g, TH + 0.6, 0.18, len + 0.3, x, t.top + 0.09, cz, capMat);
+      }
+    });
+
+    /* —— 四坡黛瓦顶（檐口 4.6、出檐 1.2、举高 2.0 → 脊 6.9）—— */
+    buildRoof(g, { x: 0, z: (Z0 + Z1) / 2, y: 4.6, w: X1 - X0, d: Z1 - Z0, h: 2.0, eave: 1.2, ridge: 9 });
+
+    /* —— 屋顶北侧天井（6×4：x −3~3、z −23~−19）+ 天光 —— */
+    buildHall2Skylight(g, FLOOR, tileMat, capMat);
+
+    /* —— 室内木地板（比室外高 0.3）—— */
+    var floor = new _g.Mesh(new _g.PlaneGeometry(X1 - X0 - 0.7, Z1 - Z0 - 0.7), canvasMat(drawWood(), { roughness: 0.7 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(0, FLOOR, (Z0 + Z1) / 2);
+    floor.receiveShadow = true;
+    g.add(floor);
+
+    /* —— 室内顶板（天井区域开口，拆四块；底 4.15 → 净高 3.85）—— */
+    var ceilY = WALL_TOP - 0.15;
+    buildBox(g, X1 - X0 - 0.7, 0.3, 0.825, 0, ceilY, -23.41, wallMat);   // 天井以北窄条
+    buildBox(g, 8.825, 0.3, 4.0, -7.41, ceilY, -21, wallMat);             // 天井以西
+    buildBox(g, 8.825, 0.3, 4.0, 7.41, ceilY, -21, wallMat);              // 天井以东
+    buildBox(g, X1 - X0 - 0.7, 0.3, 10.825, 0, ceilY, -13.59, wallMat);   // 天井以南
+
+    /* —— 北墙挂画（花鸟三帧，暂以现有 id 占位）—— */
+    // TODO(组员4 config 合并后换成 xieshengzhenqintu / wuniutu / molantu
+    addPainting(g, { x: -7, y: 2.55, z: -23.5, ry: 0 }, 2.2, 1.5, "qianlijiangshan"); // TODO: 写生珍禽图
+    addPainting(g, { x: 0, y: 2.55, z: -23.5, ry: 0 }, 3.4, 2.2, "fuchunshanjv");     // TODO: 五牛图
+    addPainting(g, { x: 7, y: 2.55, z: -23.5, ry: 0 }, 2.2, 1.5, "hanxizai");          // TODO: 墨兰图
+
+    /* —— 室内基础照明 —— */
+    var roomA = new _g.PointLight(0xffe6c4, 0.55, 20, 2);
+    roomA.position.set(0, 3.8, -16);
+    g.add(roomA);
+    var roomB = new _g.PointLight(0xffe6c4, 0.4, 16, 2);
+    roomB.position.set(-6, 3.6, -19);
+    g.add(roomB);
+
+    /* —— 入口台阶（2 级，室外 0 → 室内 0.3）—— */
+    buildBox(g, 4.0, 0.15, 0.8, 0, 0.225, -7.2, stoneMat);  // 第 2 级（高，顶 0.3）
+    buildBox(g, 5.0, 0.15, 0.8, 0, 0.075, -6.4, stoneMat);  // 第 1 级（低，顶 0.15）
+
+    /* —— 入口门廊（4 朱柱 + 小四坡顶 + 2 灯笼）—— */
+    var colGeo = new _g.CylinderGeometry(0.16, 0.2, 3.25, 10);
+    var colMat = mat(0x9c3a2c, { roughness: 0.55 });          // 朱砂
+    [-5.0, -2.2, 2.2, 5.0].forEach(function (x) {
+      var col = new _g.Mesh(colGeo, colMat);
+      col.position.set(x, 1.625, -6.0);
+      col.castShadow = true;
+      g.add(col);
+    });
+    // 门廊小四坡顶（檐口 3.4、脊 4.45，低于大厅檐口 4.6；北缘 z=−7.7 不穿南墙）
+    buildRoof(g, { x: 0, z: -6.6, y: 3.4, w: 9.0, d: 1.6, h: 0.75, eave: 0.3, ridge: 6.0 });
+    // 檐下灯笼（悬挂点取檐口板底 3.25 之下，避免插进顶板）
+    buildLantern(g, -2.8, 2.5, -6.6, 0.9);
+    buildLantern(g, 2.8, 2.5, -6.6, 0.9);
+  }
+
+  /* hall2 天井：屋顶北坡 6×4 井口（亮面 + 瓦框）+ 室内井壁 + 天光 */
+  function buildHall2Skylight(parent, floorY, tileMat, capMat) {
+    var W = 6, D = 4;          // 井口 6（x）× 4（z）
+    var cx = 0, cz = -21;      // 井口中心（北坡中段）
+    var slope = -0.24;         // 贴北坡角度（举高 2.0 / 半深 8 → 约 14°）
+    var darkMat = mat(0x4b423a, { roughness: 0.95 });  // 深压顶（井壁）
+    // 北坡面标高：z=−24 处 4.9（檐口板顶），每向南 1m 升 0.25 → y(z)=4.9+0.25*(z+24)
+    var slopeY = function (z) { return 4.9 + 0.25 * (z + 24); };
+
+    // 井口亮面（自发光，模拟天光透入；贴北坡、高于坡面 0.13）
+    var mouth = new _g.Mesh(
+      new _g.BoxGeometry(W, 0.12, D),
+      new _g.MeshStandardMaterial({
+        color: 0xd8e0d8, emissive: 0xfff4e0, emissiveIntensity: 0.55, roughness: 0.6,
+      })
+    );
+    mouth.rotation.x = slope;
+    mouth.position.set(cx, slopeY(cz) + 0.13, cz);
+    parent.add(mouth);
+
+    // 井口压边（瓦色细框，随坡面贴合）
+    [[0, -2.35, W + 0.4, 0.2], [0, 2.35, W + 0.4, 0.2]].forEach(function (p) {
+      var rim = new _g.Mesh(new _g.BoxGeometry(p[2], 0.22, p[3]), tileMat);
+      rim.rotation.x = slope;
+      rim.position.set(cx, slopeY(cz + p[1]) + 0.13, cz + p[1]);
+      parent.add(rim);
+    });
+    [[-3.35, 0, 0.2, D + 0.4], [3.35, 0, 0.2, D + 0.4]].forEach(function (p) {
+      var rim = new _g.Mesh(new _g.BoxGeometry(p[2], 0.22, p[3]), tileMat);
+      rim.rotation.x = slope;
+      rim.position.set(cx + p[0], slopeY(cz) + 0.13, cz);
+      parent.add(rim);
+    });
+
+    // 室内井壁（顶板开口四周，从顶板底 4.15 向上到坡面）
+    var wellH = 1.5;
+    var wellY = 4.15 + wellH / 2;
+    buildBox(parent, W, wellH, 0.15, cx, wellY, cz - D / 2, darkMat);   // 北壁
+    buildBox(parent, W, wellH, 0.15, cx, wellY, cz + D / 2, darkMat);   // 南壁
+    buildBox(parent, 0.15, wellH, D, cx - W / 2, wellY, cz, darkMat);   // 西壁
+    buildBox(parent, 0.15, wellH, D, cx + W / 2, wellY, cz, darkMat);   // 东壁
+
+    // 天光：从天井口向下打（0xfff4e0，强度 0.6），target 指向室内地面
+    var skylight = new _g.SpotLight(0xfff4e0, 0.6, 14, Math.PI / 5, 0.5, 1.5);
+    skylight.position.set(cx, 5.2, cz);
+    skylight.target.position.set(cx, floorY, cz);
+    parent.add(skylight);
+    parent.add(skylight.target);
   }
 
   function buildBox(parent, w, h, d, x, y, z, m) {
