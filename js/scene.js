@@ -794,140 +794,28 @@ window.MuseumScene = (function () {
     var group = new _g.Group();
     root.add(group);
 
-    // 基座
-    var plinth = new _g.Mesh(new _g.BoxGeometry(26, 0.7, 18), mat(0xb9b0a0, { roughness: 0.9 }));
-    plinth.position.set(0, 0.35, -2);
-    plinth.receiveShadow = true;
-    group.add(plinth);
-    // 建筑碰撞：只挡「外墙 + 正门两侧基座」，室内展厅必须保持可漫游，
-    // 否则玩家会被堵在 x ∈ [-2,2] 的 4 米通道里，二楼展厅的 6 件展品全都走不到。
-    obstacles.push({ type: "rect", x0: -13, z0: 5.6, x1: -2, z1: 7 });      // 南立面·门左
-    obstacles.push({ type: "rect", x0: 2, z0: 5.6, x1: 13, z1: 7 });        // 南立面·门右
-    obstacles.push({ type: "rect", x0: -13, z0: -11, x1: -10.6, z1: 7 });   // 西外墙
-    obstacles.push({ type: "rect", x0: 10.6, z0: -11, x1: 13, z1: 7 });     // 东外墙
-    obstacles.push({ type: "rect", x0: -13, z0: -11, x1: 13, z1: -9.6 });   // 北外墙
+    /* ============================================================
+     * 江南院落 · 六厅逐栋替换旧单体大殿（2026-09-22 拆改）
+     * ------------------------------------------------------------
+     * 本次拆除：
+     *   · 旧单体大殿：石基座 / 南侧柱廊 / 一层墙体与高侧窗 / 四坡顶与匾额 /
+     *     檐下灯笼 / 室内木地板 / 顶棚梁格 / 室内照明 / 两座展台 /
+     *     北墙三幅与西墙两幅挂画
+     *   · 旧西侧连廊：美人靠、展墙、蒙娜丽莎与星月夜两幅西画
+     *   同时移除旧大殿墙体的 5 个碰撞体与柱廊 4 个柱碰撞体
+     *   （原为组长代登记，已随几何一并移除，**待组员1 复核**）。
+     *   需要回溯旧几何：见提交 095e8dd 之前的版本。
+     *
+     * 进度：已建 hall2 花鸟画展区（样板厅，函数定义见本函数下方）
+     *       待建 hall0 序厅 / hall1 山水展区 / hall3 人物展区 /
+     *            hall4 书斋茶室 / hall5 文创区 / 中央庭院 courtyard
+     *            （含水池、太湖石、竹丛、东西曲廊、马头墙与漏窗）
+     * ============================================================ */
 
-    // 台阶（正门）
-    [-1, 1].forEach(function (k) {
-      var step = new _g.Mesh(new _g.BoxGeometry(8, 0.16, 1.1), mat(0xb9b0a0, { roughness: 0.9 }));
-      step.position.set(0, 0.16 * (k + 1), 6.4 + k * 1.1);
-      group.add(step);
-    });
-
-    // 一层主体墙（22 x 4.8 x 14）——单层高敞大殿，已去掉二楼
-    // 墙身标高 0.65~5.45，墙顶板 5.475~5.825
-    var wallMat = mat(0xefe9dc, { roughness: 0.9, side: _g.DoubleSide });
-    buildBox(group, 22, 4.8, 0.35, 0, 3.05, -2, wallMat);   // 顶板（兼挑檐内侧）
-    buildBox(group, 22, 0.35, 14, 0, 5.65, -2, wallMat);    // 一层顶板
-    buildBox(group, 0.35, 4.8, 14, -10.82, 3.05, -2, wallMat); // 西墙
-    buildBox(group, 0.35, 4.8, 14, 10.82, 3.05, -2, wallMat);  // 东墙
-    buildBox(group, 22, 4.8, 0.35, 0, 3.05, -9.82, wallMat);   // 北墙
-    // 南墙（大门开口）：左墙 + 右墙 + 门上横墙
-    buildBox(group, 9, 4.8, 0.35, -6.5, 3.05, 5.82, wallMat);
-    buildBox(group, 9, 4.8, 0.35, 6.5, 3.05, 5.82, wallMat);
-    buildBox(group, 4, 1.45, 0.35, 0, 4.725, 5.82, wallMat);
-
-    // 一层立柱（红柱，正门廊）——高度随墙身一起加高
-    var colGeo = new _g.CylinderGeometry(0.18, 0.22, 4.9, 10);
-    var colMat = mat(0x9c3a2c, { roughness: 0.55 });
-    [-6.8, -2.6, 2.6, 6.8].forEach(function (x) {
-      var col = new _g.Mesh(colGeo, colMat);
-      col.position.set(x, 2.55, 7.0);
-      col.castShadow = true;
-      group.add(col);
-      obstacles.push({ type: "circle", x: x, z: 7.0, r: 0.4 });
-    });
-
-    // 已去掉二楼：原二层体块（20.4×2.6×12.4）与 8 樘二层窗全部移除，
-    // 木格花窗下移到一层墙身上部（高侧窗），单层大殿的标准做法。
-    var winMat = canvasMat(drawLattice(), { roughness: 0.55 });
-    // 北立面 4 樘高侧窗
-    [-6.6, -2.2, 2.2, 6.6].forEach(function (wx) {
-      buildBox(group, 2.5, 1.5, 0.16, wx, 4.4, -10.01, winMat);
-    });
-    // 南立面门两侧各 1 樘（中间留给门洞与匾额）
-    [-6.6, 6.6].forEach(function (wx) {
-      buildBox(group, 2.5, 1.5, 0.16, wx, 4.4, 6.01, winMat);
-    });
-    // 南立面门两侧下部花窗
-    [-6.2, 6.2].forEach(function (wx) {
-      buildBox(group, 2.2, 1.8, 0.16, wx, 2.6, 6.01, winMat);
-    });
-
-    // 挑檐 + 四坡屋顶（瓦面 / 飞檐翘角 / 正脊 / 鸱吻）
-    buildRoof(group, { x: 0, z: -2, y: 5.65, w: 24.4, d: 16.2, h: 3.5, eave: 1.5, ridge: 8.0 });
-
-    // 门楣 + 匾额（正门上方）
-    // 原实现：匾额平面在 z=5.9，正好落在南墙墙身（5.645~5.995）内部，等于埋进墙体，
-    // 看着像一张贴在墙上的纸。现外移出墙面，并加木框、门楣与檐下灯笼。
-    buildBox(group, 5.4, 0.24, 0.5, 0, 5.15, 6.03, mat(0x6d5544, { roughness: 0.7 }));
-    var plaqueFrame = new _g.Mesh(new _g.BoxGeometry(3.9, 1.34, 0.18), mat(0x8a6a45, { roughness: 0.55, metalness: 0.15 }));
-    plaqueFrame.position.set(0, 4.5, 6.02);
-    plaqueFrame.castShadow = true;
-    group.add(plaqueFrame);
-    var plaque = new _g.Mesh(
-      new _g.PlaneGeometry(3.4, 0.95),
-      canvasMat(drawPlaque("云墨美术馆"), { side: _g.DoubleSide })
-    );
-    plaque.position.set(0, 4.5, 6.12);
-    group.add(plaque);
-    // 檐下灯笼一对
-    buildLantern(group, -3.0, 4.85, 6.6, 0.95);
-    buildLantern(group, 3.0, 4.85, 6.6, 0.95);
-
-    /* ---------- 室内一层（中国绘画厅） ---------- */
-    // 室内地面（木地板）
-    var floor = new _g.Mesh(new _g.PlaneGeometry(21.6, 13.6), canvasMat(drawWood(), { roughness: 0.7 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(0, 0.71, -2);
-    floor.receiveShadow = true;
-    group.add(floor);
-
-    // 天花板（一层顶板底面，double side 已可见）
-
-    // 中央展台（鼎 + 俑）
-    addPedestal(group, -3.2, "houmuwuding", "后母戊鼎 · 商");
-    addPedestal(group, 3.4, "jiangjunyong", "将军俑 · 秦");
-
-    // 展墙上的画（挂于东、西、北墙 + 南墙两侧）
-    addPainting(group, { x: 0, y: 2.55, z: -9.35, ry: 0 }, 3.4, 2.2, "qianlijiangshan");            // 北墙·千里江山
-    addPainting(group, { x: -5.6, y: 2.55, z: -9.35, ry: 0 }, 2.2, 1.5, "fuchunshanjv");          // 北墙·富春山居
-    addPainting(group, { x: 5.6, y: 2.55, z: -9.35, ry: 0 }, 2.2, 1.5, "qingmingshanghe");        // 北墙·清明上河
-    // 西墙两幅：原 ry=-π/2 使画面法线朝向西墙内部（背对观众、画面镜像），
-    // 改为朝东（室内）并给射灯一组朝室内的偏移
-    addPainting(group, { x: -10.35, y: 2.55, z: -4.5, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.2, 1.5, "hanxizai");    // 西墙·韩熙载
-    addPainting(group, { x: -10.35, y: 2.55, z: 0.8, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.2, 1.5, "luoshenfu");    // 西墙·洛神赋
-
-    // 顶棚梁格（藻井感）：原来一层顶板是一整块素面
-    var beamXs = [-9, -3, 3, 9];
-    for (var bi = 0; bi < beamXs.length; bi++) {
-      buildBox(group, 0.32, 0.32, 13.4, beamXs[bi], 4.34, -2, mat(0xd9d2c4, { roughness: 0.85 }));
-    }
-    var beamZs = [-8.5, -4.2, 0.1, 4.4];
-    for (var bj = 0; bj < beamZs.length; bj++) {
-      buildBox(group, 21.4, 0.32, 0.32, 0, 4.34, beamZs[bj], mat(0xd9d2c4, { roughness: 0.85 }));
-    }
-
-    // 室内照明：主灯压中轴，两盏偏暖洗墙灯，拉开明暗层次
-    var light1 = new _g.PointLight(0xffe6c4, 0.7, 24, 2);
-    light1.position.set(0, 4.0, -2);
-    group.add(light1);
-    var light2 = new _g.PointLight(0xffd9a8, 0.45, 16, 2);
-    light2.position.set(-6, 3.6, -6);
-    group.add(light2);
-    var light3 = new _g.PointLight(0xffd9a8, 0.45, 16, 2);
-    light3.position.set(6, 3.6, -6);
-    group.add(light3);
-
-    /* ---------- 西侧连廊（文明对话厅 · 二楼展品移此，可到达） ---------- */
-    buildCorridor(root, group);
-
-    /* ---------- 前庭雕塑（铜奔马 + 石狮） ---------- */
-    // 铜奔马置于中轴偏西：中轴要给「张开手掌向前漫游 → 直行进门」留出干净走道
-    addPlazaSculpture(root, -6.4, 15.2, "matayafeiyan", "马踏飞燕 · 东汉");
-    addStoneLion(root, -7.2, 9.2, 1);
-    addStoneLion(root, 7.2, 9.2, -1);
-
+    /* ---------- 前庭雕塑与石狮（按坐标版 §四 调整坐标）---------- */
+    addPlazaSculpture(root, -6.4, 6, "matayafeiyan", "马踏飞燕 · 东汉");  // 移入中央庭院西南
+    addStoneLion(root, -8, 25, 1);   // 序厅前 · 西
+    addStoneLion(root, 8, 25, -1);   // 序厅前 · 东
     /* ---------- 展厅区域（用于玩家所在厅判定） ---------- */
     hallRegions.plaza = { type: "circle", x: 0, z: 20, r: 34 };
     hallRegions.hall1 = { type: "rect", x0: -10.5, z0: -9.5, x1: 10.5, z1: 5.5 };
