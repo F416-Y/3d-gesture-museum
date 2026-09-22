@@ -929,9 +929,15 @@ window.MuseumScene = (function () {
     addStoneLion(root, 7.2, 9.2, -1);
 
     /* ---------- 展厅区域（用于玩家所在厅判定） ---------- */
-    hallRegions.plaza = { type: "circle", x: 0, z: 20, r: 34 };
-    hallRegions.hall1 = { type: "rect", x0: -10.5, z0: -9.5, x1: 10.5, z1: 5.5 };
-    hallRegions.hall2 = { type: "rect", x0: -16.5, z0: -9.5, x1: -12.2, z1: 5.5 };
+    // 六厅 + 中央庭院：矩形取《江南院落平面-坐标版.md》§二 冻结值（改范围需先群里公告）
+    hallRegions.hall0 = { type: "rect", x0: -10, z0: 24, x1: 10, z1: 34 };      // 序厅
+    hallRegions.hall1 = { type: "rect", x0: -34, z0: -22, x1: -16, z1: -4 };    // 山水画展区
+    hallRegions.hall2 = { type: "rect", x0: -12, z0: -24, x1: 12, z1: -8 };     // 花鸟画展区
+    hallRegions.hall3 = { type: "rect", x0: 16, z0: -22, x1: 34, z1: -4 };      // 人物画展区
+    hallRegions.hall4 = { type: "rect", x0: 16, z0: 6, x1: 32, z1: 20 };        // 书斋 · 茶室
+    hallRegions.hall5 = { type: "rect", x0: -32, z0: 6, x1: -16, z1: 20 };      // 文创区 · 临帖休憩
+    hallRegions.courtyard = { type: "rect", x0: -14, z0: 0, x1: 14, z1: 22 };   // 中央庭院
+    hallRegions.plaza = { type: "circle", x: 0, z: 20, r: 34 };                 // 前庭 · 园区
 
     return group;
   }
