@@ -15,7 +15,9 @@
  *   指点（仅食指伸出）→ turn：根据食指指向左右转向
  *
  * 依赖：config.js（MuseumConfig.gesture 阈值）、HTML 中 <video id="cam">
- * 注意：摄像头画面不可用时自动降级，由 main.js 走键盘控制
+ * 失败约定：init() 的 reject 带 stage（camera | model）与 hint（可直接展示的中文原因），
+ *          也可用 getLastError() 读；失败路径内部已释放摄像头与模型实例，
+ *          main.js 只需展示 hint 并保持键盘模式
  * ============================================================ */
 
 window.MuseumGesture = (function () {
@@ -24,6 +26,9 @@ window.MuseumGesture = (function () {
   var handLandmarker = null;
   var running = false;
   var stream = null;
+  var starting = false;      // init() 进行中；超时后用它丢弃迟到的模型实例
+  var startingPromise = null; // 进行中的启动链，供重复点击复用
+  var lastError = null;      // 最近一次启动失败：{ stage, hint }
 
   /* 手势输出状态（main.js 每帧读取） */
   var state = {
@@ -39,15 +44,141 @@ window.MuseumGesture = (function () {
   var pinchPrev = false;
   var turnSmoothed = 0;
 
+  var WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm";
+  var MODEL_URL =
+    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+  var VISION_WAIT_MS = 12000;   // 等 index.html 的动态 import 完成
+  var MODEL_LOAD_MS = 25000;    // 等 WASM + 模型初始化（GPU delegate 卡死时靠它兜底）
+
+  /* ---------- 错误分类 ---------- */
+  // stage 区分「摄像头」与「模型」两类失败，hint 是给用户看的中文原因，
+  // 让 main.js 的 catch 能直接展示，而不是统一糊成一句「摄像头不可用」。
+  function makeError(stage, hint, cause) {
+    var err = new Error(hint);
+    err.stage = stage;
+    err.hint = hint;
+    if (cause) err.cause = cause;
+    return err;
+  }
+
+  function describeCameraError(err) {
+    var name = (err && err.name) || "";
+    if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
+      return "摄像头权限被拒绝：请在浏览器地址栏将摄像头设为「允许」后重新点击摄像头按钮";
+    }
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      return "未检测到可用摄像头：已切换为键盘模式";
+    }
+    if (name === "NotReadableError" || name === "TrackStartError") {
+      return "摄像头被其他程序占用（微信 / 钉钉 / 腾讯会议等）：关闭占用程序后重试";
+    }
+    if (name === "OverconstrainedError") {
+      return "摄像头不支持请求的分辨率：已切换为键盘模式";
+    }
+    return "摄像头启动失败：" + (name || (err && err.message) || "未知原因");
+  }
+
+  // 模型阶段（CDN / WASM / .task 下载 / GPU 初始化）的原始报错统一打上 stage=model，
+  // 并换成照着能做的中文提示——答辩现场断网最先撞上的就是这一类
+  function tagModelError(err) {
+    if (err && err.stage) return err;
+    var msg = (err && err.message) || (err && err.name) || "未知错误";
+    var hint = /fetch|network|404|Failed to|load/i.test(msg)
+      ? "手势模型下载失败（首次需从 CDN 拉取约 10MB）：请检查网络后重试，或使用键盘模式"
+      : "手势模型初始化失败：" + msg + "（可改用键盘模式参观）";
+    return makeError("model", hint, err);
+  }
+
+  /* ---------- 超时保护 ---------- */
+  // GPU delegate 在部分机器上既不 resolve 也不 reject，只会一直挂着，
+  // 那时 loading 层会永远停在那里，所以整条加载链必须有一个上限。
+  function withTimeout(promise, ms, stage, hint) {
+    var timer;
+    var guarded = promise.then(
+      function (v) { clearTimeout(timer); return v; },
+      function (e) { clearTimeout(timer); throw e; },
+    );
+    return Promise.race([
+      guarded,
+      new Promise(function (_resolve, reject) {
+        timer = setTimeout(function () { reject(makeError(stage, hint)); }, ms);
+      }),
+    ]);
+  }
+
   /* ---------- 启动摄像头 ---------- */
   function startCamera() {
+    if (!video) {
+      return Promise.reject(makeError("camera", "页面缺少摄像头预览元素（<video id=\"cam\">），无法启动手势"));
+    }
+    // 非安全上下文（file:// 或 http://内网IP）下浏览器根本不暴露 mediaDevices，
+    // 这里单独判一次，否则会被误报成「没有摄像头」，答辩现场最难查的就是这种。
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return Promise.reject(makeError(
+        "camera",
+        "当前页面无法调用摄像头（浏览器要求 https:// 或 localhost）：请用键盘模式参观",
+      ));
+    }
+    // muted + playsinline：绕开自动播放策略，避免 video.play() 被拒后画面不更新
+    video.muted = true;
+    video.setAttribute("playsinline", "true");
+
     return navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: cfg.camWidth }, height: { ideal: cfg.camHeight }, facingMode: "user" },
       audio: false,
     }).then(function (s) {
       stream = s;
       video.srcObject = s;
-      return video.play();
+      // 黑屏排查自检：打印实际被浏览器选中的设备（虚拟摄像头在这现形），
+      // 1 秒后仍无帧则给出可操作原因——授权成功但画面全黑时不用开盲盒
+      var track = s.getVideoTracks && s.getVideoTracks()[0];
+      if (track) {
+        console.log("[云墨美术馆] 已选中的摄像头：", track.label || "(无设备名)");
+      }
+      setTimeout(function () {
+        if (!video.srcObject) return;
+        var hasFrame = video.readyState >= 2 && video.videoWidth > 0;
+        if (!hasFrame) {
+          console.warn(
+            "[云墨美术馆] 摄像头已授权但无画面：浏览器没拿到视频帧",
+            track && track.label ? "（设备：" + track.label + "）。" : "。",
+            "常见于内置容器或虚拟摄像头；请在 Chrome / Edge 打开，或用系统相机验证设备",
+          );
+          return;
+        }
+        // 有帧不等于有画面：抽一帧量平均亮度，
+        // 区分「浏览器不画帧」（亮度正常）和「设备在出黑帧」（亮度≈0，物理遮挡/隐私模式）
+        try {
+          var probe = document.createElement("canvas");
+          probe.width = video.videoWidth;
+          probe.height = video.videoHeight;
+          var pctx = probe.getContext("2d", { willReadFrequently: true });
+          pctx.drawImage(video, 0, 0);
+          var px = pctx.getImageData(0, 0, probe.width, probe.height).data;
+          var sum = 0;
+          for (var i = 0; i < px.length; i += 4) { sum += px[i] + px[i + 1] + px[i + 2]; }
+          var mean = sum / (px.length / 4) / 3;
+          if (mean < 3) {
+            console.warn(
+              "[云墨美术馆] 摄像头在出黑帧（平均亮度 " + mean.toFixed(1) + "/255）：",
+              "最常见是笔记本物理遮挡片或 Lenovo Vantage 相机隐私模式；",
+              "打开系统「相机」应用确认，再检查机身滑片 / 按 Fn+F8 / 在 Vantage 里解除隐私模式",
+            );
+          }
+        } catch (probeErr) {
+          console.warn("[云墨美术馆] 黑帧检测失败：", probeErr && probeErr.message);
+        }
+      }, 1000);
+      // 预览播不出来不影响识别（detectForVideo 直接读视频轨），只记警告
+      // 老浏览器 play() 不返回 Promise，所以先判一下再挂 catch
+      var played = video.play();
+      if (!played || !played.catch) return;
+      return played.catch(function (playErr) {
+        console.warn("[云墨美术馆] 摄像头预览未能自动播放（识别继续）：", playErr && playErr.name);
+      });
+    }).catch(function (err) {
+      if (err && err.stage) throw err;
+      throw makeError("camera", describeCameraError(err), err);
     });
   }
 
@@ -66,46 +197,47 @@ window.MuseumGesture = (function () {
         if (typeof FilesetResolver !== "undefined" && typeof HandLandmarker !== "undefined") {
           resolve();
         } else {
-          reject(new Error("MediaPipe 依赖未加载（vision_bundle.mjs 拉取失败），请检查网络"));
+          reject(makeError("model", "MediaPipe 依赖未加载（CDN 拉取失败）：请检查网络后重试，或使用键盘模式"));
         }
       }
       window.addEventListener("mediapipe-ready", finish, { once: true });
-      setTimeout(finish, timeoutMs || 12000);
+      // index.html 的 import 失败时 MediaPipeReady 会 resolve(false)，
+      // 据此立刻失败，不必让演示者干等 12 秒
+      if (window.MediaPipeReady && window.MediaPipeReady.then) {
+        window.MediaPipeReady.then(function (ok) { if (!ok) finish(); });
+      }
+      setTimeout(finish, timeoutMs || VISION_WAIT_MS);
     });
   }
 
+  function landmarkerOptions(delegate) {
+    return {
+      baseOptions: { modelAssetPath: MODEL_URL, delegate: delegate },
+      runningMode: "VIDEO",
+      numHands: 1,
+      minHandDetectionConfidence: 0.55,
+      minTrackingConfidence: 0.5,
+    };
+  }
+
   function loadModel() {
-    return waitForVision(12000).then(function () {
-      return FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-      );
+    return waitForVision(VISION_WAIT_MS).then(function () {
+      return FilesetResolver.forVisionTasks(WASM_URL);
     }).then(function (vision) {
-      // 优先 GPU，失败时降级 CPU（部分笔记本 GPU delegate 不可用）
-      return HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numHands: 1,
-        minHandDetectionConfidence: 0.55,
-        minTrackingConfidence: 0.5,
-      }).catch(function () {
-        return HandLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-            delegate: "CPU",
-          },
-          runningMode: "VIDEO",
-          numHands: 1,
-          minHandDetectionConfidence: 0.55,
-          minTrackingConfidence: 0.5,
-        });
+      // 优先 GPU，失败降级 CPU；两者都是同一份 options，只差 delegate
+      return HandLandmarker.createFromOptions(vision, landmarkerOptions("GPU")).catch(function (gpuErr) {
+        console.warn("[云墨美术馆] GPU delegate 不可用，降级 CPU：", gpuErr && gpuErr.message);
+        return HandLandmarker.createFromOptions(vision, landmarkerOptions("CPU"));
       });
     }).then(function (lm) {
+      if (!starting) {
+        // 已经超时或被 stop()：关掉这个迟到的实例，避免留下第二个 WASM 上下文
+        try { lm.close(); } catch (e) { /* ignore */ }
+        return;
+      }
       handLandmarker = lm;
+    }).catch(function (err) {
+      throw tagModelError(err);
     });
   }
 
@@ -189,6 +321,29 @@ window.MuseumGesture = (function () {
     requestAnimationFrame(tick);
   }
 
+  /* ---------- 释放全部外部资源（摄像头 / 模型 / 平滑状态） ---------- */
+  function shutdown() {
+    starting = false;
+    startingPromise = null;
+    running = false;
+    state.active = false;
+    state.forward = false;
+    state.pinch = false;
+    state.pinchPressed = false;
+    state.turn = 0;
+    pinchPrev = false;
+    turnSmoothed = 0;
+    if (stream) {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      stream = null;
+    }
+    if (video) video.srcObject = null;
+    if (handLandmarker) {
+      try { handLandmarker.close(); } catch (e) { /* ignore */ }
+      handLandmarker = null;
+    }
+  }
+
   /* ---------- 对外 API ---------- */
   return {
     init: function (videoEl) {
@@ -202,30 +357,48 @@ window.MuseumGesture = (function () {
         cfg.turnMax = gc.turnMax;
         cfg.smooth = gc.smooth;
       }
-      return startCamera().then(loadModel).then(function () {
-        running = true;
-        requestAnimationFrame(tick);
-        return true;
-      });
+      // 已在运行直接返回；正在启动时再点一次就复用同一条启动链——
+      // 既不会再开一条视频流，也不会提前回一句「已就绪」骗过 main.js
+      if (running) {
+        return Promise.resolve(true);
+      }
+      if (starting && startingPromise) {
+        return startingPromise;
+      }
+      lastError = null;
+      starting = true;
+      var chain = startCamera()
+        .then(function () {
+          return withTimeout(loadModel(), MODEL_LOAD_MS, "model",
+            "手势模型加载超时（首次需从 CDN 下载约 10MB）：请检查网络后重试，或使用键盘模式");
+        })
+        .then(
+          function () {
+            starting = false;
+            startingPromise = null;
+            running = true;
+            requestAnimationFrame(tick);
+            return true;
+          },
+          function (err) {
+            lastError = {
+              stage: (err && err.stage) || "camera",
+              hint: (err && err.hint) || (err && err.message) || "手势启动失败",
+            };
+            // 关键：模型加载失败时摄像头已经开着，必须在这里关掉，
+            // 否则浏览器指示灯常亮，再点一次还会叠出第二条流
+            shutdown();
+            throw err;
+          },
+        );
+      startingPromise = chain;
+      return chain;
     },
     stop: function () {
-      running = false;
-      state.active = false;
-      state.forward = false;
-      state.pinch = false;
-      state.pinchPressed = false;
-      state.turn = 0;
-      if (stream) {
-        stream.getTracks().forEach(function (t) { t.stop(); });
-        stream = null;
-      }
-      if (video) video.srcObject = null;
-      if (handLandmarker) {
-        try { handLandmarker.close(); } catch (e) { /* ignore */ }
-        handLandmarker = null;
-      }
+      shutdown();
     },
     getState: function () { return state; },
     isRunning: function () { return running; },
+    getLastError: function () { return lastError; },
   };
 })();
