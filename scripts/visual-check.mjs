@@ -123,6 +123,14 @@ page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); }
 console.log('外观自检：打开页面…');
 await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'load', timeout: 90000 });
 await page.waitForFunction(() => window.MuseumPlayer && window.MuseumScene, null, { timeout: 90000 });
+/* 等 GLB 零件模型加载替换完成（models.js 是异步的；等它彻底静下来再拍，否则截图会卡在"等画面稳定"） */
+await page.waitForFunction(() => {
+  const M = window.MuseumModels;
+  if (!M) return true;
+  const s = M.stats();
+  return s.requested === s.ready + s.failed.length;
+}, null, { timeout: 60000 }).catch(() => {});
+await page.waitForTimeout(2000);
 
 /* 自由相机：只改工具，不动产品代码。
  * three 的 WebGLRenderer.render 是"实例方法"，原型补丁对它无效；
@@ -166,8 +174,13 @@ for (const shot of SHOTS) {
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
-  const canvas = await page.$('canvas');
-  const png = await canvas.screenshot({ type: 'png' });
+  /* 用整页裁切代替元素截图：画布持续重绘时元素截图会卡在"等待稳定" */
+  const clip = await page.evaluate(() => {
+    const c = document.querySelector('canvas');
+    const r = c.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
+  });
+  const png = await page.screenshot({ type: 'png', clip, animations: 'disabled', timeout: 60000 });
   await fsp.writeFile(path.join(OUT, shot.name + '.png'), png);
   const stat = await measure(page, png, shot.name);
   stat.note = shot.note;

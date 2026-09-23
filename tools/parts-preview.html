@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>GLB 零件验证</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#1b1b1b}
+  #info{position:absolute;left:12px;top:12px;color:#eee;font:13px/1.6 sans-serif;background:rgba(0,0,0,.45);padding:8px 12px;border-radius:6px}
+</style>
+</head>
+<body>
+<div id="info">加载中…</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* 目的：验证 Aholo 产出的 GLB 能否被项目的 three r147（UMD）+ GLTFLoader 直接吃进去。
+   用法：parts-preview.html?m=lantern.glb */
+var file = new URLSearchParams(location.search).get('m') || 'lantern.glb';
+var info = document.getElementById('info');
+
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0xb9b4a8);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6b6155, 0.85));
+var key = new THREE.DirectionalLight(0xfff2e0, 1.5);
+key.position.set(3, 6, 4); key.castShadow = true; scene.add(key);
+var fill = new THREE.DirectionalLight(0xcfe0ff, 0.5);
+fill.position.set(-4, 2, -3); scene.add(fill);
+
+var camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.01, 500);
+camera.position.set(1.6, 1.1, 2.2);
+
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.5, 0);
+
+var grid = new THREE.GridHelper(4, 8, 0x6b6155, 0x8a8578);
+scene.add(grid);
+
+var loaded = null;
+new THREE.GLTFLoader().load(file, function (gltf) {
+  loaded = gltf.scene;
+  var box = new THREE.Box3().setFromObject(loaded);
+  var size = box.getSize(new THREE.Vector3());
+  var center = box.getCenter(new THREE.Vector3());
+  loaded.position.sub(center);
+  loaded.position.y += size.y / 2;
+  loaded.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(loaded);
+  var d = Math.max(size.x, size.y, size.z) || 1;
+  camera.position.set(d * 1.05, d * 0.75, d * 1.5);
+  controls.target.set(0, size.y / 2, 0);
+  controls.update();
+  info.textContent = file + ' ✔ ' + Math.round(size.x * 100) / 100 + ' × ' + Math.round(size.y * 100) / 100
+    + ' × ' + Math.round(size.z * 100) / 100 + ' m · 三角面 ' + renderer.info.render.triangles;
+  window.__glbReady = { ok: true, size: [size.x, size.y, size.z] };
+}, function (e) {
+  if (e && e.total) info.textContent = '下载 ' + Math.round(e.loaded / e.total * 100) + '%';
+}, function (err) {
+  info.textContent = '加载失败：' + err;
+  window.__glbReady = { ok: false, error: String(err) };
+});
+
+addEventListener('resize', function () {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+(function loop() {
+  requestAnimationFrame(loop);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+</script>
+</body>
+</html>

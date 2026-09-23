@@ -49,7 +49,14 @@ async function loadSdk() {
 /** 递归收集返回体里的 URL（不同任务返回结构不完全一致，按后缀挑） */
 function collectUrls(node, out = []) {
   if (!node) return out;
-  if (typeof node === 'string') { if (/^https?:\/\//.test(node)) out.push(node); return out; }
+  if (typeof node === 'string') {
+    const s = node.replace(/\\\//g, '/');
+    if (/^https?:\/\//.test(s.trim())) { out.push(s.trim()); return out; }
+    /* 有些返回把 URL 数组塞在一个字符串里（JSON-in-string），这里兜底抠出来 */
+    const found = s.match(/https?:\/\/[^\s"'\\,\]}]+/g);
+    if (found) found.forEach(u => out.push(u));
+    return out;
+  }
   if (Array.isArray(node)) { node.forEach(n => collectUrls(n, out)); return out; }
   if (typeof node === 'object') { Object.values(node).forEach(n => collectUrls(n, out)); }
   return out;
@@ -118,19 +125,51 @@ for (const part of picked) {
   }
   const tag = `[${++done}/${picked.length}] ${part.id} · ${part.name}`;
   try {
-    console.log(`${tag} → 文生图…`);
-    const imgTask = await lux.multimodalToImage.create({ prompt: `${part.prompt}${style}` });
-    const imgRes = await lux.tasks.waitFor(imgTask);
-    const imgUrl = pickUrl(imgRes, ['.png', '.jpg', '.jpeg', '.webp']);
-    if (!imgUrl) throw new Error('生图任务返回里找不到图片 URL：' + JSON.stringify(imgRes).slice(0, 300));
-    const rawPath = path.join(RAW_DIR, part.id + '.png');
-    const imgBytes = await download(imgUrl, rawPath);
-    console.log(`${tag} → 图生 3D（G1-Turbo · ${part.faceCount} 面 · GLB+PBR）…`);
-
-    const meshTask = await lux.imgTo3d.createFromFile(rawPath, {
+    /* 有 refImage 就直接拿单件参考图当输入（跳过生图，最忠实）；
+       没有才走 文生图 → 图生3D */
+    let rawPath, imgTask = null, imgRes = null, imgUrl = null, imgBytes = 0;
+    if (part.refImage) {
+      rawPath = path.resolve(ROOT, part.refImage);
+      if (!fs.existsSync(rawPath)) throw new Error('参考图不存在：' + part.refImage);
+      console.log(`${tag} → 参考图直出（跳过生图）…`);
+    } else {
+      console.log(`${tag} → 文生图…`);
+      imgTask = await lux.multimodalToImage.create({ prompt: `${part.prompt}${style}` });
+      imgRes = await lux.tasks.waitFor(imgTask);
+      imgUrl = pickUrl(imgRes, ['.png', '.jpg', '.jpeg', '.webp']);
+      if (!imgUrl) throw new Error('生图任务返回里找不到图片 URL：' + JSON.stringify(imgRes).slice(0, 300));
+      rawPath = path.join(RAW_DIR, part.id + '.png');
+      imgBytes = await download(imgUrl, rawPath);
+    }
+    /* aiPredictSize：参考图直出时默认关掉（尺寸在场景里手动定，它猜的经常是错的） */
+    const tile = {
       version: 'G1-Turbo', outputFormat: ['glb'], faceCount: part.faceCount,
-      aiPredictSize: true, enablePbr: true,
-    });
+      aiPredictSize: part.aiPredictSize === undefined ? !part.refImage : part.aiPredictSize,
+      enablePbr: true,
+    };
+    let meshTask;
+    const extra = {};
+    if (part.fourView) {
+      /* 单张正立面缺深度信息，先扩成四视图，再走多视角图生3D */
+      console.log(`${tag} → 四视图（正/侧/背/顶）…`);
+      const fvTask = await lux.imageToFourView.createFromFile(rawPath, { prompt: part.prompt });
+      const fvRes = await lux.tasks.waitFor(fvTask);
+      const fvUrls = [...new Set(collectUrls(fvRes))].filter(u => /\.(png|jpe?g|webp)$/i.test(u.split('?')[0]));
+      if (fvUrls.length < 2) throw new Error('四视图返回里视图不够：' + JSON.stringify(fvRes).slice(0, 300));
+      const fvPaths = [];
+      for (let i = 0; i < fvUrls.length; i++) {
+        const p = path.join(RAW_DIR, `${part.id}-view${i + 1}.png`);
+        await download(fvUrls[i], p);
+        fvPaths.push(p);
+      }
+      extra.fourViewTaskId = fvTask;
+      extra.fourViewUrls = fvUrls;
+      console.log(`${tag} → 多视角图生 3D（${fvPaths.length} 视图 · ${part.faceCount} 面）…`);
+      meshTask = await lux.imgTo3d.createFromFiles(fvPaths, tile);
+    } else {
+      console.log(`${tag} → 图生 3D（G1-Turbo · ${part.faceCount} 面 · 预测尺寸=${tile.aiPredictSize}）…`);
+      meshTask = await lux.imgTo3d.createFromFile(rawPath, tile);
+    }
     const meshRes = await lux.tasks.waitFor(meshTask);
     const glbUrl = pickUrl(meshRes, ['.glb']);
     if (!glbUrl) throw new Error('图生3D 返回里找不到 GLB URL：' + JSON.stringify(meshRes).slice(0, 300));
@@ -139,7 +178,8 @@ for (const part of picked) {
     ledger.parts[part.id] = {
       name: part.name, replaces: part.replaces, sizeM: part.sizeM, faceCount: part.faceCount,
       imageTaskId: imgTask, meshTaskId: meshTask, imageBytes: imgBytes, glbBytes,
-      imageUrl: imgUrl, glbUrl, at: new Date().toISOString(), raw: { image: imgRes, mesh: meshRes },
+      imageUrl: imgUrl, glbUrl, at: new Date().toISOString(), fourView: extra.fourViewUrls || null,
+      raw: { image: imgRes, mesh: meshRes },
     };
     await ledgerWrite(ledger);
     console.log(`${tag} ✔ 生图 ${(imgBytes / 1024).toFixed(0)}KB → 模型 ${(glbBytes / 1024 / 1024).toFixed(2)}MB`);
