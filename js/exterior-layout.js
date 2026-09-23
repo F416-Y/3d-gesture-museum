@@ -487,19 +487,19 @@ window.MuseumExteriorLayout = (function () {
           box(0.24, wallH - doorH, doorW, M.paper, sd.px, wallY0 + doorH + (wallH - doorH) / 2, sd.pz, 0, g);
         }
         var ox = sd.px + sd.nx * 0.05, oz = sd.pz + sd.nz * 0.05;
-        if (!isEntry) {   /* 后门保持关闭：门洞填暗腔；正门敞开可直视室内 */
-          var dk = sd.ax === 'x'
-            ? box(doorW - 0.1, doorH, 0.16, M.ink, ox, wallY0 + doorH / 2, oz, 0, g)
-            : box(0.16, doorH, doorW - 0.1, M.ink, ox, wallY0 + doorH / 2, oz, 0, g);
-          dk.castShadow = false;
-        }
         var leafW = (doorW - 0.24) / 2;
         if (sd.ax === 'x') {
           box(doorW + 0.8, 0.24, 1.0, M.stone, sd.px, 0.36, sd.pz + sd.nz * 0.9, 0, g);
           box(doorW + 0.8, 0.24, 0.6, M.stone, sd.px, 0.12, sd.pz + sd.nz * 1.35, 0, g);
           var lf1 = box(leafW, doorH - 0.08, 0.08, M.door, ox - leafW / 2 - 0.02, wallY0 + doorH / 2, oz + sd.nz * 0.1, 0, g);
           var lf2 = box(leafW, doorH - 0.08, 0.08, M.door, ox + leafW / 2 + 0.02, wallY0 + doorH / 2, oz + sd.nz * 0.1, 0, g);
-          if (isEntry) { lf1.rotation.y = 1.15; lf2.rotation.y = -1.15; }   /* 正门双扇敞开 */
+          var _op = 1.42;
+          lf1.position.x = ox - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op);
+          lf1.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));
+          lf1.rotation.y = -_op;
+          lf2.position.x = ox + doorW / 2 - 0.12 - (leafW / 2) * Math.cos(_op);
+          lf2.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));
+          lf2.rotation.y = _op;
           if (isEntry) {   /* 正门两侧灌木球收边 */
             shrub(sd.px - doorW / 2 - 1.1, sd.pz + sd.nz * 1.5, 0.5, 300 + i * 7);
             shrub(sd.px + doorW / 2 + 1.1, sd.pz + sd.nz * 1.5, 0.5, 301 + i * 7);
@@ -509,7 +509,13 @@ window.MuseumExteriorLayout = (function () {
           box(0.6, 0.24, doorW + 0.8, M.stone, sd.px + sd.nx * 1.35, 0.12, sd.pz, 0, g);
           var lf3 = box(0.08, doorH - 0.08, leafW, M.door, ox + sd.nx * 0.1, wallY0 + doorH / 2, oz - leafW / 2 - 0.02, 0, g);
           var lf4 = box(0.08, doorH - 0.08, leafW, M.door, ox + sd.nx * 0.1, wallY0 + doorH / 2, oz + leafW / 2 + 0.02, 0, g);
-          if (isEntry) { lf3.rotation.y = 1.15; lf4.rotation.y = -1.15; }   /* 正门双扇敞开 */
+          var _op2 = 1.42;
+          lf3.position.z = oz - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op2);
+          lf3.position.x = ox + sd.nx * (0.1 + (leafW / 2) * Math.sin(_op2));
+          lf3.rotation.y = _op2;
+          lf4.position.z = oz + doorW / 2 - 0.12 - (leafW / 2) * Math.cos(_op2);
+          lf4.position.x = ox + sd.nx * (0.1 + (leafW / 2) * Math.sin(_op2));
+          lf4.rotation.y = -_op2;
           if (isEntry) {   /* 正门两侧灌木球收边 */
             shrub(sd.px + sd.nx * 1.5, sd.pz - doorW / 2 - 1.1, 0.5, 302 + i * 7);
             shrub(sd.px + sd.nx * 1.5, sd.pz + doorW / 2 + 1.1, 0.5, 303 + i * 7);

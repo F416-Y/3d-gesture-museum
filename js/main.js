@@ -204,9 +204,20 @@ window.MuseumMain = (function () {
   }
 
   /* ---------- 主循环 ---------- */
+  /* 帧率自检：每 2 秒往控制台报一次（排查"移动很慢"时看这个数字）
+     真机上低于 30fps 说明是渲染卡，不是移动速度参数的问题。 */
+  var fpsFrames = 0, fpsStamp = (typeof performance !== "undefined" ? performance.now() : Date.now());
+
   function animate() {
     requestAnimationFrame(animate);
     var dt = Math.min(clock.getDelta(), 0.05);
+
+    fpsFrames++;
+    var nowMs = (typeof performance !== "undefined" ? performance.now() : Date.now());
+    if (nowMs - fpsStamp >= 2000) {
+      console.info("[帧率] " + Math.round(fpsFrames * 1000 / (nowMs - fpsStamp)) + " fps");
+      fpsFrames = 0; fpsStamp = nowMs;
+    }
 
     var gs = MuseumGesture.getState();
     var input = composeInput(gs);

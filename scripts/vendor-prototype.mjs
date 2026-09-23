@@ -36,6 +36,7 @@ const e = html.indexOf('\n})();', s);
 if (e < 0) { console.error('找不到模块结束标记 })( );'); process.exit(2); }
 let body = html.slice(s, e + '\n})();'.length);
 body = body.replace(START, 'window.MuseumExteriorLayout = (function () {');
+body = body.replace(/\r\n/g, '\n');   /* 原型可能是 CRLF，先统一成 LF，后面的挂钩才好匹配 */
 /* 颜色：本项目设了 ColorManagement.legacyMode=false（构造时已 sRGB→线性），
    原型的 C() 又转了一次会造成双重转换、整体偏暗，这里按模式自适应。 */
 body = body.replace(
@@ -80,6 +81,37 @@ if (body.indexOf(HOOK_OLD) >= 0) {
 } else {
   console.log('画廊挂钩：未找到 scrollTex（原型结构变了？）');
 }
+
+
+/* 门禁修正：原型把后门用暗腔填死、正门只转 66度（看着像半开挡门）。
+   这里统一改成"绕门轴大敞开"：删掉后门暗腔、双扇折到墙外，洞口全通透。 */
+const DOOR_DEAD = "        if (!isEntry) {   /* 后门保持关闭：门洞填暗腔；正门敞开可直视室内 */\n" +
+  "          var dk = sd.ax === 'x'\n" +
+  "            ? box(doorW - 0.1, doorH, 0.16, M.ink, ox, wallY0 + doorH / 2, oz, 0, g)\n" +
+  "            : box(0.16, doorH, doorW - 0.1, M.ink, ox, wallY0 + doorH / 2, oz, 0, g);\n" +
+  "          dk.castShadow = false;\n" +
+  "        }\n";
+const DOOR_OPEN_X = "          var _op = 1.42;\n" +
+  "          lf1.position.x = ox - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op);\n" +
+  "          lf1.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));\n" +
+  "          lf1.rotation.y = -_op;\n" +
+  "          lf2.position.x = ox + doorW / 2 - 0.12 - (leafW / 2) * Math.cos(_op);\n" +
+  "          lf2.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));\n" +
+  "          lf2.rotation.y = _op;\n";
+const DOOR_OPEN_Z = "          var _op2 = 1.42;\n" +
+  "          lf3.position.z = oz - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op2);\n" +
+  "          lf3.position.x = ox + sd.nx * (0.1 + (leafW / 2) * Math.sin(_op2));\n" +
+  "          lf3.rotation.y = _op2;\n" +
+  "          lf4.position.z = oz + doorW / 2 - 0.12 - (leafW / 2) * Math.cos(_op2);\n" +
+  "          lf4.position.x = ox + sd.nx * (0.1 + (leafW / 2) * Math.sin(_op2));\n" +
+  "          lf4.rotation.y = -_op2;\n";
+const OLD_X = "          if (isEntry) { lf1.rotation.y = 1.15; lf2.rotation.y = -1.15; }   /* 正门双扇敞开 */\n";
+const OLD_Z = "          if (isEntry) { lf3.rotation.y = 1.15; lf4.rotation.y = -1.15; }   /* 正门双扇敞开 */\n";
+let fixLog = [];
+if (body.indexOf(DOOR_DEAD) >= 0) { body = body.replace(DOOR_DEAD, ""); fixLog.push("删后门暗腔"); }
+if (body.indexOf(OLD_X) >= 0) { body = body.replace(OLD_X, DOOR_OPEN_X); fixLog.push("正/后门 x 向双扇大敞开"); }
+if (body.indexOf(OLD_Z) >= 0) { body = body.replace(OLD_Z, DOOR_OPEN_Z); fixLog.push("正/后门 z 向双扇大敞开"); }
+console.log("门禁修正：" + (fixLog.length ? fixLog.join(" / ") : "未匹配到（原型结构变了？）"));
 
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
 /* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */
