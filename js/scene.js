@@ -597,6 +597,13 @@ window.MuseumScene = (function () {
     buildBox(root, 0.3, 0.12, d + 0.6, x0 - 0.15, 0.06, cz, edgeMat);
     buildBox(root, 0.3, 0.12, d + 0.6, x1 + 0.15, 0.06, cz, edgeMat);
 
+    /* 草丛：GLB 实例撒点（低面数 grass-tuft，有资产才铺） */
+    if (window.MuseumModels) {
+      window.MuseumModels.scatter(root, "grass-tuft",
+        { x0: x0 + 0.5, x1: x1 - 0.5, z0: z0 + 0.5, z1: z1 - 0.5 },
+        18, { seed: x0 + z0, scaleMin: 0.8, scaleMax: 1.4 });
+    }
+
     // 草坪内点景一：小乔木 3 株
     [[cx - w * 0.28, cz - d * 0.22], [cx + w * 0.30, cz + d * 0.04], [cx - w * 0.06, cz + d * 0.30]].forEach(function (p) {
       var trunk = new _g.Mesh(new _g.CylinderGeometry(0.12, 0.17, 2.2, 8), mat(0x5d4a3a));
@@ -902,10 +909,15 @@ window.MuseumScene = (function () {
         buildBox(g, 0.16, oh + 0.12, th + 0.08, o.u + ow / 2 + 0.08, bodyY + (oh + 0.12) / 2, 0, brick);
         buildBox(g, ow + 0.32, 0.18, th + 0.08, o.u, bodyY + oh + 0.09, 0, brick);
         if (opt.steps !== false) buildPartDoorSteps(g, o.u, ow, bodyY, opt.outward || 1, th);
+        /* 双扇门：大敞开 —— 绕门轴转到 80°，两扇都朝墙外侧折开，洞口全通透 */
+        var leafW = ow / 2 - 0.04, openA = 1.40;
         [-1, 1].forEach(function (s) {
-          var leaf = new _g.Mesh(new _g.BoxGeometry(ow / 2 - 0.04, oh - 0.06, 0.06), wood);
-          leaf.position.set(o.u + s * (ow / 4), bodyY + (oh - 0.06) / 2, 0);
-          leaf.rotation.y = s * 0.42;
+          var hinge = o.u + s * (ow / 2);
+          var leaf = new _g.Mesh(new _g.BoxGeometry(leafW, oh - 0.06, 0.06), wood);
+          leaf.position.set(hinge - s * (leafW / 2) * Math.cos(openA),
+                            bodyY + (oh - 0.06) / 2,
+                            (opt.outward || 1) * (leafW / 2) * Math.sin(openA));
+          leaf.rotation.y = s * openA;
           leaf.castShadow = true;
           g.add(leaf);
         });
@@ -1463,15 +1475,21 @@ window.MuseumScene = (function () {
   function buildJiangnanCompound(root) {
     buildPartGround(root);
     buildPartOuterWall(root);
+    buildPartZoneWalls(root);   // 按总平面图补分区院墙
+    buildPartImportedProps(root);   // 现成资产：景观石 / 草丛 / 枯木 / 冷杉
     buildPartGate(root, 0, 42.2);
-    buildPartTree(root, -7.5, 35.5);
-    buildPartTree(root, 7.5, 35.5);
-    buildPartTree(root, -7.5, 40);
-    buildPartTree(root, 7.5, 40);
+    buildPartTree(root, -7.5, 35.5, "willow");
+    buildPartTree(root, 7.5, 35.5, "camphor");
+    buildPartTree(root, -7.5, 40, "camphor");
+    buildPartTree(root, 7.5, 40, "willow");
 
     buildPartCourtyard(root);
-    buildPartCorridor(root, -16, -13, 0, 22, 1);   // 西廊，靠东
-    buildPartCorridor(root, 13, 16, 0, 22, -1);    // 东廊，靠西
+    /* 回廊骨架：两侧长廓把北三厅与序厅串起来，南廊/北廊把它们横向连通，
+       对应参考图"廊子把各功能区串成一个整体"的格局 */
+    buildPartCorridor(root, -16, -13, -4, 24, 1);   // 西廊：北廊 → 序厅
+    buildPartCorridor(root, 13, 16, -4, 24, -1);    // 东廊：北廊 → 序厅
+    buildPartCorridor(root, -16, 16, 21, 24, 1);    // 南廊：序厅前，连通两廊
+    buildPartCorridor(root, -34, 34, -7, -4, 1);    // 北廊：串联山水 / 花鸟 / 人物三厅
 
     // 六厅：序厅 + 三主展厅 + 书斋/文创
     buildHall0(root);
@@ -1491,6 +1509,95 @@ window.MuseumScene = (function () {
   }
 
   /* ---------- 2. 地面系统 ---------- */
+  /* ============================================================
+   * 分区院墙（按总平面图 2026-09-23）
+   * ------------------------------------------------------------
+   * 参考图 plan.png：整个馆区是"院落 + 廊道"格局，八个功能区之间
+   * 用院墙分隔、靠门洞串通，而不是六栋房子孤零零散在空地上。
+   * 这里补 11 道院墙，把馆区切成：
+   *   前庭 | 序厅 | 中央庭院 | 三面展区（山水/花鸟/人物）/ 两翼（文创/书斋）
+   * 每道墙照 buildPartWallRun 的做法：石基 + 粉墙 + 砖砌边框 + 瓦压顶，
+   * 门洞处留 1.8m 通行口。
+   * 碰撞体由组长代登记（接缝归属组员1），门口位置按门洞切开，保证能走进去。
+   * ============================================================ */
+  function buildPartZoneWall(root, opt) {
+    buildPartWallRun(root, opt);
+    /* 碰撞体：整道墙切成若干段，门洞处留空 */
+    var hl = opt.len / 2, half = 0.42;
+    var cuts = (opt.openings || []).filter(function (o) { return o.kind === "door"; })
+      .map(function (o) { return [o.u - o.w / 2, o.u + o.w / 2]; })
+      .sort(function (a, b) { return a[0] - b[0]; });
+    var spans = [], cursor = -hl;
+    cuts.forEach(function (c) {
+      if (c[0] > cursor) spans.push([cursor, c[0]]);
+      cursor = Math.max(cursor, c[1]);
+    });
+    if (cursor < hl) spans.push([cursor, hl]);
+    var vertical = Math.abs(opt.ry || 0) > 0.01;
+    spans.forEach(function (s) {
+      if (vertical) {
+        /* ry = +90°：局部 +x 映射到世界 -z */
+        obstacles.push({ type: "rect", x0: opt.cx - half, z0: opt.cz - s[1], x1: opt.cx + half, z1: opt.cz - s[0] });
+      } else {
+        obstacles.push({ type: "rect", x0: opt.cx + s[0], z0: opt.cz - half, x1: opt.cx + s[1], z1: opt.cz + half });
+      }
+    });
+  }
+
+  var ZONE_WALL = { h: 2.6, th: 0.42, plinth: 0.38, frame: 0.3, pilasters: 7.5, steps: false };
+  /* ============================================================
+   * 现成资产（Poly Haven · CC0）：景观石 / 草丛 / 枯木 / 冷杉
+   * ------------------------------------------------------------
+   * 只接"自然物"——写实扫描件放进风格化场景里，自然物的违和感最小；
+   * 西式家具（书架/桌/椅）不接；冷杉只放草坪与墙根，不上中轴。
+   * 缺资产时整段静默跳过，场景照常。
+   * ============================================================ */
+  function buildPartImportedProps(root) {
+    var M = window.MuseumModels;
+    if (!M) return;
+    /* 草丛地被：庭院东西两侧（程序化草团仍在，这里补成片的地被） */
+    M.attach(root, "grass-patch", { x: -11.5, z: 6.0, ry: 0.4, scale: 1.15 });
+    M.attach(root, "grass-patch", { x: -11.5, z: 15.5, ry: 1.9, scale: 1.0 });
+    M.attach(root, "grass-patch", { x: 11.5, z: 6.0, ry: -0.5, scale: 1.1 });
+    M.attach(root, "grass-patch", { x: 11.5, z: 15.5, ry: 2.4, scale: 1.05 });
+    /* 景观石：水池两端与庭院南缘 */
+    [[-12.6, 8.4, 0.0], [12.6, 8.4, 1.3], [-5.6, 5.4, 2.1], [5.6, 20.6, 3.4]].forEach(function (p, i) {
+      M.attach(root, "rock-boulder", { x: p[0], z: p[1], ry: p[2], scale: 0.85 + (i % 3) * 0.2 });
+    });
+    /* 枯木：两个院角 */
+    M.attach(root, "dead-trunk", { x: -14.4, z: 21.2, ry: 0.5, scale: 1.0 });
+    M.attach(root, "dead-trunk", { x: 14.4, z: 1.4, ry: -0.8, scale: 0.9 });
+    /* 冷杉：只放两翼草坪与墙根，避开中轴、前庭主通道 */
+    [[-30, 27, 0.0], [30, 27, 1.7], [-30, 37.5, 3.1], [30, 37.5, 4.6]].forEach(function (p, i) {
+      M.attach(root, "fir-tree", { x: p[0], z: p[1], ry: p[2], scale: 0.85 + (i % 2) * 0.18 });
+    });
+  }
+  function buildPartZoneWalls(root) {
+    var door = function (u, w, h) { return { kind: "door", u: u, w: w || 1.8, h: h || 2.4, sill: 0 }; };
+    var V = Math.PI / 2;
+    /* 坐标来自参考图 外墙.png 的墙线提取（见 docs/reference-images/外墙.png）：
+     *   纵墙 20.1% → x −31（文创西）｜33.0% → x −18（山水/文创东）｜
+     *        61.2% → x +11｜69.0% → x +19（书斋西）｜93.0% → x +43（东围墙）
+     *   横墙 24.5% → z −25（花鸟北）｜39.7% → z −9（花鸟南）｜43.7% → z −5（山水/人物南）｜
+     *        53.7% → z +6（书斋/文创北）｜89.3% → z +44（南围墙）
+     * 换算后这些线正好落在六厅边界上——也就是说：院墙是"沿各厅边界把用地切块"，
+     * 而不是我上一轮那样在空地上随手拉几段。 */
+    var runs = [
+      /* 中轴区（前庭—序厅—庭院—花鸟）与两翼之间的两条长纵墙：
+         从花鸟厅南侧 z=-8 一直拉到南围墙 z=44，门洞开在与廊子/庭院的交汇处 */
+      { cx: -16.5, cz: 18, len: 52, ry: V, openings: [door(21), door(5), door(-5)], name: "zone-w" },
+      { cx: 16.5, cz: 18, len: 52, ry: V, openings: [door(21), door(5), door(-5)], name: "zone-e" },
+      /* 花鸟厅与山水/人物厅之间的两小段 */
+      { cx: -14, cz: -16, len: 16, ry: V, openings: [door(0)], name: "zone-nw" },
+      { cx: 14, cz: -16, len: 16, ry: V, openings: [door(0)], name: "zone-ne" },
+      /* 两翼内部：北厅（山水/人物）与南厅（文创/书斋）之间 */
+      { cx: -30, cz: 1, len: 28, ry: 0, openings: [door(9)], name: "zone-west" },
+      { cx: 30, cz: 1, len: 28, ry: 0, openings: [door(-9)], name: "zone-east" },
+      /* 北侧收口：参考图北墙在 z −36 一带 */
+      { cx: 0, cz: -36, len: 88, ry: 0, openings: [door(0, 2.4, 2.6)], name: "zone-north" }
+    ];
+    runs.forEach(function (r) { buildPartZoneWall(root, Object.assign({}, ZONE_WALL, r)); });
+  }
   function buildPartGround(root) {
     // 围墙内基地
     var ground = new _g.Mesh(new _g.PlaneGeometry(88, 88), mat(0xd9d4c8, { roughness: 0.95 }));
@@ -1547,16 +1654,21 @@ window.MuseumScene = (function () {
   }
 
   /* ---------- 4. 植物与景观 ---------- */
-  function buildPartTree(root, x, z) {
-    var trunk = new _g.Mesh(new _g.CylinderGeometry(0.18, 0.24, 2.6, 8), mat(0x5d4a3a));
-    trunk.position.set(x, 1.3, z);
-    trunk.castShadow = true;
-    root.add(trunk);
-    var crown = new _g.Mesh(new _g.SphereGeometry(1.35, 12, 9), mat(0x5f7043, { roughness: 1 }));
-    crown.position.set(x, 3.15, z);
-    crown.castShadow = true;
-    root.add(crown);
+  /* 庭院树：参数化版本只做占位，GLB 模型到位后自动替换（models.js） */
+  function buildPartTree(root, x, z, modelId) {
+    var g = new _g.Group();
+    g.position.set(x, 0, z);
+    if (window.MuseumFoliage) {
+      var seed = Math.abs((x * 13 + z * 7) | 0) || 7;
+      g.add(modelId === "camphor"
+        ? window.MuseumFoliage.tree({ seed: seed, height: 4.6 })
+        : window.MuseumFoliage.willow({ seed: seed, height: 4.4 }));
+    }
+    root.add(g);
     obstacles.push({ type: "circle", x: x, z: z, r: 0.8 });
+    if (window.MuseumModels) {
+      window.MuseumModels.attach(root, modelId || "willow", { x: x, z: z, ry: (x * 7 + z * 3) % 6.28 }, g);
+    }
   }
 
   function buildPartCourtyard(root) {
@@ -1580,34 +1692,72 @@ window.MuseumScene = (function () {
     buildPartBamboo(root, 13.5, 2.5);
     buildPartBamboo(root, -13.5, 19.5);
     buildPartBamboo(root, 13.5, 19.5);
+
+    /* 草丛 + 灌木：程序化生成（合并几何，几十丛也不心疼），
+       避开中央水池 14×8 与中轴道路 */
+    if (window.MuseumFoliage) {
+      var gs = 31;
+      var gr = function () { gs = (gs * 1103515245 + 12345) & 0x7fffffff; return gs / 0x7fffffff; };
+      [[-15.2, -8.2], [8.2, 15.2]].forEach(function (band) {
+        for (var i = 0; i < 18; i++) {
+          var gx = band[0] + gr() * (band[1] - band[0]);
+          var gz = 1.5 + gr() * 19;
+          var clump = window.MuseumFoliage.grassClump({
+            seed: Math.abs((gx * 17 + gz * 3) | 0) || 13, height: 0.30 + gr() * 0.16
+          });
+          clump.position.set(gx, 0, gz);
+          clump.rotation.y = gr() * 6.28;
+          root.add(clump);
+        }
+      });
+      for (var j = 0; j < 8; j++) {
+        var cx2 = -7.5 + gr() * 15, cz2 = 19 + gr() * 2.5;
+        var c2 = window.MuseumFoliage.grassClump({ seed: Math.abs((cx2 * 23 + cz2) | 0) || 29, height: 0.26 + gr() * 0.14 });
+        c2.position.set(cx2, 0, cz2);
+        root.add(c2);
+      }
+      [[-12.6, 6.5], [-12.6, 14.5], [12.6, 6.5], [12.6, 14.5], [-9.5, 20.4], [9.5, 20.4]].forEach(function (bp, bi) {
+        var bsh = window.MuseumFoliage.bush({ seed: 40 + bi * 7, radius: 0.6 + (bi % 3) * 0.08 });
+        bsh.position.set(bp[0], 0, bp[1]);
+        root.add(bsh);
+      });
+    }
   }
 
   function buildPartRockGroup(root, cx, cz) {
-    var stone = mat(0x8f8a7e, { roughness: 0.95 });
-    [[0, 0.55, 0.75], [0.78, 0.36, 0.5], [-0.62, 0.3, 0.44]].forEach(function (rk) {
-      var rock = new _g.Mesh(new _g.DodecahedronGeometry(rk[1], 0), stone);
-      rock.position.set(cx + rk[0], rk[1] * 0.85, cz);
-      rock.rotation.y = rk[0];
-      rock.scale.set(1, rk[2] / rk[1], 0.8);
-      rock.castShadow = true;
-      root.add(rock);
-    });
+    var rg = new _g.Group();
+    rg.position.set(cx, 0, cz);
+    root.add(rg);
+    if (window.MuseumFoliage) {
+      var s1 = Math.abs((cx + cz * 5) | 0) || 17;
+      var big = window.MuseumFoliage.rock({ seed: s1, radius: 0.85 });
+      rg.add(big);
+      var small = window.MuseumFoliage.rock({ seed: s1 + 3, radius: 0.42 });
+      small.position.set(0.85, 0, 0.25);
+      small.rotation.y = 0.7;
+      rg.add(small);
+      var small2 = window.MuseumFoliage.rock({ seed: s1 + 9, radius: 0.34 });
+      small2.position.set(-0.7, 0, 0.35);
+      small2.rotation.y = -1.1;
+      rg.add(small2);
+    }
     obstacles.push({ type: "circle", x: cx, z: cz, r: 1.1 });
+    if (window.MuseumModels) {
+      window.MuseumModels.attach(root, "taihu-rock", { x: cx, z: cz, ry: (cx + cz) % 3 }, rg);
+    }
   }
 
   function buildPartBamboo(root, cx, cz) {
-    for (var i = 0; i < 7; i++) {
-      var bx = cx + (i % 3) * 0.34 - 0.34;
-      var bz = cz + Math.floor(i / 3) * 0.36;
-      var h = 3.0 + (i % 3) * 0.45;
-      var pole = new _g.Mesh(new _g.CylinderGeometry(0.045, 0.055, h, 6), mat(0x7c8a53, { roughness: 0.9 }));
-      pole.position.set(bx, h / 2, bz);
-      root.add(pole);
-      var leaf = new _g.Mesh(new _g.ConeGeometry(0.42, 1.1, 6), mat(0x5f7043, { roughness: 1 }));
-      leaf.position.set(bx, h + 0.55, bz);
-      root.add(leaf);
+    var bg = new _g.Group();
+    bg.position.set(cx, 0, cz);
+    if (window.MuseumFoliage) {
+      bg.add(window.MuseumFoliage.bamboo({ seed: Math.abs((cx * 7 + cz * 3) | 0) || 5, height: 2.8 }));
     }
+    root.add(bg);
     obstacles.push({ type: "circle", x: cx, z: cz, r: 0.7 });
+    if (window.MuseumModels) {
+      window.MuseumModels.attach(root, "bamboo", { x: cx, z: cz, ry: (cx * 5 + cz) % 6.28 }, bg);
+    }
   }
 
   /* ---------- 5. 曲廊 ---------- */
@@ -1624,30 +1774,57 @@ window.MuseumScene = (function () {
     floor.receiveShadow = true;
     g.add(floor);
 
-    var n = Math.max(2, Math.round(d / 3.4));
-    for (var i = 0; i <= n; i++) {
-      var z = z0 + d * (i / n);
-      buildBox(g, 0.16, 2.9, 0.16, x0 + 0.25, floorY + 1.45, z, wood);
-      buildBox(g, 0.16, 2.9, 0.16, x1 - 0.25, floorY + 1.45, z, wood);
-    }
-
-    // 美人靠（朝庭院一侧）
-    var railX = (facing > 0) ? x0 + 0.25 : x1 - 0.25;
-    buildRailing(g, railX, z0 + 0.2, z1 - 0.2, facing, floorY);
-
-    // 漏窗（朝展厅一侧墙上）
-    var wallX = (facing > 0) ? x1 : x0;
     var wallMat = mat(0xefe9dc, { roughness: 0.9, side: _g.DoubleSide });
-    for (var j = 0; j < 2; j++) {
-      var wz = z0 + 6 + j * 10;
-      buildBox(g, 0.2, 2.2, 1.2, wallX, floorY + 1.1, wz, wallMat);
-      buildPartLattice(g, wallX + (facing > 0 ? 0.11 : -0.11), floorY + 1.3, wz, facing > 0 ? Math.PI / 2 : -Math.PI / 2);
+    var vertical = d >= w;                       /* 南北向廊 or 东西向廊 */
+
+    if (vertical) {
+      var n = Math.max(2, Math.round(d / 3.4));
+      for (var i = 0; i <= n; i++) {
+        var z = z0 + d * (i / n);
+        buildBox(g, 0.16, 2.9, 0.16, x0 + 0.25, floorY + 1.45, z, wood);
+        buildBox(g, 0.16, 2.9, 0.16, x1 - 0.25, floorY + 1.45, z, wood);
+      }
+      var railX = (facing > 0) ? x0 + 0.25 : x1 - 0.25;
+      buildRailing(g, railX, z0 + 0.2, z1 - 0.2, facing, floorY);
+      var wallX = (facing > 0) ? x1 : x0;
+      for (var j = 0; j < 2; j++) {
+        var wz = z0 + d * (0.3 + j * 0.35);
+        buildBox(g, 0.2, 2.2, 1.2, wallX, floorY + 1.1, wz, wallMat);
+        buildPartLattice(g, wallX + (facing > 0 ? 0.11 : -0.11), floorY + 1.3, wz, facing > 0 ? Math.PI / 2 : -Math.PI / 2);
+      }
+    } else {
+      var nx = Math.max(2, Math.round(w / 3.4));
+      for (var a = 0; a <= nx; a++) {
+        var x = x0 + w * (a / nx);
+        buildBox(g, 0.16, 2.9, 0.16, x, floorY + 1.45, z0 + 0.25, wood);
+        buildBox(g, 0.16, 2.9, 0.16, x, floorY + 1.45, z1 - 0.25, wood);
+      }
+      /* 美人靠 + 漏窗墙，东西向廊用同样的构件，只是把轴换过来 */
+      var railZ = (facing > 0) ? z0 + 0.25 : z1 - 0.25;
+      buildRailingX(g, x0 + 0.2, x1 - 0.2, railZ, floorY);
+      var wallZ = (facing > 0) ? z1 : z0;
+      for (var k = 0; k < 4; k++) {
+        var wx = x0 + w * (0.16 + k * 0.23);
+        buildBox(g, 1.2, 2.2, 0.2, wx, floorY + 1.1, wallZ, wallMat);
+        buildPartLattice(g, wx, floorY + 1.3, wallZ + (facing > 0 ? 0.11 : -0.11), facing > 0 ? 0 : Math.PI);
+      }
     }
 
     // 廊顶
-    buildRoof(g, { x: cx, z: cz, y: floorY + 2.9, w: w, d: d, h: 0.7, eave: 0.4, ridge: w - 1 });
+    buildRoof(g, { x: cx, z: cz, y: floorY + 2.9, w: w, d: d, h: 0.7, eave: 0.4,
+                   ridge: (vertical ? d : w) - 1, axis: vertical ? "z" : "x" });
 
     root.add(g);
+  }
+
+  /* 东西向廊的美人靠（沿 x 排） */
+  function buildRailingX(parent, x0, x1, z, floorY) {
+    var wood = mat(0x6d5544, { roughness: 0.75 });
+    var len = x1 - x0;
+    buildBox(parent, len, 0.08, 0.12, (x0 + x1) / 2, floorY + 0.55, z, wood);
+    buildBox(parent, len, 0.05, 0.10, (x0 + x1) / 2, floorY + 0.30, z, wood);
+    var n = Math.max(3, Math.round(len / 0.7));
+    for (var i = 0; i <= n; i++) buildBox(parent, 0.06, 0.55, 0.06, x0 + len * (i / n), floorY + 0.28, z, wood);
   }
 
   function buildPartLattice(parent, x, y, z, ry) {
