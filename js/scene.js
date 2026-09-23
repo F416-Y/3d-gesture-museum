@@ -465,30 +465,39 @@ window.MuseumScene = (function () {
     // 檐口板：悬出墙身，同时遮住屋顶与墙之间的缝
     buildBox(g, w + eave * 2, 0.3, d + eave * 2, 0, 0.15, 0, mat(0x4b423a, { roughness: 0.9 }));
 
-    // 坡面：手写四边形，保证是「矩形四坡顶」而不是方锥
-    var A = [-a, 0.3, -b], B = [a, 0.3, -b], C = [a, 0.3, b], D = [-a, 0.3, b];
-    var P = [-c, 0.3 + h, 0], Q = [c, 0.3 + h, 0];
-    var tris = [
-      A, B, Q, A, Q, P,   // 北坡
-      D, C, P, C, Q, P,   // 南坡
-      B, Q, C,            // 东坡
-      P, A, D,            // 西坡
-    ];
-    var pos = [], uv = [];
-    for (var i = 0; i < tris.length; i++) {
-      var v = tris[i];
-      pos.push(v[0], v[1], v[2]);
-      uv.push((v[0] + a) / (2 * a), (v[2] + b) / (2 * b));
+    /* 坡面：优先用举折（凹曲）屋面，翼角自带上翘 —— 构件移植自外观原型
+       （tools/exterior-prototype.html 的 hipGeo）；没有该模块时退回平面四坡。 */
+    var useHip = !!(window.MuseumExterior && window.MuseumExterior.hipGeo);
+    var geo;
+    if (useHip) {
+      geo = window.MuseumExterior.hipGeo(w, d, h, Math.min(0.5, 0.14 + Math.max(w, d) * 0.018));
+      geo.translate(0, 0.3, 0);
+    } else {
+      var A = [-a, 0.3, -b], B = [a, 0.3, -b], C = [a, 0.3, b], D = [-a, 0.3, b];
+      var P = [-c, 0.3 + h, 0], Q = [c, 0.3 + h, 0];
+      var tris = [
+        A, B, Q, A, Q, P,
+        D, C, P, C, Q, P,
+        B, Q, C,
+        P, A, D,
+      ];
+      var pos = [], uv = [];
+      for (var i = 0; i < tris.length; i++) {
+        var v = tris[i];
+        pos.push(v[0], v[1], v[2]);
+        uv.push((v[0] + a) / (2 * a), (v[2] + b) / (2 * b));
+      }
+      geo = new _g.BufferGeometry();
+      geo.setAttribute("position", new _g.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("uv", new _g.Float32BufferAttribute(uv, 2));
+      geo.computeVertexNormals();
     }
-    var geo = new _g.BufferGeometry();
-    geo.setAttribute("position", new _g.Float32BufferAttribute(pos, 3));
-    geo.setAttribute("uv", new _g.Float32BufferAttribute(uv, 2));
-    geo.computeVertexNormals();
 
     var tileTex = new _g.CanvasTexture(drawTile());
     tileTex.encoding = _g.sRGBEncoding;
     tileTex.wrapS = tileTex.wrapT = _g.RepeatWrapping;
-    tileTex.repeat.set(3, 1.6);
+    /* 举折屋面的 UV 单位是"米"，平面四坡是 0~1，重复率要分开设 */
+    tileTex.repeat.set(useHip ? 0.35 : 3, useHip ? 0.25 : 1.6);
     var roofMesh = new _g.Mesh(geo, new _g.MeshStandardMaterial({
       map: tileTex, roughness: 0.72, metalness: 0.05, side: _g.DoubleSide,
     }));
@@ -1738,8 +1747,19 @@ window.MuseumScene = (function () {
     var rg = new _g.Group();
     rg.position.set(cx, 0, cz);
     root.add(rg);
-    if (window.MuseumFoliage) {
-      var s1 = Math.abs((cx + cz * 5) | 0) || 17;
+    var s1 = Math.abs((cx + cz * 5) | 0) || 17;
+    var rockMat = new _g.MeshStandardMaterial({ color: 0x9a9488, roughness: 0.98, flatShading: true });
+    if (window.MuseumExterior && window.MuseumExterior.blobGeo) {
+      /* 噪声球石头（移植自外观原型 blobGeo）：比十二面体自然得多 */
+      [[0.85, 0, 0, 0], [0.44, 0.88, 0.26, 3], [0.36, -0.72, 0.36, 9]].forEach(function (rk) {
+        var m = new _g.Mesh(window.MuseumExterior.blobGeo(rk[0], 0.24, 0.8, s1 + rk[3]), rockMat);
+        m.position.set(rk[1], rk[0] * 0.8, rk[2]);
+        m.rotation.y = s1 * 0.37 + rk[3];
+        m.castShadow = true;
+        m.receiveShadow = true;
+        rg.add(m);
+      });
+    } else if (window.MuseumFoliage) {
       var big = window.MuseumFoliage.rock({ seed: s1, radius: 0.85 });
       rg.add(big);
       var small = window.MuseumFoliage.rock({ seed: s1 + 3, radius: 0.42 });
@@ -2525,41 +2545,64 @@ window.MuseumScene = (function () {
       obstacles.length = 0;
       spotMeshes.length = 0;
 
-      // 江南文人国画博物馆 · 院落外观（零件装配）
-      buildJiangnanCompound(scene);
+      /* 布局来源：严格遵循外观原型 tools/exterior-prototype.html
+         （原作者 Kimi；整块搬入 js/exterior-layout.js）
+         没有该模块时退回本项目旧的六厅院落。 */
+      var useProtoLayout = !!(window.MuseumExteriorLayout && window.MuseumExteriorLayout.build);
+      if (useProtoLayout) {
+        window.MuseumExteriorLayout.addLights(scene);
+        window.MuseumExteriorLayout.build(scene);
+      } else {
+        buildJiangnanCompound(scene);
+      }
 
-      // 全场景光照：环境光压一档、天光提亮，明暗关系更清楚
-      var ambient = new _g.AmbientLight(0xffffff, 0.45);
-      scene.add(ambient);
-      var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 0.75);
-      scene.add(hemi);
-      var sun = new _g.DirectionalLight(0xfff0d8, 1.6);
-      sun.position.set(14, 22, 18);
-      sun.castShadow = true;
-      sun.shadow.mapSize.width = 1024;
-      sun.shadow.mapSize.height = 1024;
-      sun.shadow.camera.near = 1;
-      sun.shadow.camera.far = 60;
-      scene.add(sun);
-
-      // 背光面补光（太阳在东南向，主楼北侧原为死黑）
-      var fill = new _g.DirectionalLight(0xdfe6f2, 0.3);
-      fill.position.set(-16, 14, -20);
-      scene.add(fill);
-
-      scene.fog = new _g.Fog(0xd9d4c8, 52, 135);
-      // 展厅区域判定（坐标冻结值，见 docs/江南院落平面-坐标版.md）
+      if (useProtoLayout) {
+        /* 光照与雾也照原型来（原型光照在 addLights 里） */
+        scene.background = new _g.Color(0xece6d8);
+        scene.fog = new _g.Fog(0xece6d8, 95, 300);
+      } else {
+        var ambient = new _g.AmbientLight(0xffffff, 0.45);
+        scene.add(ambient);
+        var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 0.75);
+        scene.add(hemi);
+        var sun = new _g.DirectionalLight(0xfff0d8, 1.6);
+        sun.position.set(14, 22, 18);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 1024;
+        sun.shadow.mapSize.height = 1024;
+        sun.shadow.camera.near = 1;
+        sun.shadow.camera.far = 60;
+        scene.add(sun);
+        var fill = new _g.DirectionalLight(0xdfe6f2, 0.3);
+        fill.position.set(-16, 14, -20);
+        scene.add(fill);
+        scene.fog = new _g.Fog(0xd9d4c8, 52, 135);
+      }
+      // 展厅区域判定：坐标取自外观原型（tools/exterior-prototype.html）
       Object.keys(hallRegions).forEach(function (k) { delete hallRegions[k]; });
-      Object.assign(hallRegions, {
-        plaza:     { type: "circle", x: 0, z: 20, r: 34 },
-        hall0:     { type: "rect",  x0: -10, z0: 24,  x1: 10,  z1: 34 },
-        courtyard: { type: "rect",  x0: -16, z0: 0,   x1: 16,  z1: 22 },
-        hall1:     { type: "rect",  x0: -34, z0: -22, x1: -16, z1: -4 },
-        hall2:     { type: "rect",  x0: -12, z0: -24, x1: 12,  z1: -8 },
-        hall3:     { type: "rect",  x0: 16,  z0: -22, x1: 34,  z1: -4 },
-        hall4:     { type: "rect",  x0: 16,  z0: 6,   x1: 32,  z1: 20 },
-        hall5:     { type: "rect",  x0: -32, z0: 6,   x1: -16, z1: 20 },
-      });
+      if (useProtoLayout) {
+        Object.assign(hallRegions, {
+          plaza:     { type: "rect",  x0: -26,  z0: 34,   x1: 26,   z1: 41 },     // 南入口前庭（六级大台阶）
+          hall0:     { type: "rect",  x0: -11,  z0: 24.5, x1: 11,   z1: 34.5 },   // 序厅（高台基 22×10）
+          courtyard: { type: "rect",  x0: -9,   z0: -20,  x1: 9,    z1: 24.5 },   // 中轴庭院带（轴线庭+水榭+中心庭）
+          hall1:     { type: "rect",  x0: -46,  z0: -20,  x1: -28.5, z1: -5 },    // 山水画展区（院落 17.5×15）
+          hall2:     { type: "rect",  x0: -11,  z0: -37.5, x1: 11,  z1: -21 },    // 花鸟画展区（院落 22×16.5）
+          hall3:     { type: "rect",  x0: 28,   z0: -21,  x1: 45.5, z1: -10 },    // 人物画展区（院落 17.5×11）
+          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 42,   z1: 19 },     // 书斋·茶室（8×13）
+          hall5:     { type: "rect",  x0: -45,  z0: 8,    x1: -34,  z1: 21 },     // 文创·临摹（11×13）
+        });
+      } else {
+        Object.assign(hallRegions, {
+          plaza:     { type: "circle", x: 0, z: 20, r: 34 },
+          hall0:     { type: "rect",  x0: -10, z0: 24,  x1: 10,  z1: 34 },
+          courtyard: { type: "rect",  x0: -16, z0: 0,   x1: 16,  z1: 22 },
+          hall1:     { type: "rect",  x0: -34, z0: -22, x1: -16, z1: -4 },
+          hall2:     { type: "rect",  x0: -12, z0: -24, x1: 12,  z1: -8 },
+          hall3:     { type: "rect",  x0: 16,  z0: -22, x1: 34,  z1: -4 },
+          hall4:     { type: "rect",  x0: 16,  z0: 6,   x1: 32,  z1: 20 },
+          hall5:     { type: "rect",  x0: -32, z0: 6,   x1: -16, z1: 20 },
+        });
+      }
 
     },
 
