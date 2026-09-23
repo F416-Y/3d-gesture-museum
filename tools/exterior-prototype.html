@@ -1024,6 +1024,83 @@ window.MuseumScene = (function () {
     rf.rotation.y = Math.PI / 2;
   }
 
+  /* ---------- 廊道挂画：立轴国画（宣纸画心 + 绫边装裱 + 天地杆轴头 + 暖光洗画灯带） ---------- */
+  function scrollTex(seed) {
+    return canvasTex(128, function (ctx, s2) {
+      ctx.fillStyle = '#e9e0c9'; ctx.fillRect(0, 0, s2, s2);
+      var s = seed >>> 0, i, x;
+      function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+      /* 淡墨远山三层 */
+      for (i = 0; i < 3; i++) {
+        var y0 = s2 * (0.34 + i * 0.13), amp = s2 * 0.1 * (0.5 + rnd());
+        ctx.fillStyle = 'rgba(58,62,58,' + (0.22 + i * 0.14) + ')';
+        ctx.beginPath(); ctx.moveTo(0, y0);
+        for (x = 0; x <= s2; x += 6) ctx.lineTo(x, y0 - Math.abs(Math.sin(x * 0.06 + seed * 0.7 + i * 2.1)) * amp - rnd() * 3);
+        ctx.lineTo(s2, s2); ctx.lineTo(0, s2); ctx.closePath(); ctx.fill();
+      }
+      /* 近景浓墨数笔（树石） */
+      ctx.strokeStyle = 'rgba(38,40,38,0.85)'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      for (i = 0; i < 4; i++) {
+        ctx.beginPath();
+        var sx = s2 * (0.15 + rnd() * 0.7), sy = s2 * (0.55 + rnd() * 0.2);
+        ctx.moveTo(sx, sy);
+        ctx.bezierCurveTo(sx + rnd() * 20 - 10, sy - 14, sx + rnd() * 26 - 13, sy - 26, sx + rnd() * 30 - 15, sy - 34 - rnd() * 10);
+        ctx.stroke();
+      }
+      /* 留白题款 + 朱红印章 */
+      ctx.fillStyle = 'rgba(50,50,48,0.7)';
+      for (i = 0; i < 4; i++) ctx.fillRect(s2 * 0.12, s2 * (0.08 + i * 0.035), 2.5, 2.5);
+      ctx.fillStyle = '#a83a2a'; ctx.fillRect(s2 * 0.12, s2 * 0.24, s2 * 0.075, s2 * 0.075);
+    }, 1, 1);
+  }
+  function hangingScroll(x, z, faceDir, seed, k) {
+    var g = new THREE.Group(); g.position.set(x, 0, z);
+    g.rotation.y = faceDir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    if (k) g.scale.setScalar(k);
+    S.scene.add(g);
+    box(0.9, 1.72, 0.02, M.wood, 0, 1.5, 0, 0, g);              /* 绫边装裱 */
+    var paint = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.42),
+      new THREE.MeshStandardMaterial({ map: scrollTex(seed), roughness: 0.92 }));
+    paint.position.set(0, 1.5, 0.015); g.add(paint);
+    var r1 = cyl(0.016, 0.016, 0.98, 6, M.wood, 0, 2.4, 0.02, g); r1.rotation.z = Math.PI / 2;   /* 天杆 */
+    var r2 = cyl(0.035, 0.035, 1.0, 8, M.wood, 0, 0.62, 0.03, g); r2.rotation.z = Math.PI / 2;   /* 地杆 */
+    var k1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.ink); k1.position.set(-0.53, 0.62, 0.03); k1.castShadow = true; g.add(k1);
+    var k2 = k1.clone(); k2.position.x = 0.53; g.add(k2);
+    /* 暖光洗画灯带（自发光灯箱，斜向下洗到画面） */
+    if (!S.lampGlow) S.lampGlow = new THREE.MeshStandardMaterial({ color: 0x4a3f2c, emissive: 0xffd9a0, emissiveIntensity: 1.15 });
+    var strip = box(0.86, 0.05, 0.07, S.lampGlow, 0, 2.32, 0.1, 0, g);
+    strip.rotation.x = 0.5;
+  }
+  /* 半壁廊墙：廊外侧重柱间封墙（墙脚石 + 纸筋白墙 + 墨瓦压顶）+ 每开间一幅立轴 */
+  function galleryWall(x, faceDir) {
+    var len = 12.9, zc = 16.75;
+    box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
+    box(0.15, 2.3, len, M.paper, x, 1.15 + 0.1, zc);
+    box(0.22, 0.14, len + 0.1, M.ink, x, 2.42, zc);
+    var zs = [10.93, 13.79, 16.65, 19.51, 22.37], i;
+    for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0));
+  }
+
+  /* ---------- 临水半亭：背壁白粉墙 + 前檐双柱 + 单披顶 + 大立轴 + 美人靠 + 红灯笼（面西隔水） ---------- */
+  function halfPavilion(x, z) {
+    var g = new THREE.Group(); S.scene.add(g);
+    box(0.16, 2.7, 2.8, M.paper, x + 0.75, 1.42, z, 0, g);   /* 背壁（顶 2.77） */
+    box(0.24, 0.16, 3.0, M.ink, x + 0.75, 2.85, z, 0, g);    /* 瓦压顶 */
+    box(0.26, 0.14, 3.0, M.stoneDark, x + 0.75, 0.07, z, 0, g);
+    box(2.0, 0.3, 3.0, M.stone, x, 0.15, z, 0, g);           /* 石台基 */
+    cyl(0.16, 0.19, 0.14, 8, M.stone, x - 0.7, 0.37, z - 1.1, g);
+    cyl(0.16, 0.19, 0.14, 8, M.stone, x - 0.7, 0.37, z + 1.1, g);
+    cyl(0.1, 0.12, 2.1, 8, M.wood, x - 0.7, 1.4, z - 1.1, g);
+    cyl(0.1, 0.12, 2.1, 8, M.wood, x - 0.7, 1.4, z + 1.1, g);
+    box(0.14, 0.2, 2.6, M.wood, x - 0.7, 2.5, z, 0, g);      /* 檐枋 */
+    box(0.05, 0.3, 2.4, M.gualuo, x - 0.7, 2.26, z, 0, g);   /* 挂落 */
+    hipRoof(2.8, 3.6, 1.0, x, 2.62, z, g);
+    box(0.28, 0.42, 2.2, M.wood, x - 0.45, 0.55, z, 0, g);   /* 美人靠 */
+    hangingScroll(x + 0.62, z, -1, 999, 1.15);               /* 背壁大立轴（面西） */
+    redLantern(x - 0.7, 2.44, z - 1.1, g);
+    redLantern(x - 0.7, 2.44, z + 1.1, g);
+  }
+
   /* ---------- 石栏杆一段（望柱 + 扶手 + 地栿，高 0.6m） ---------- */
   function railing(x0, z0, x1, z1, y0) {
     var dx = x1 - x0, dz = z1 - z0;
@@ -1132,6 +1209,9 @@ window.MuseumScene = (function () {
     /* 双廊北端收头门洞：出廊即中轴南院，北对水榭庭院南门 */
     corridorEnd(-7, 9.5);
     corridorEnd(7, 9.5);
+    /* 中轴双廊改画廊：外侧半壁墙封廊，每开间一幅立轴国画 + 暖光洗画 */
+    galleryWall(-8.1, 1);
+    galleryWall(8.1, -1);
   }
 
   /* ---------- 中心庭（17×13 碎石广场 + 内院 5×5m：中心树 + 太湖石 + 石桌凳 + 条凳 + 石灯 + 陶罐） ---------- */
@@ -1221,7 +1301,7 @@ window.MuseumScene = (function () {
     rock(-4.6, 0.35, -2.6, 1.3, 0.5, 1.5, 81);
     rock(-3.0, 0.18, -3.4, 0.7, 0.42, 1.1, 82);
     rock(-5.6, 0.12, -1.2, 0.5, 0.4, 0.9, 84);
-    plantTree(4.8, 4.8, 1.0, 83);
+    plantTree(3.2, 5.3, 1.0, 83);
     bambooClump(-5.8, -3.8, 213, S.scene, 0.8);
     stoneTableSet(3.6, -3.4);
     lantern(1.6, 5.6);
@@ -1237,6 +1317,8 @@ window.MuseumScene = (function () {
     railing(-2.1, 3.35, -0.5, 3.35, 0.34);
     railing(-0.85, 3.0, -0.85, 5.4, 0.34);
     railing(0.05, 3.0, 0.05, 5.4, 0.34);
+    /* 东南角临水半亭：白墙 + 大立轴，隔水可赏 */
+    halfPavilion(6.0, 4.2);
     /* 北墙已改围栏，原冰裂棂花窗移除（全院围栏统一） */
   }
 
@@ -1816,8 +1898,120 @@ window.MuseumScene = (function () {
       report();
     });
 
+    /* ---------- 案头小品与架侧摆件（代码建模，随布展落位） ---------- */
+    var MT = {
+      celadon: new THREE.MeshStandardMaterial({ color: 0x9db8a6, roughness: 0.3 }),
+      whitePorc: new THREE.MeshStandardMaterial({ color: 0xf3eee3, roughness: 0.22 }),
+      inkstone: new THREE.MeshStandardMaterial({ color: 0x2e2d33, roughness: 0.5 }),
+      woodD: new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.8 }),
+      paper: new THREE.MeshStandardMaterial({ color: 0xe9e0c9, roughness: 0.95 }),
+      red: new THREE.MeshStandardMaterial({ color: 0x9e2b23, roughness: 0.6 }),
+      stoneG: new THREE.MeshStandardMaterial({ color: 0x9a938a, roughness: 0.9 })
+    };
+    function handscrollTex(seed) {
+      var cv = document.createElement('canvas'); cv.width = 128; cv.height = 64;
+      var ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ece3cd'; ctx.fillRect(0, 0, 128, 64);
+      var s = (seed >>> 0) || 7;
+      function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+      var i, x, y;
+      ctx.strokeStyle = 'rgba(50,54,50,0.75)'; ctx.lineWidth = 2;
+      for (i = 0; i < 4; i++) {
+        ctx.beginPath();
+        x = 12 + i * 26 + rnd() * 8; y = 46 - rnd() * 10;
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + 8 + rnd() * 8, y - 18 - rnd() * 10, x + 4 + rnd() * 14, y - 26 - rnd() * 8);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(50,54,50,0.35)';
+      ctx.beginPath(); ctx.ellipse(30 + rnd() * 60, 52, 18 + rnd() * 10, 6 + rnd() * 3, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = '#a53328'; ctx.fillRect(112, 8, 8, 8);
+      var t = new THREE.CanvasTexture(cv);
+      t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+      return t;
+    }
+    function vaseMesh(mat, s) {
+      var prof = [[0.001, 0], [0.42, 0], [0.6, 0.06], [0.72, 0.3], [0.55, 0.62], [0.34, 0.8], [0.3, 0.9], [0.4, 1.0]];
+      var pts = prof.map(function (p) { return new THREE.Vector2(p[0] * s, p[1] * s); });
+      var m = new THREE.Mesh(new THREE.LatheGeometry(pts, 18), mat);
+      m.castShadow = m.receiveShadow = true;
+      return m;
+    }
+    /* 长案案头：青瓷瓶 + 平铺手卷（带画心与轴杆）+ 卷轴捆 + 砚台笔山（书斋）/ 白瓷碗（展厅） */
+    function tabletopSet(cx, cz, ux, uz, topY, seed, isBook) {
+      var g = new THREE.Group();
+      g.position.set(cx, topY, cz);
+      g.rotation.y = Math.atan2(-uz, ux);
+      scene.add(g);
+      function put(m, x, y, z) { m.position.set(x, y, z); g.add(m); return m; }
+      put(vaseMesh(MT.celadon, 0.3), -0.52, 0, 0.05);
+      put(new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.012, 0.32), MT.paper), -0.02, 0.006, 0.02);
+      var paint = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.24),
+        new THREE.MeshStandardMaterial({ map: handscrollTex(seed), roughness: 0.92 }));
+      paint.rotation.x = -Math.PI / 2; put(paint, -0.02, 0.014, 0.02);
+      var r1 = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.38, 8), MT.woodD);
+      r1.rotation.x = Math.PI / 2; put(r1, -0.39, 0.02, 0.02);
+      var r2 = r1.clone(); put(r2, 0.35, 0.02, 0.02);
+      var i, rr;
+      var offs = [[0.55, 0.032, -0.05], [0.55, 0.032, 0.07], [0.56, 0.095, 0.01]];
+      for (i = 0; i < 3; i++) {
+        rr = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.5, 10), MT.paper);
+        rr.rotation.z = Math.PI / 2; rr.rotation.y = (i - 1) * 0.06;
+        rr.castShadow = rr.receiveShadow = true;
+        put(rr, offs[i][0], offs[i][1], offs[i][2]);
+      }
+      if (isBook) {
+        put(new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.035, 0.14), MT.inkstone), 0.78, 0.018, -0.06);
+        var j, bh;
+        for (j = -1; j <= 1; j++) {
+          bh = 0.05 + (1 - Math.abs(j)) * 0.03;
+          put(new THREE.Mesh(new THREE.BoxGeometry(0.045, bh, 0.04), MT.woodD), 0.7 + j * 0.06, bh / 2, 0.1);
+        }
+        var br = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.24, 6), MT.red);
+        br.rotation.z = Math.PI / 2; br.rotation.y = 0.15;
+        put(br, 0.7, 0.085, 0.1);
+      } else {
+        var bpts = [[0.001, 0], [0.045, 0], [0.07, 0.05], [0.062, 0.1], [0.055, 0.115]]
+          .map(function (p) { return new THREE.Vector2(p[0], p[1]); });
+        put(new THREE.Mesh(new THREE.LatheGeometry(bpts, 16), MT.whitePorc), 0.78, 0, 0.02);
+      }
+      g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    }
+    /* 卷轴缸（书斋/临摹架侧）：敞口瓷缸插四支错落卷轴 */
+    function scrollPot(x, z, y, seed) {
+      var g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+      var potMat = new THREE.MeshStandardMaterial({ color: 0x8fa89a, roughness: 0.4, side: THREE.DoubleSide });
+      var pot = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.15, 0.42, 14, 1, true), potMat);
+      pot.position.y = 0.21; g.add(pot);
+      var bot = new THREE.Mesh(new THREE.CircleGeometry(0.15, 12), potMat);
+      bot.rotation.x = Math.PI / 2; bot.position.y = 0.005; g.add(bot);
+      var i, a, t, len, rl, cap;
+      for (i = 0; i < 4; i++) {
+        a = i * 1.7 + seed; t = 0.05 + (i % 2) * 0.06; len = 0.5 + ((i * 7) % 3) * 0.08;
+        rl = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 8), MT.paper);
+        rl.position.set(Math.cos(a) * 0.07, 0.4, Math.sin(a) * 0.07);
+        rl.rotation.set(Math.sin(a) * t, 0, Math.cos(a) * t);
+        cap = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.03, 8), MT.woodD);
+        cap.position.y = len / 2 + 0.01; rl.add(cap);
+        g.add(rl);
+      }
+      g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    }
+    /* 独立展台（展厅架侧）：石方墩 + 木托 + 瓷瓶 */
+    function pedestalVase(x, z, y, seed) {
+      var g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+      var ped = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.95, 0.42), MT.stoneG);
+      ped.position.y = 0.475; g.add(ped);
+      var tray = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.04, 0.34), MT.woodD);
+      tray.position.y = 0.97; g.add(tray);
+      var v = vaseMesh(seed % 2 ? MT.whitePorc : MT.celadon, 0.36);
+      v.position.y = 0.99; g.add(v);
+      g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    }
+
     /* 室内陈设布展：后墙一架排 + 架前长案 + 案两端宫灯 + 案前方凳；
-       书斋/临摹用书架，其余展厅用展示架；人物馆加将军俑一对与马踏飞燕居中展台 */
+       书斋/临摹用书架，其余展厅用展示架；人物馆加将军俑一对与马踏飞燕居中展台；
+       长案案头摆卷轴瓷器，架侧书斋配卷轴缸、展厅配独立展台 */
     function furnishHall(h, L) {
       var floor = 0.62;   /* 台基顶面 */
       var horiz = (h.entry === 'S' || h.entry === 'N');

@@ -1,15 +1,10 @@
 /* ============================================================
- * 外观布局（整块移植自 tools/exterior-prototype.html）
+ * 外观布局（由 scripts/vendor-prototype.mjs 自动同步自外观原型）
+ * 源文件：tools/exterior-prototype.html —— 请勿手改本文件，改原型后重跑脚本
  * ------------------------------------------------------------
  * 原作者：Kimi 的「江南文人国画博物馆 · 建筑外观布局原型」
- * 说明：本文件是**原样搬入**的布局与构件库，坐标约定与原型一致：
- *       1 单位 = 1 米；x 向东为正，z 向南为正；总平面 100m × 80m
- *       即 x ∈ [-50, 50]，z ∈ [-40, 40]
- * 入口：MuseumExteriorLayout.addLights(scene) —— 原型的日光 + 半球光
- *       MuseumExteriorLayout.build(scene)      —— 生成整套建筑与庭院
- *       MuseomExteriorLayout.slots             —— glb 接线槽位（备用）
- * 为什么要整块搬：用户要求"严格遵循原型的布局"，所以不再用本项目旧
- * 的六厅坐标，而是以原型为准。
+ * 坐标约定（与原型一致）：1 单位 = 1 米；x 向东为正，z 向南为正
+ * 入口：MuseumExteriorLayout.addLights(scene) / .build(scene) / .slots
  * ============================================================ */
 window.MuseumExteriorLayout = (function () {
 
@@ -959,6 +954,83 @@ window.MuseumExteriorLayout = (function () {
     rf.rotation.y = Math.PI / 2;
   }
 
+  /* ---------- 廊道挂画：立轴国画（宣纸画心 + 绫边装裱 + 天地杆轴头 + 暖光洗画灯带） ---------- */
+  function scrollTex(seed) {
+    return canvasTex(128, function (ctx, s2) {
+      ctx.fillStyle = '#e9e0c9'; ctx.fillRect(0, 0, s2, s2);
+      var s = seed >>> 0, i, x;
+      function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+      /* 淡墨远山三层 */
+      for (i = 0; i < 3; i++) {
+        var y0 = s2 * (0.34 + i * 0.13), amp = s2 * 0.1 * (0.5 + rnd());
+        ctx.fillStyle = 'rgba(58,62,58,' + (0.22 + i * 0.14) + ')';
+        ctx.beginPath(); ctx.moveTo(0, y0);
+        for (x = 0; x <= s2; x += 6) ctx.lineTo(x, y0 - Math.abs(Math.sin(x * 0.06 + seed * 0.7 + i * 2.1)) * amp - rnd() * 3);
+        ctx.lineTo(s2, s2); ctx.lineTo(0, s2); ctx.closePath(); ctx.fill();
+      }
+      /* 近景浓墨数笔（树石） */
+      ctx.strokeStyle = 'rgba(38,40,38,0.85)'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      for (i = 0; i < 4; i++) {
+        ctx.beginPath();
+        var sx = s2 * (0.15 + rnd() * 0.7), sy = s2 * (0.55 + rnd() * 0.2);
+        ctx.moveTo(sx, sy);
+        ctx.bezierCurveTo(sx + rnd() * 20 - 10, sy - 14, sx + rnd() * 26 - 13, sy - 26, sx + rnd() * 30 - 15, sy - 34 - rnd() * 10);
+        ctx.stroke();
+      }
+      /* 留白题款 + 朱红印章 */
+      ctx.fillStyle = 'rgba(50,50,48,0.7)';
+      for (i = 0; i < 4; i++) ctx.fillRect(s2 * 0.12, s2 * (0.08 + i * 0.035), 2.5, 2.5);
+      ctx.fillStyle = '#a83a2a'; ctx.fillRect(s2 * 0.12, s2 * 0.24, s2 * 0.075, s2 * 0.075);
+    }, 1, 1);
+  }
+  function hangingScroll(x, z, faceDir, seed, k) {
+    var g = new THREE.Group(); g.position.set(x, 0, z);
+    g.rotation.y = faceDir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    if (k) g.scale.setScalar(k);
+    S.scene.add(g);
+    box(0.9, 1.72, 0.02, M.wood, 0, 1.5, 0, 0, g);              /* 绫边装裱 */
+    var paint = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.42),
+      new THREE.MeshStandardMaterial({ map: scrollTex(seed), roughness: 0.92 }));
+    paint.position.set(0, 1.5, 0.015); g.add(paint);
+    var r1 = cyl(0.016, 0.016, 0.98, 6, M.wood, 0, 2.4, 0.02, g); r1.rotation.z = Math.PI / 2;   /* 天杆 */
+    var r2 = cyl(0.035, 0.035, 1.0, 8, M.wood, 0, 0.62, 0.03, g); r2.rotation.z = Math.PI / 2;   /* 地杆 */
+    var k1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.ink); k1.position.set(-0.53, 0.62, 0.03); k1.castShadow = true; g.add(k1);
+    var k2 = k1.clone(); k2.position.x = 0.53; g.add(k2);
+    /* 暖光洗画灯带（自发光灯箱，斜向下洗到画面） */
+    if (!S.lampGlow) S.lampGlow = new THREE.MeshStandardMaterial({ color: 0x4a3f2c, emissive: 0xffd9a0, emissiveIntensity: 1.15 });
+    var strip = box(0.86, 0.05, 0.07, S.lampGlow, 0, 2.32, 0.1, 0, g);
+    strip.rotation.x = 0.5;
+  }
+  /* 半壁廊墙：廊外侧重柱间封墙（墙脚石 + 纸筋白墙 + 墨瓦压顶）+ 每开间一幅立轴 */
+  function galleryWall(x, faceDir) {
+    var len = 12.9, zc = 16.75;
+    box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
+    box(0.15, 2.3, len, M.paper, x, 1.15 + 0.1, zc);
+    box(0.22, 0.14, len + 0.1, M.ink, x, 2.42, zc);
+    var zs = [10.93, 13.79, 16.65, 19.51, 22.37], i;
+    for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0));
+  }
+
+  /* ---------- 临水半亭：背壁白粉墙 + 前檐双柱 + 单披顶 + 大立轴 + 美人靠 + 红灯笼（面西隔水） ---------- */
+  function halfPavilion(x, z) {
+    var g = new THREE.Group(); S.scene.add(g);
+    box(0.16, 2.7, 2.8, M.paper, x + 0.75, 1.42, z, 0, g);   /* 背壁（顶 2.77） */
+    box(0.24, 0.16, 3.0, M.ink, x + 0.75, 2.85, z, 0, g);    /* 瓦压顶 */
+    box(0.26, 0.14, 3.0, M.stoneDark, x + 0.75, 0.07, z, 0, g);
+    box(2.0, 0.3, 3.0, M.stone, x, 0.15, z, 0, g);           /* 石台基 */
+    cyl(0.16, 0.19, 0.14, 8, M.stone, x - 0.7, 0.37, z - 1.1, g);
+    cyl(0.16, 0.19, 0.14, 8, M.stone, x - 0.7, 0.37, z + 1.1, g);
+    cyl(0.1, 0.12, 2.1, 8, M.wood, x - 0.7, 1.4, z - 1.1, g);
+    cyl(0.1, 0.12, 2.1, 8, M.wood, x - 0.7, 1.4, z + 1.1, g);
+    box(0.14, 0.2, 2.6, M.wood, x - 0.7, 2.5, z, 0, g);      /* 檐枋 */
+    box(0.05, 0.3, 2.4, M.gualuo, x - 0.7, 2.26, z, 0, g);   /* 挂落 */
+    hipRoof(2.8, 3.6, 1.0, x, 2.62, z, g);
+    box(0.28, 0.42, 2.2, M.wood, x - 0.45, 0.55, z, 0, g);   /* 美人靠 */
+    hangingScroll(x + 0.62, z, -1, 999, 1.15);               /* 背壁大立轴（面西） */
+    redLantern(x - 0.7, 2.44, z - 1.1, g);
+    redLantern(x - 0.7, 2.44, z + 1.1, g);
+  }
+
   /* ---------- 石栏杆一段（望柱 + 扶手 + 地栿，高 0.6m） ---------- */
   function railing(x0, z0, x1, z1, y0) {
     var dx = x1 - x0, dz = z1 - z0;
@@ -1067,6 +1139,9 @@ window.MuseumExteriorLayout = (function () {
     /* 双廊北端收头门洞：出廊即中轴南院，北对水榭庭院南门 */
     corridorEnd(-7, 9.5);
     corridorEnd(7, 9.5);
+    /* 中轴双廊改画廊：外侧半壁墙封廊，每开间一幅立轴国画 + 暖光洗画 */
+    galleryWall(-8.1, 1);
+    galleryWall(8.1, -1);
   }
 
   /* ---------- 中心庭（17×13 碎石广场 + 内院 5×5m：中心树 + 太湖石 + 石桌凳 + 条凳 + 石灯 + 陶罐） ---------- */
@@ -1156,7 +1231,7 @@ window.MuseumExteriorLayout = (function () {
     rock(-4.6, 0.35, -2.6, 1.3, 0.5, 1.5, 81);
     rock(-3.0, 0.18, -3.4, 0.7, 0.42, 1.1, 82);
     rock(-5.6, 0.12, -1.2, 0.5, 0.4, 0.9, 84);
-    plantTree(4.8, 4.8, 1.0, 83);
+    plantTree(3.2, 5.3, 1.0, 83);
     bambooClump(-5.8, -3.8, 213, S.scene, 0.8);
     stoneTableSet(3.6, -3.4);
     lantern(1.6, 5.6);
@@ -1172,6 +1247,8 @@ window.MuseumExteriorLayout = (function () {
     railing(-2.1, 3.35, -0.5, 3.35, 0.34);
     railing(-0.85, 3.0, -0.85, 5.4, 0.34);
     railing(0.05, 3.0, 0.05, 5.4, 0.34);
+    /* 东南角临水半亭：白墙 + 大立轴，隔水可赏 */
+    halfPavilion(6.0, 4.2);
     /* 北墙已改围栏，原冰裂棂花窗移除（全院围栏统一） */
   }
 
@@ -1601,9 +1678,9 @@ window.MuseumExteriorLayout = (function () {
 
   return { build: build, slots: S.slots };
 })();
-/* ---------- 原型的日光与半球光（从原型主控段搬入） ---------- */
+/* ---------- 原型的日光与半球光（从原型主控段自动抓取） ---------- */
 window.MuseumExteriorLayout.addLights = function (scene) {
-  var sun = new THREE.DirectionalLight(0xffd9a6, 1.18);
+var sun = new THREE.DirectionalLight(0xffd9a6, 1.18);
   sun.position.set(-56, 48, 74);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
