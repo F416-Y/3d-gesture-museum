@@ -70,16 +70,23 @@ for (const a of calls('buildHall')) {
 }
 rows.sort((a, b) => (a.cz - b.cz) || (a.cx - b.cx));
 
+/* 展厅 / 装饰景观 分类：只有 config.js 里的 8 个展厅需要区域判定与展品热点，
+   其余（亭轩、庭院、廊）是装饰景观，只需要碰撞体，不需要展厅 id。 */
+const HALL_LABELS = new Set(['序厅', '花鸟', '山水', '人物', '书斋', '文创']);
+function classify(label) {
+  return HALL_LABELS.has(label) ? '**展厅**' : '装饰景观';
+}
+
 const L = [];
 L.push('# 外观原型 · 坐标对接表（给组员1）', '');
 L.push('> 数据来源：`js/exterior-layout.js`（外观原型整块移植，原作者 Kimi）');
 L.push('> 生成脚本：`node scripts/extract-layout-coords.mjs`（改布局后重跑即可）', '');
 L.push('**坐标系**：1 单位 = 1 米；x 向东为正，z 向南为正（北 = −z）；总平面 100 × 80，即 x ∈ [−50, 50]、z ∈ [−40, 40]。');
 L.push('**院墙规则**：院落式的院墙矩形就是 `(cx±w/2, cz±d/2)`；门洞开在 `入口` 那一边，洞口宽 = gateW+1.4。', '');
-L.push('| 名称 | 形式 | 中心 (x, z) | 面阔 × 进深 | 院墙/台基范围 x | z | 入口 | 洞口宽 | 院墙高 | 后门 |');
-L.push('|---|---|---|---|---|---|---|---|---|---|');
+L.push('| 名称 | 分类 | 形式 | 中心 (x, z) | 面阔 × 进深 | 院墙/台基范围 x | z | 入口 | 洞口宽 | 院墙高 | 后门 |');
+L.push('|---|---|---|---|---|---|---|---|---|---|---|');
 for (const r of rows) {
-  L.push(`| ${r.label || '(无匾)'} | ${r.kind} | ${r.cx}, ${r.cz} | ${r.w} × ${r.d} | ${r.x0} ~ ${r.x1} | ${r.z0} ~ ${r.z1} | ${r.entry} | ${r.gateOpen} m | ${r.wallH} m | ${r.backdoor ? '有' : '—'} |`);
+  L.push(`| ${r.label || '(无匾)'} | ${classify(r.label)} | ${r.kind} | ${r.cx}, ${r.cz} | ${r.w} × ${r.d} | ${r.x0} ~ ${r.x1} | ${r.z0} ~ ${r.z1} | ${r.entry} | ${r.gateOpen} m | ${r.wallH} m | ${r.backdoor ? '有' : '—'} |`);
 }
 L.push('', '## 我（外观）暂定的 8 个展厅区域判定', '');
 L.push('代码位置：`js/scene.js` 的 `init()` 里 `if (useProtoLayout) { Object.assign(hallRegions, {...}) }`。**这份是暂定值，请组员1 按上表核对/替换。**', '');
@@ -101,12 +108,21 @@ L.push('1. **碰撞体**：新布局 `obstacles` 现在是 **0 个**（原型不
 L.push('2. **展品热点**：`spotMeshes` 现在也是 **0 个**。原型的场馆还没有展品落位，需要和组员4 的 `config.js` 展品表对齐后逐个登记。');
 L.push('3. **区域判定**：核对上面那份 8 个区域，尤其是中轴庭院带（跨越了轴线庭/水榭庭/中心庭三个庭院）。');
 L.push('');
-L.push('## 还没被覆盖的原型场馆', '');
-const extra = ['雅集', '景韵', '兰竹', '临摹', '茶室', '水榭庭院', '荷池庭院', '山石庭院', '兰竹庭院', '景观庭院'];
-L.push('原型里这些场馆在建，但 `config.js` 的 8 个展厅里没有对应 id：' + extra.join('、') + '。');
-L.push('要么补 id（组员4 改 config），要么把它们并入相邻展厅——**需要组长定**。');
+L.push('## 分类说明（哪些是展厅、哪些只是装饰）', '');
+L.push('`config.js` 里只有 **8 个展厅**：plaza 前庭 / hall0 序厅 / courtyard 庭院 / hall1 山水 / hall2 花鸟 / hall3 人物 / hall4 书斋 / hall5 文创。');
+L.push('原型里的**亭、轩、庭院、廊**属于**装饰景观**，不占展厅 id，也**不需要展品热点**——但它们的墙体和亭柱**仍然需要碰撞体**（否则玩家会穿过去）。', '');
+L.push('### 展厅 → 只做这三样（区域判定 / 展品热点 / 碰撞体）', '');
+L.push('- 序厅 = 原型 `buildXuting`（台基 x −11~11 / z 24.5~34.5）');
+L.push('- 山水 = 院落 ( −37.25, −12.5 )  花鸟 = 院落 ( 0, −29.25 )  人物 = 院落 ( 36.75, −15.5 )');
+L.push('- 书斋 = 院落 ( 38, 12.5 )（原型另有一个"茶室"院落 (38, 26.5)，属装饰或并入书斋，待定）');
+L.push('- 文创 = 院落 ( −39.5, 14.5 )（原型另有一个"临摹"院落 (−39.5, 28.5)，同上）');
+L.push('- 前庭 = 南入口区  庭院 = 中轴庭院带', '');
+L.push('### 装饰景观 → 只需要碰撞体', '');
+L.push('中心庭、轴线庭院、水榭庭院、荷池庭院、山石庭院、兰竹庭院、景观庭院、雅集、景韵、兰竹（门厅），以及全园的游廊系统。');
 L.push('');
+
 fs.writeFileSync(path.join(ROOT, 'docs', '外观原型-坐标对接表.md'), L.join('\n'), 'utf8');
-fs.writeFileSync(path.join(ROOT, 'tools', 'layout-coords.json'), JSON.stringify({ note: '外观原型坐标（由 scripts/extract-layout-coords.mjs 生成）', rows, regions }, null, 2) + '\n');
+fs.writeFileSync(path.join(ROOT, 'tools', 'layout-coords.json'),
+  JSON.stringify({ note: '外观原型坐标（由 scripts/extract-layout-coords.mjs 生成）', rows, regions }, null, 2) + '\n');
 console.log('已写 docs/外观原型-坐标对接表.md 与 tools/layout-coords.json');
 console.log('提取到 ' + rows.length + ' 个建筑/院落：' + rows.map(r => r.label).filter(Boolean).join('、'));
