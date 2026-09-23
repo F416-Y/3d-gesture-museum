@@ -113,6 +113,12 @@ if (body.indexOf(OLD_X) >= 0) { body = body.replace(OLD_X, DOOR_OPEN_X); fixLog.
 if (body.indexOf(OLD_Z) >= 0) { body = body.replace(OLD_Z, DOOR_OPEN_Z); fixLog.push("正/后门 z 向双扇大敞开"); }
 console.log("门禁修正：" + (fixLog.length ? fixLog.join(" / ") : "未匹配到（原型结构变了？）"));
 
+/* 格扇窗挂钩：命中"朝院立面"时由我们自己的落地格扇窗接管 */
+const WIN_OLD = "function addWindow(x, y, z, ry, parent) {";
+const WIN_NEW = "function addWindow(x, y, z, ry, parent) {\n    if (window.MuseumWindows && window.MuseumWindows.replace(x, y, z, ry, (parent || S.scene))) return null;";
+if (body.indexOf(WIN_OLD) >= 0) { body = body.replace(WIN_OLD, WIN_NEW); console.log("格扇窗挂钩：已插入 addWindow"); }
+else console.log("格扇窗挂钩：未找到 addWindow");
+
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
 /* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */
 const SLOTS_OUT = path.join(ROOT, 'js', 'slots.js');

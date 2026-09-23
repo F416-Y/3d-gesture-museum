@@ -264,6 +264,7 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 假窗（外立面棂格窗） ---------- */
   function addWindow(x, y, z, ry, parent) {
+    if (window.MuseumWindows && window.MuseumWindows.replace(x, y, z, ry, (parent || S.scene))) return null;
     var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry;
     (parent || S.scene).add(g);
     box(1.5, 1.5, 0.1,  M.ink,   0, 0, 0,    0, g);

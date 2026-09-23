@@ -2639,6 +2639,10 @@ window.MuseumScene = (function () {
     },
 
     terrainHeightAt: terrainHeightAt,   // 地面标高查询（player.js 高度跟随用）
+    /* 供 js/windows.js 调用：把我们的落地格扇窗建到指定 parent 里 */
+    buildWindowWallInto: function (parent, x, y0, y1, z0, z1, ry) {
+      buildPartWindowWall(parent, x, y0, y1, z0, z1, ry);
+    },
     obstacles: obstacles,
     spotMeshes: spotMeshes,
     hallRegions: hallRegions,
