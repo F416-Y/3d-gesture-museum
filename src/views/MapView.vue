@@ -1,7 +1,7 @@
 <template>
   <div class="overlay-page map-page">
     <div class="map-card">
-      <h2 class="card-title">江南文人国画博物馆 · 平面图</h2>
+      <h2 class="card-title">云墨美术馆 · 园区平面图</h2>
       <p class="map-hint">上 = 北（z 负方向）｜ 每个方格 10m ｜红点是当前位置</p>
       <svg class="map-svg" viewBox="0 0 920 920" xmlns="http://www.w3.org/2000/svg">
         <!-- 背景：围墙内园区 -->
