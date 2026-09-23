@@ -36,6 +36,14 @@ const e = html.indexOf('\n})();', s);
 if (e < 0) { console.error('找不到模块结束标记 })( );'); process.exit(2); }
 let body = html.slice(s, e + '\n})();'.length);
 body = body.replace(START, 'window.MuseumExteriorLayout = (function () {');
+/* 颜色：本项目设了 ColorManagement.legacyMode=false（构造时已 sRGB→线性），
+   原型的 C() 又转了一次会造成双重转换、整体偏暗，这里按模式自适应。 */
+body = body.replace(
+  'function C(hex) { return new THREE.Color(hex).convertSRGBToLinear(); }',
+  'function C(hex) {\n' +
+  '    if (THREE.ColorManagement && THREE.ColorManagement.legacyMode === false) return new THREE.Color(hex);\n' +
+  '    return new THREE.Color(hex).convertSRGBToLinear();\n' +
+  '  }');
 
 /* ---- 3. 抓光照 ---- */
 const li = html.indexOf('var sun = new THREE.DirectionalLight');
@@ -64,6 +72,35 @@ ${lights}
 `;
 
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
+/* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */
+const SLOTS_OUT = path.join(ROOT, 'js', 'slots.js');
+const ui2 = html.indexOf('(function upgradeParts() {');
+const uj2 = ui2 >= 0 ? html.indexOf('\n  })();', ui2) : -1;
+let slotsNote = '未找到 upgradeParts';
+if (ui2 >= 0 && uj2 > ui2) {
+  let up = html.slice(ui2, uj2 + '\n  })();'.length);
+  up = up.split('window.MuseumScene.slots').join('window.MuseumExteriorLayout.slots');
+  up = up.replace("'assets/models/parts/' + id + '.glb'", "'assets/models/parts/opt/' + id + '.glb'");
+  up = up.split('\n').map(l => '  ' + l).join('\n');
+  const sHead = `/* ============================================================
+ * GLB 真模型替换（由 scripts/vendor-prototype.mjs 自动同步自外观原型主控段）
+ * 源文件：tools/exterior-prototype.html —— 请勿手改本文件
+ * 作用：读 MuseumExteriorLayout.slots 登记表，把代码件替换成 assets/models/parts/opt/ 里的真模型；
+ *       任何一件加载失败就保留代码件（渐进替换、失败回退）。原作者：Kimi
+ * ============================================================ */
+window.MuseumExteriorSlots = {
+  install: function (scene) {
+`;
+  const sTail = `  }
+};
+`;
+  fs.writeFileSync(SLOTS_OUT, sHead + up + '\n' + sTail, 'utf8');
+  slotsNote = '已生成 js/slots.js（' + (sHead + up).split('\n').length + ' 行）';
+} else {
+  fs.writeFileSync(SLOTS_OUT, 'window.MuseumExteriorSlots = { install: function () {} };\n', 'utf8');
+}
+console.log(slotsNote);
+
 const fnCount = (body.match(/^\s*function [A-Za-z0-9_]+\(/gm) || []).length;
 console.log('已同步：' + VENDOR);
 console.log('已生成：' + OUT + '  （' + (header + body + footer).split('\n').length + ' 行，' + fnCount + ' 个函数）');

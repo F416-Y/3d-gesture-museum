@@ -40,7 +40,8 @@ window.MuseumMain = (function () {
     renderer.outputEncoding = THREE.sRGBEncoding;
     // 色调映射：把超过 1.0 的高光压回来，避免地面/墙面一片死白（此前中轴道路会被曝成浅灰）
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    // 曝光：走外观原型布局时按原型的 1.12，其余保持 1.0
+  renderer.toneMappingExposure = (window.MuseumExteriorLayout && window.MuseumExteriorLayout.build) ? 1.12 : 1.0;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     MuseumUI.getStage().appendChild(renderer.domElement);

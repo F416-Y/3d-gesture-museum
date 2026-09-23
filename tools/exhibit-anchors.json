@@ -1,0 +1,134 @@
+[
+  {
+    "id": "qianlijiangshan",
+    "name": "千里江山图",
+    "hall": "hall1",
+    "hallLabel": "山水",
+    "kind": "painting",
+    "x": -44.92,
+    "y": 1.9,
+    "z": -16.77,
+    "ry": 1.5708
+  },
+  {
+    "id": "fuchunshanjv",
+    "name": "富春山居图",
+    "hall": "hall1",
+    "hallLabel": "山水",
+    "kind": "painting",
+    "x": -44.92,
+    "y": 1.9,
+    "z": -12.5,
+    "ry": 1.5708
+  },
+  {
+    "id": "xishanxinglvtu",
+    "name": "溪山行旅图",
+    "hall": "hall1",
+    "hallLabel": "山水",
+    "kind": "painting",
+    "x": -44.92,
+    "y": 1.9,
+    "z": -8.23,
+    "ry": 1.5708
+  },
+  {
+    "id": "xieshengzhenqintu",
+    "name": "写生珍禽图",
+    "hall": "hall2",
+    "hallLabel": "花鸟",
+    "kind": "painting",
+    "x": -6.6,
+    "y": 1.9,
+    "z": -36.42,
+    "ry": 3.1416
+  },
+  {
+    "id": "wuniutu",
+    "name": "五牛图",
+    "hall": "hall2",
+    "hallLabel": "花鸟",
+    "kind": "painting",
+    "x": 0.0,
+    "y": 1.9,
+    "z": -36.42,
+    "ry": 3.1416
+  },
+  {
+    "id": "molantu",
+    "name": "墨兰图",
+    "hall": "hall2",
+    "hallLabel": "花鸟",
+    "kind": "painting",
+    "x": 6.6,
+    "y": 1.9,
+    "z": -36.42,
+    "ry": 3.1416
+  },
+  {
+    "id": "hanxizai",
+    "name": "韩熙载夜宴图",
+    "hall": "hall3",
+    "hallLabel": "人物",
+    "kind": "painting",
+    "x": 31.65,
+    "y": 1.9,
+    "z": -19.92,
+    "ry": 3.1416
+  },
+  {
+    "id": "luoshenfu",
+    "name": "洛神赋图",
+    "hall": "hall3",
+    "hallLabel": "人物",
+    "kind": "painting",
+    "x": 36.75,
+    "y": 1.9,
+    "z": -19.92,
+    "ry": 3.1416
+  },
+  {
+    "id": "buniantu",
+    "name": "步辇图",
+    "hall": "hall3",
+    "hallLabel": "人物",
+    "kind": "painting",
+    "x": 41.85,
+    "y": 1.9,
+    "z": -19.92,
+    "ry": 3.1416
+  },
+  {
+    "id": "jiangjunyong",
+    "name": "将军俑",
+    "hall": "hall3",
+    "hallLabel": "人物",
+    "kind": "sculpture",
+    "x": 36.75,
+    "y": 0,
+    "z": -13.3,
+    "ry": 0
+  },
+  {
+    "id": "houmuwuding",
+    "name": "后母戊鼎",
+    "hall": "hall0",
+    "hallLabel": "序厅",
+    "kind": "sculpture",
+    "x": 0,
+    "y": 0,
+    "z": 29.5,
+    "ry": 0
+  },
+  {
+    "id": "matayafeiyan",
+    "name": "马踏飞燕",
+    "hall": "courtyard",
+    "hallLabel": "庭院",
+    "kind": "sculpture",
+    "x": 0,
+    "y": 0,
+    "z": -13,
+    "ry": 0.6
+  }
+]

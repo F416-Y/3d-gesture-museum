@@ -23,7 +23,10 @@ window.MuseumExteriorLayout = (function () {
   var STONE  = 0xB9B0A0;  // 石材浅灰
   var INK    = 0x1C1A17;  // 墨黑
 
-  function C(hex) { return new THREE.Color(hex).convertSRGBToLinear(); }
+  function C(hex) {
+    if (THREE.ColorManagement && THREE.ColorManagement.legacyMode === false) return new THREE.Color(hex);
+    return new THREE.Color(hex).convertSRGBToLinear();
+  }
 
   /* ---------- 二维值噪声 ---------- */
   function makeNoise(seed) {

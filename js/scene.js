@@ -2552,6 +2552,9 @@ window.MuseumScene = (function () {
       if (useProtoLayout) {
         window.MuseumExteriorLayout.addLights(scene);
         window.MuseumExteriorLayout.build(scene);
+        /* 真模型接线：读原型的 slots 登记表，把代码件换成 assets/models/parts/opt/ 里的 GLB
+           （门楼/石狮/青铜鼎/太湖石/景观石/树/竹…；任何一件失败就保留代码件） */
+        if (window.MuseumExteriorSlots) window.MuseumExteriorSlots.install(scene);
       } else {
         buildJiangnanCompound(scene);
       }
