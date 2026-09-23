@@ -4,7 +4,7 @@
    签名元素：朱砂印章「云墨」+ 水墨加载
    ============================================================ */
 
-@import url("../src/styles/tokens.css");
+@import url("./tokens.css");
 
 :root {
   /* 核心令牌已在 src/styles/tokens.css 的 :root 定义（通过顶部 @import 引入） */

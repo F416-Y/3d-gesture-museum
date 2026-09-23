@@ -22,7 +22,8 @@ body.vue-overlay { background: var(--paper); }
 }
 .vue-nav a { text-decoration: none; color: var(--text-on-light-soft); }
 .nav-halls {
-  display: flex; gap: 2px;
+  display: flex; flex-wrap: wrap; gap: 2px;
+  max-width: min(560px, 60vw);
   background: var(--panel-light);
   border: 1px solid var(--gold);
   border-radius: var(--radius-md);
@@ -216,6 +217,6 @@ body.vue-overlay { background: var(--paper); }
 /* ===== 响应式 ===== */
 @media (max-width: 720px) {
   .vue-nav { flex-direction: column; align-items: flex-end; gap: 6px; }
-  .nav-halls { flex-wrap: wrap; }
+  .nav-halls { flex-wrap: wrap; justify-content: flex-end; max-width: 80vw; }
   .card { padding: 22px 18px 16px; }
 }
