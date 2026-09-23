@@ -18,6 +18,14 @@ window.MuseumMain = (function () {
   var clock = new THREE.Clock();
   var cameraOn = false;
 
+  /* ---------- 全景俯瞰模式 ----------
+   * player.js 每帧把相机锁在 1.6m 人眼高度、俯仰角为 0，所以只能第一人称。
+   * 全景不开新相机：把相机摆在园区上方的环形轨道上，每帧在 player 之后覆写姿态，
+   * 退出时交给下一帧 player.update 自然恢复。 */
+  var panorama = { on: false, angle: Math.PI * 0.85, dist: 78, height: 44,
+                   target: new THREE.Vector3(0, 2, 6) };
+  var NEUTRAL_INPUT = { forward: false, back: false, turnLeft: false, turnRight: false, sprint: false };
+
   var keys = {};
 
   /* ---------- 初始化 ---------- */
@@ -86,11 +94,14 @@ window.MuseumMain = (function () {
       keys[e.code] = true;
       if (e.code === "KeyE") { e.preventDefault(); MuseumExhibit.pick(); }
       if (e.code === "KeyR") { resetView(); }
+      if (e.code === "KeyV") { e.preventDefault(); setPanorama(!panorama.on); }
+      if (e.code === "KeyE" && panorama.on) { e.preventDefault(); return; }
     });
     window.addEventListener("keyup", function (e) { keys[e.code] = false; });
 
     // 鼠标点击拾取（演示/无摄像头时的备选交互）
     renderer.domElement.addEventListener("click", function () {
+      if (panorama.on) return;
       MuseumExhibit.pick();
     });
 
@@ -136,7 +147,43 @@ window.MuseumMain = (function () {
     }
   }
 
+  /* 全景轨道：A/D 或左右方向键绕行，W/S 或上下键推近拉远，Shift 加速 */
+  function updatePanorama(dt, input) {
+    var fast = input.sprint ? 3 : 1;
+    if (input.turnLeft) panorama.angle -= dt * 0.45 * fast;
+    if (input.turnRight) panorama.angle += dt * 0.45 * fast;
+    if (!input.turnLeft && !input.turnRight) panorama.angle += dt * 0.04;
+    if (input.forward) panorama.dist = Math.max(34, panorama.dist - dt * 20 * fast);
+    if (input.back) panorama.dist = Math.min(130, panorama.dist + dt * 20 * fast);
+    camera.position.set(Math.sin(panorama.angle) * panorama.dist, panorama.height,
+                        Math.cos(panorama.angle) * panorama.dist);
+    camera.lookAt(panorama.target);
+  }
+
+  function setPanorama(on) {
+    if (on === panorama.on) return;
+    panorama.on = on;
+    if (on) {
+      panorama.angle = Math.PI * 0.85;
+      panorama.dist = 78;
+      panorama.height = 44;
+      camera.fov = 55;
+      camera.updateProjectionMatrix();
+      MuseumUI.toast("全景俯瞰 · A/D 绕行 · W/S 远近 · V 返回漫游");
+    } else {
+      camera.fov = 60;
+      camera.updateProjectionMatrix();
+      camera.position.copy(MuseumPlayer.getPosition());
+      MuseumUI.toast("已返回第一人称漫游");
+    }
+  }
+
   function resetView() {
+    if (panorama.on) {
+      panorama.angle = Math.PI * 0.85;
+      panorama.dist = 78;
+      return;
+    }
     MuseumPlayer.reset();
     // 重置后相机姿态由下一帧 update 应用
     var p = MuseumPlayer.getPosition();
@@ -163,14 +210,25 @@ window.MuseumMain = (function () {
     var gs = MuseumGesture.getState();
     var input = composeInput(gs);
 
-    MuseumPlayer.update(dt, input, camera);
+    if (panorama.on) {
+      // 冻结漫游位移（人站在原地看着，退出后回到原处），再覆写相机姿态
+      MuseumPlayer.update(dt, NEUTRAL_INPUT, camera);
+      updatePanorama(dt, input);
+    } else {
+      MuseumPlayer.update(dt, input, camera);
+    }
     MuseumExhibit.update();
     MuseumScene.update();
 
     renderer.render(scene, camera);
   }
 
-  return { init: init };
+  return {
+    init: init,
+    setPanorama: setPanorama,
+    togglePanorama: function () { setPanorama(!panorama.on); },
+    isPanorama: function () { return panorama.on; },
+  };
 })();
 
 /* 页面加载完成后启动 */
