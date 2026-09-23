@@ -2,6 +2,7 @@
   <!-- 顶部右侧导航：展厅直达 + 用户入口（叠在 3D 场景之上，不影响原有顶栏） -->
   <nav class="vue-nav">
     <div class="nav-halls">
+      <RouterLink to="/map">平面图</RouterLink>
       <RouterLink to="/hall/plaza">前庭</RouterLink>
       <RouterLink to="/hall/hall0">序厅</RouterLink>
       <RouterLink to="/hall/courtyard">庭院</RouterLink>
