@@ -28,3 +28,6 @@ temp/
 .env.local
 .env.*.local
 !.env.example
+
+# 外观自检出图（本地生成，不进版本库）
+tools/visual-check/
