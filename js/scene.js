@@ -465,30 +465,39 @@ window.MuseumScene = (function () {
     // 檐口板：悬出墙身，同时遮住屋顶与墙之间的缝
     buildBox(g, w + eave * 2, 0.3, d + eave * 2, 0, 0.15, 0, mat(0x4b423a, { roughness: 0.9 }));
 
-    // 坡面：手写四边形，保证是「矩形四坡顶」而不是方锥
-    var A = [-a, 0.3, -b], B = [a, 0.3, -b], C = [a, 0.3, b], D = [-a, 0.3, b];
-    var P = [-c, 0.3 + h, 0], Q = [c, 0.3 + h, 0];
-    var tris = [
-      A, B, Q, A, Q, P,   // 北坡
-      D, C, P, C, Q, P,   // 南坡
-      B, Q, C,            // 东坡
-      P, A, D,            // 西坡
-    ];
-    var pos = [], uv = [];
-    for (var i = 0; i < tris.length; i++) {
-      var v = tris[i];
-      pos.push(v[0], v[1], v[2]);
-      uv.push((v[0] + a) / (2 * a), (v[2] + b) / (2 * b));
+    /* 坡面：优先用举折（凹曲）屋面，翼角自带上翘 —— 构件移植自外观原型
+       （tools/exterior-prototype.html 的 hipGeo）；没有该模块时退回平面四坡。 */
+    var useHip = !!(window.MuseumExterior && window.MuseumExterior.hipGeo);
+    var geo;
+    if (useHip) {
+      geo = window.MuseumExterior.hipGeo(w, d, h, Math.min(0.5, 0.14 + Math.max(w, d) * 0.018));
+      geo.translate(0, 0.3, 0);
+    } else {
+      var A = [-a, 0.3, -b], B = [a, 0.3, -b], C = [a, 0.3, b], D = [-a, 0.3, b];
+      var P = [-c, 0.3 + h, 0], Q = [c, 0.3 + h, 0];
+      var tris = [
+        A, B, Q, A, Q, P,
+        D, C, P, C, Q, P,
+        B, Q, C,
+        P, A, D,
+      ];
+      var pos = [], uv = [];
+      for (var i = 0; i < tris.length; i++) {
+        var v = tris[i];
+        pos.push(v[0], v[1], v[2]);
+        uv.push((v[0] + a) / (2 * a), (v[2] + b) / (2 * b));
+      }
+      geo = new _g.BufferGeometry();
+      geo.setAttribute("position", new _g.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("uv", new _g.Float32BufferAttribute(uv, 2));
+      geo.computeVertexNormals();
     }
-    var geo = new _g.BufferGeometry();
-    geo.setAttribute("position", new _g.Float32BufferAttribute(pos, 3));
-    geo.setAttribute("uv", new _g.Float32BufferAttribute(uv, 2));
-    geo.computeVertexNormals();
 
     var tileTex = new _g.CanvasTexture(drawTile());
     tileTex.encoding = _g.sRGBEncoding;
     tileTex.wrapS = tileTex.wrapT = _g.RepeatWrapping;
-    tileTex.repeat.set(3, 1.6);
+    /* 举折屋面的 UV 单位是"米"，平面四坡是 0~1，重复率要分开设 */
+    tileTex.repeat.set(useHip ? 0.35 : 3, useHip ? 0.25 : 1.6);
     var roofMesh = new _g.Mesh(geo, new _g.MeshStandardMaterial({
       map: tileTex, roughness: 0.72, metalness: 0.05, side: _g.DoubleSide,
     }));
@@ -1738,8 +1747,19 @@ window.MuseumScene = (function () {
     var rg = new _g.Group();
     rg.position.set(cx, 0, cz);
     root.add(rg);
-    if (window.MuseumFoliage) {
-      var s1 = Math.abs((cx + cz * 5) | 0) || 17;
+    var s1 = Math.abs((cx + cz * 5) | 0) || 17;
+    var rockMat = new _g.MeshStandardMaterial({ color: 0x9a9488, roughness: 0.98, flatShading: true });
+    if (window.MuseumExterior && window.MuseumExterior.blobGeo) {
+      /* 噪声球石头（移植自外观原型 blobGeo）：比十二面体自然得多 */
+      [[0.85, 0, 0, 0], [0.44, 0.88, 0.26, 3], [0.36, -0.72, 0.36, 9]].forEach(function (rk) {
+        var m = new _g.Mesh(window.MuseumExterior.blobGeo(rk[0], 0.24, 0.8, s1 + rk[3]), rockMat);
+        m.position.set(rk[1], rk[0] * 0.8, rk[2]);
+        m.rotation.y = s1 * 0.37 + rk[3];
+        m.castShadow = true;
+        m.receiveShadow = true;
+        rg.add(m);
+      });
+    } else if (window.MuseumFoliage) {
       var big = window.MuseumFoliage.rock({ seed: s1, radius: 0.85 });
       rg.add(big);
       var small = window.MuseumFoliage.rock({ seed: s1 + 3, radius: 0.42 });
