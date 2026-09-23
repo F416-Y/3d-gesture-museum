@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>零件：落地格扇大窗</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #222; }
+  #info { position: absolute; top: 10px; left: 10px; color: #fff; font: 14px sans-serif; background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="info">buildPartWindowWall 零件预览（微风摆动）</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script>
+function mat(color, opt) {
+  opt = opt || {};
+  return new THREE.MeshStandardMaterial(Object.assign({ color: color }, opt));
+}
+function buildBox(parent, w, h, d, x, y, z, m) {
+  var mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+}
+var animWindowDoors = [];
+function buildPartWindowWall(parent, x, y0, y1, z0, z1, ry) {
+  var wood = mat(0x5d4a3a, { roughness: 0.7 });
+  var paper = mat(0xf5f0e6, { roughness: 0.9, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  var H = y1 - y0;
+  var W = z1 - z0;
+  var paneW = 1.15;
+  var n = Math.max(3, Math.round(W / paneW));
+  var actualW = W / n;
+  var frameD = 0.12;
+
+  buildBox(parent, 0.14, 0.12, W + 0.1, x, y0, (z0 + z1) / 2, wood);
+  buildBox(parent, 0.14, 0.12, W + 0.1, x, y1, (z0 + z1) / 2, wood);
+
+  for (var i = 0; i < n; i++) {
+    var cz = z0 + actualW * (i + 0.5);
+    var isEdge = i === 0 || i === n - 1;
+    var openAngle = isEdge ? (ry > 0 ? 0.12 : -0.12) : 0;
+
+    var door = new THREE.Group();
+    door.position.set(x, y0, cz);
+    door.rotation.y = ry + openAngle;
+
+    buildBox(door, 0.08, H, frameD, 0, H / 2, -actualW / 2 + 0.04, wood);
+    buildBox(door, 0.08, H, frameD, 0, H / 2, actualW / 2 - 0.04, wood);
+    buildBox(door, 0.08, 0.1, actualW - 0.08, 0, 0.05, 0, wood);
+    buildBox(door, 0.08, 0.1, actualW - 0.08, 0, H - 0.05, 0, wood);
+    buildBox(door, 0.06, 0.08, actualW - 0.1, 0, H * 0.52, 0, wood);
+    for (var k = -1; k <= 1; k++) {
+      buildBox(door, 0.04, H - 0.24, frameD, 0, H / 2, k * (actualW * 0.22), wood);
+    }
+    var paperMesh = new THREE.Mesh(new THREE.PlaneGeometry(H - 0.24, actualW - 0.18), paper);
+    paperMesh.position.set(ry > 0 ? 0.045 : -0.045, H / 2, 0);
+    paperMesh.rotation.y = ry > 0 ? Math.PI / 2 : -Math.PI / 2;
+    door.add(paperMesh);
+
+    parent.add(door);
+    animWindowDoors.push({ mesh: door, baseRy: ry + openAngle, phase: Math.random() * Math.PI * 2 });
+  }
+}
+
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0xd9d4c8);
+scene.fog = new THREE.Fog(0xd9d4c8, 15, 40);
+
+var camera = new THREE.PerspectiveCamera(50, 1280 / 720, 0.1, 200);
+camera.position.set(6, 2.8, 8);
+camera.lookAt(0, 1.8, 0);
+
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(1280, 720);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+var ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), mat(0xcfc6b6, { roughness: 0.9 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+var root = new THREE.Group();
+buildPartWindowWall(root, 0, 0.4, 3.8, -5.5, 5.5, Math.PI / 2);
+scene.add(root);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+var hemi = new THREE.HemisphereLight(0xfff4e0, 0x3b3228, 0.7);
+scene.add(hemi);
+var sun = new THREE.DirectionalLight(0xfff0d8, 1.2);
+sun.position.set(8, 12, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+scene.add(sun);
+var fill = new THREE.DirectionalLight(0xdfe6f2, 0.3);
+fill.position.set(-8, 6, -6);
+scene.add(fill);
+
+function animate() {
+  requestAnimationFrame(animate);
+  var t = Date.now() * 0.0012;
+  animWindowDoors.forEach(function (item) {
+    item.mesh.rotation.y = item.baseRy + Math.sin(t + item.phase) * 0.035;
+  });
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
