@@ -31,3 +31,12 @@ temp/
 
 # 外观自检出图（本地生成，不进版本库）
 tools/visual-check/
+
+# 小零件资产：只入库压缩后的 opt/ 成品；原始大文件与中间产物不入库
+assets/models/parts/*.glb
+assets/models/parts/raw/
+assets/models/parts/_prev/
+assets/models/parts/_exp/
+assets/models/parts/_polly/
+assets/models/parts/_tripo/
+assets/models/parts/_generated.json
