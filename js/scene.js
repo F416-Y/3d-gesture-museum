@@ -1636,14 +1636,19 @@ window.MuseumScene = (function () {
     buildWallWithGap(root);
   }
 
+  /* 门楼：参数化版本只做占位，GLB 到位后自动替换（models.js）；
+     匾额单独建、不参与替换——馆名必须一直在。 */
   function buildPartGate(root, x, z) {
+    var g = new _g.Group();
+    g.position.set(x, 0, z);
     var wood = mat(0x7a3b2e, { roughness: 0.7 });
     var tile = mat(0x39332d, { roughness: 0.85 });
     [-1, 1].forEach(function (s) {
-      buildBox(root, 0.9, 3.6, 0.9, x + s * 5.2, 1.8, z, wood);
+      buildBox(g, 0.9, 3.6, 0.9, s * 5.2, 1.8, 0, wood);
     });
-    buildBox(root, 11.4, 0.55, 0.6, x, 3.7, z, wood);
-    buildBox(root, 12.2, 0.25, 0.9, x, 4.15, z, tile);
+    buildBox(g, 11.4, 0.55, 0.6, 0, 3.7, 0, wood);
+    buildBox(g, 12.2, 0.25, 0.9, 0, 4.15, 0, tile);
+    root.add(g);
 
     var plaque = new _g.Mesh(
       new _g.PlaneGeometry(2.6, 0.9),
@@ -1651,6 +1656,11 @@ window.MuseumScene = (function () {
     );
     plaque.position.set(x, 3.75, z + 0.31);
     root.add(plaque);
+
+    if (window.MuseumModels) {
+      /* 模型长轴在自身 Z 上，转 90° 让门楼横跨 x 轴、门洞朝南 */
+      window.MuseumModels.attach(root, "gate-front", { x: x, z: z, ry: Math.PI / 2, scale: 1 }, g);
+    }
   }
 
   /* ---------- 4. 植物与景观 ---------- */
