@@ -1,0 +1,82 @@
+/* ============================================================
+   云墨美术馆 · 设计令牌（Design Tokens）
+   归属：组员5（UI 视觉设计师）
+   ------------------------------------------------------------
+   作用：单一事实来源。
+     - css/style.css（3D 场景内 UI）引用这里的变量
+     - src/styles/vue-shell.css（Vue 壳页面）引用这里的变量
+   新中式配色：宣纸白 / 墨黑 / 朱砂（唯一强调色）/ 青瓦灰 / 黛青 / 原木 / 细金线
+   ============================================================ */
+
+:root {
+  /* ===== 色彩 · 底色 ===== */
+  --ink: #1c1a17;              /* 墨黑：主背景 */
+  --paper: #f5f1e8;            /* 宣纸白：亮色面板底 */
+  --paper-deep: #e9e2d3;      /* 旧纸：次级面板 / 引用块 */
+  --paper-dark: #2a251f;      /* 暗纸：深色卡片底（3D 场景用） */
+  --overlay: rgba(13, 11, 9, 0.6); /* 弹窗遮罩 */
+
+  /* ===== 色彩 · 强调与辅助 ===== */
+  --cinnabar: #b0342a;        /* 朱砂红：唯一强调色（印章/按钮/重点字） */
+  --cinnabar-deep: #8e2820;   /* 朱砂深：hover / active */
+  --tile: #4a4540;            /* 青瓦灰：描边 / 次级文字 */
+  --daiqing: #2e3d47;        /* 黛青：辅助色（标签/徽标） */
+  --wood: #8d6e63;           /* 原木：暖色点缀 */
+  --gold: #a8875a;           /* 细金线：分隔 / 描边 */
+
+  /* ===== 色彩 · 文字 ===== */
+  --text-on-dark: #f5f1e8;                 /* 深底上的文字 */
+  --text-on-dark-soft: rgba(245, 241, 232, 0.72); /* 深底次级文字 */
+  --text-on-light: #1c1a17;                /* 浅底上的文字 */
+  --text-on-light-soft: #6b6155;           /* 浅底次级文字 */
+  --text-on-light-faint: #8a7a68;         /* 浅底弱文字（空状态/链接） */
+  --danger: #b3261e;                       /* 错误 / 删除 */
+
+  /* ===== 色彩 · 面板与阴影 ===== */
+  --panel-dark: rgba(28, 26, 23, 0.55);   /* 3D 场景半透明深色面板 */
+  --panel-dark-solid: rgba(28, 26, 23, 0.85);
+  --panel-light: rgba(245, 241, 232, 0.92); /* 3D 场景半透明宣纸面板 */
+  --shadow: rgba(20, 16, 12, 0.45);
+  --shadow-soft: rgba(60, 40, 20, 0.15);
+
+  /* ===== 字体 ===== */
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", STSong, SimSun, serif;
+  --sans: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /* ===== 字号刻度 ===== */
+  --fs-display: 28px;   /* 弹窗标题 */
+  --fs-title: 22px;     /* 页面大标题 */
+  --fs-subtitle: 16px;  /* 卡片标题 / 区块标题 */
+  --fs-body: 14px;      /* 正文 */
+  --fs-small: 13px;     /* 次要正文 */
+  --fs-caption: 12px;    /* 标签 / 元信息 */
+  --fs-tiny: 11px;      /* 键盘提示 / 说明 */
+
+  /* ===== 间距刻度 ===== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ===== 圆角 ===== */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* ===== 动效 ===== */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 0.18s;
+  --dur-mid: 0.28s;
+
+  /* ===== 层级（z-index） ===== */
+  --z-scene: 0;
+  --z-hud: 20;        /* 顶栏 / 工具栏 / 帮助 / 摄像头 */
+  --z-nav: 60;        /* Vue 顶部导航 */
+  --z-overlay: 40;    /* 鉴赏弹窗遮罩 */
+  --z-toast: 60;      /* 提示条 */
+  --z-loading: 100;   /* 加载层 */
+}
