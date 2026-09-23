@@ -959,6 +959,10 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 廊道挂画：立轴国画（宣纸画心 + 绫边装裱 + 天地杆轴头 + 暖光洗画灯带） ---------- */
   function scrollTex(seed) {
+    if (window.MuseumGallery && window.MuseumGallery.tex) {
+      var _real = window.MuseumGallery.tex(seed);
+      if (_real) return _real;
+    }
     return canvasTex(128, function (ctx, s2) {
       ctx.fillStyle = '#e9e0c9'; ctx.fillRect(0, 0, s2, s2);
       var s = seed >>> 0, i, x;

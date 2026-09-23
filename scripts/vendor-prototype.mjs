@@ -71,6 +71,16 @@ ${lights}
 };
 `;
 
+/* 画廊挂画挂钩：在 scrollTex 里插入一行，让我们能用真画顶掉程序化立轴 */
+const HOOK_OLD = "function scrollTex(seed) {";
+const HOOK_NEW = "function scrollTex(seed) {\n    if (window.MuseumGallery && window.MuseumGallery.tex) {\n      var _real = window.MuseumGallery.tex(seed);\n      if (_real) return _real;\n    }";
+if (body.indexOf(HOOK_OLD) >= 0) {
+  body = body.replace(HOOK_OLD, HOOK_NEW);
+  console.log('画廊挂钩：已插入 scrollTex');
+} else {
+  console.log('画廊挂钩：未找到 scrollTex（原型结构变了？）');
+}
+
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
 /* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */
 const SLOTS_OUT = path.join(ROOT, 'js', 'slots.js');
