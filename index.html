@@ -87,6 +87,8 @@
 
   <!-- 第三方依赖：Three.js r147（UMD，SRI 锁定） -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js" integrity="sha384-vV17nr/rMaJqmeZkFUzXLpHdQ+ME5QHKdydaqqN+3Ga39RJlNrTatJxHwGV4ml2C" crossorigin="anonymous"></script>
+  <!-- GLTFLoader：加载 Aholo Lux3D 生成的小零件模型（r147 最后一个带 examples/js 的版本） -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js" crossorigin="anonymous"></script>
   <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（WASM 与 hand_landmarker.task 由代码运行时从官方 CDN 加载） -->
   <!-- 注意：vision_bundle.js 是「UMD 外层 + 末尾 ESM export」的混合产物，
        用普通 <script src> 会直接报 "Uncaught SyntaxError: Unexpected token 'export'"，
@@ -111,6 +113,13 @@
 
   <!-- 项目模块（依赖顺序不可调换） -->
   <script src="./js/config.js"></script>
+  <script src="./js/models.js"></script>
+  <script src="./js/exterior.js"></script>
+  <script src="./js/gallery.js"></script>
+  <script src="./js/windows.js"></script>
+  <script src="./js/exterior-layout.js"></script>
+  <script src="./js/slots.js"></script>
+  <script src="./js/foliage.js"></script>
   <script src="./js/scene.js"></script>
   <script src="./js/player.js"></script>
   <script src="./js/gesture.js"></script>

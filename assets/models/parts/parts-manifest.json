@@ -1,0 +1,352 @@
+{
+  "note": "云墨美术馆 · 小零件独立建模资产清单。每条对应 js/scene.js 里一个参数化零件函数，用 Aholo Lux3D 生成 GLB 后替换。",
+  "style": "江南中式园林，素雅，低饱和，哑光；单个物体居中、纯净白底、无阴影、无地面、三点柔光，正 3/4 视角；不要文字不要水印",
+  "pilot": [
+    "door-column",
+    "door-leaf",
+    "roof-tile"
+  ],
+  "parts": [
+    {
+      "id": "lantern",
+      "name": "宫灯灯笼",
+      "replaces": "buildLantern",
+      "sizeM": 0.6,
+      "faceCount": 60000,
+      "prompt": "一只中式宫灯灯笼，木框六角，外罩米色绢纱，下垂红流苏，内透暖黄烛光；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "taihu-rock",
+      "name": "太湖石",
+      "replaces": "buildPartRockGroup",
+      "sizeM": 1.8,
+      "faceCount": 120000,
+      "prompt": "一块江南太湖石，瘦皱漏透，多孔洞，灰白色石灰岩，表面有天然风化纹理；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "horse",
+      "name": "马踏飞燕",
+      "replaces": "addPlazaSculpture",
+      "sizeM": 1.6,
+      "faceCount": 120000,
+      "prompt": "东汉青铜器马踏飞燕，奔马三足腾空一足踏在飞燕上，青铜绿锈质感；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "stone-lion",
+      "name": "石狮",
+      "replaces": "addStoneLion",
+      "sizeM": 1.2,
+      "faceCount": 90000,
+      "prompt": "一只中式看门石狮，蹲坐，卷鬃，脚踏绣球，浅灰青石，表面有风化孔；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "bronze-ding",
+      "name": "青铜鼎",
+      "replaces": "buildDing",
+      "sizeM": 1.1,
+      "faceCount": 90000,
+      "prompt": "商代青铜方鼎，三足双耳，器身饕餮纹，青铜绿锈，厚重；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "warrior",
+      "name": "将军俑",
+      "replaces": "buildWarrior",
+      "sizeM": 1.6,
+      "faceCount": 120000,
+      "prompt": "秦始皇兵马俑将军俑，站立，鱼鳞甲，束发，陶土色，面容写实；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "bamboo",
+      "name": "竹丛",
+      "replaces": "buildPartBamboo",
+      "sizeM": 2.6,
+      "faceCount": 90000,
+      "prompt": "一丛江南翠竹，四到五根竹竿，竹节清晰，细长竹叶，青绿色；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "tree",
+      "name": "庭院树",
+      "replaces": "buildPartTree",
+      "sizeM": 3.4,
+      "faceCount": 120000,
+      "prompt": "一棵江南庭院老树，树干微曲，树冠自然分层不呈球状，深绿叶片稀疏透气；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "bench",
+      "name": "石条凳",
+      "replaces": "buildPartBench",
+      "sizeM": 2.2,
+      "faceCount": 40000,
+      "prompt": "一张中式石条凳，青石整料，两端略收，凳面平整有浅磨痕；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "stool",
+      "name": "方凳",
+      "replaces": "buildPartStool",
+      "sizeM": 0.45,
+      "faceCount": 40000,
+      "prompt": "一张明式红木方凳，四条直腿带罗锅枨，藤编座面；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "long-table",
+      "name": "长案",
+      "replaces": "buildPartLongTable",
+      "sizeM": 2.4,
+      "faceCount": 50000,
+      "prompt": "一张明式红木长案，独板案面，两端翘头，四腿带牙板；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "bookshelf",
+      "name": "书架",
+      "replaces": "buildPartBookshelf",
+      "sizeM": 2,
+      "faceCount": 60000,
+      "prompt": "一件中式木质书架，四层，格间通透，深棕色，无书；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "display-shelf",
+      "name": "文创展示架",
+      "replaces": "buildPartDisplayShelf",
+      "sizeM": 1.8,
+      "faceCount": 60000,
+      "prompt": "一件新中式文创展示架，浅色原木，层板错落，背后为竖向细木格；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "column",
+      "name": "木柱与柱础",
+      "replaces": "buildPartColumn",
+      "sizeM": 4.2,
+      "faceCount": 40000,
+      "prompt": "一根中式木柱立在鼓形石柱础上，柱身深棕，柱础浅灰青石带鼓钉；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "lattice-window",
+      "name": "格扇窗",
+      "replaces": "buildPartWindowWall",
+      "sizeM": 2.2,
+      "faceCount": 60000,
+      "prompt": "一扇中式落地格扇窗，深棕木框，内部井字加步步锦棂条，半透窗纸；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "steps",
+      "name": "入口踏跺",
+      "replaces": "buildPartDoorSteps",
+      "sizeM": 2,
+      "faceCount": 30000,
+      "prompt": "三级中式条石台阶踏跺，浅灰青石，每级为整条石，边缘微磨圆；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "pedestal",
+      "name": "展台基座",
+      "replaces": "addPedestal",
+      "sizeM": 1.5,
+      "faceCount": 30000,
+      "prompt": "一个方形中式展台基座，深棕木质台面，石质须弥座下裙，简洁无纹饰；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "gate-tower",
+      "name": "门楼",
+      "replaces": "buildPartGate",
+      "sizeM": 11.4,
+      "faceCount": 150000,
+      "prompt": "一座江南中式门楼牌坊，两柱一梁一小坡黑瓦顶，朱红立柱，中间空白匾额无字；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "skylight",
+      "name": "藻井天窗",
+      "replaces": "buildPartSkylight",
+      "sizeM": 6,
+      "faceCount": 60000,
+      "prompt": "一个中式藻井天窗，木方格井口，中央半透磨砂玻璃，四周木格层层内收；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "painting-frame",
+      "name": "挂画框",
+      "replaces": "addFrameBox",
+      "sizeM": 1.6,
+      "faceCount": 30000,
+      "prompt": "一个中式立轴挂画木框，深棕细木框，画面为空白宣纸卷轴，两端有轴头；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "willow",
+      "name": "垂柳",
+      "replaces": "buildPartTree",
+      "sizeM": 4.5,
+      "faceCount": 150000,
+      "plant": true,
+      "prompt": "一棵江南垂柳，树干微倾，细长柳条自然下垂成帘状，叶片细密，浅黄绿色；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "camphor",
+      "name": "庭院乔木",
+      "replaces": "buildPartTree",
+      "sizeM": 5,
+      "faceCount": 150000,
+      "plant": true,
+      "prompt": "一棵江南庭院香樟老树，树干粗壮分叉，树冠蓬松分三层，深绿叶片成簇，枝干可见；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "grass-clump",
+      "name": "沿阶草草丛",
+      "replaces": "buildLawn 植被",
+      "sizeM": 0.35,
+      "faceCount": 40000,
+      "plant": true,
+      "prompt": "一小丛江南庭园沿阶草，细长深绿草叶从中心放射散开，叶片自然弯折，根部密实；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "bush",
+      "name": "杜鹃灌木球",
+      "replaces": "buildHedge 灌木",
+      "sizeM": 0.8,
+      "faceCount": 60000,
+      "plant": true,
+      "prompt": "一丛修剪过的江南庭园杜鹃灌木球，枝叶致密不呈几何球状，深浅两层绿叶，边缘有细碎出枝；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "banana",
+      "name": "芭蕉",
+      "replaces": "造景补件",
+      "sizeM": 2.2,
+      "faceCount": 90000,
+      "plant": true,
+      "prompt": "一株江南庭园芭蕉，五六片宽大长椭形叶片，叶脉清晰，叶缘有自然撕裂，翠绿色；",
+      "aiPredictSize": true
+    },
+    {
+      "id": "door-column",
+      "name": "门柱单根",
+      "replaces": "buildPartColumn",
+      "sizeM": 5,
+      "faceCount": 50000,
+      "refImage": "assets/models/parts/ref/门柱单根.png",
+      "prompt": "中式木门柱，方形柱身立于鼓形石柱础上；",
+      "fourView": true,
+      "aiPredictSize": false
+    },
+    {
+      "id": "door-leaf",
+      "name": "门扇单扇",
+      "replaces": "门扇",
+      "sizeM": 3,
+      "faceCount": 50000,
+      "refImage": "assets/models/parts/ref/门扇单扇.png",
+      "prompt": "中式双开木门扇，竖向木板拼接，带门环门钉铜饰；",
+      "fourView": true,
+      "aiPredictSize": false
+    },
+    {
+      "id": "door-canopy",
+      "name": "大门顶栏",
+      "replaces": "buildPartGate 顶部",
+      "sizeM": 8,
+      "faceCount": 60000,
+      "refImage": "assets/models/parts/ref/大门顶栏.png",
+      "prompt": "中式门楼顶部单坡黑瓦屋檐与深色木梁，两端飞檐翘角；",
+      "fourView": true,
+      "aiPredictSize": false
+    },
+    {
+      "id": "roof-tile",
+      "name": "屋顶",
+      "replaces": "buildRoof",
+      "sizeM": 12,
+      "faceCount": 90000,
+      "refImage": "assets/models/parts/ref/屋顶.png",
+      "prompt": "江南中式屋面的悬山瓦顶，黑瓦垄沟清晰，正脊两端起翘；",
+      "fourView": true,
+      "aiPredictSize": false
+    },
+    {
+      "id": "wall-pillar",
+      "name": "围墙立柱",
+      "replaces": "buildPartWallRun 壁柱",
+      "sizeM": 2.6,
+      "faceCount": 40000,
+      "refImage": "assets/models/parts/ref/围墙立柱.png",
+      "prompt": "白粉院墙的砖砌壁柱，浅灰砖镶边，顶有黑瓦压顶；",
+      "fourView": true,
+      "aiPredictSize": false
+    },
+    {
+      "id": "back-wall",
+      "name": "后墙主体",
+      "replaces": "buildPartHallWalls 北墙",
+      "sizeM": 14,
+      "faceCount": 60000,
+      "refImage": "assets/models/parts/ref/后墙主体.png",
+      "prompt": "白粉墙主体，两侧浅灰砖砌边框，顶部黑瓦檐；",
+      "fourView": true,
+      "aiPredictSize": false
+    },
+    {
+      "id": "grass-tuft",
+      "name": "低面数草丛",
+      "replaces": "草坪植被铺装",
+      "sizeM": 0.3,
+      "faceCount": 5000,
+      "plant": true,
+      "prompt": "一小丛江南庭园沿阶草，细长深绿草叶放射散开，叶片自然弯折，低面数；"
+    },
+    {
+      "id": "rock-boulder",
+      "name": "景观石",
+      "replaces": "庭院/草坪点景",
+      "sizeM": 1.8,
+      "faceCount": 65784,
+      "source": "Poly Haven · boulder_01 · CC0",
+      "prompt": "（现成资产，无需生成）"
+    },
+    {
+      "id": "grass-patch",
+      "name": "草丛（写实）",
+      "replaces": "草坪/庭院地被",
+      "sizeM": 3,
+      "faceCount": 19243,
+      "source": "Poly Haven · grass_medium_01 · CC0",
+      "prompt": "（现成资产，无需生成）"
+    },
+    {
+      "id": "dead-trunk",
+      "name": "枯木",
+      "replaces": "庭院点景",
+      "sizeM": 3,
+      "faceCount": 55002,
+      "source": "Poly Haven · dead_tree_trunk · CC0",
+      "prompt": "（现成资产，无需生成）"
+    },
+    {
+      "id": "fir-tree",
+      "name": "冷杉（草坪/墙根）",
+      "replaces": "草坪乔木",
+      "sizeM": 7,
+      "faceCount": 67423,
+      "source": "Poly Haven · fir_tree_01 · CC0",
+      "prompt": "（现成资产，无需生成）"
+    }
+  ]
+}
