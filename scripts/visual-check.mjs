@@ -116,6 +116,7 @@ const { server, port } = await startServer();
 await fsp.mkdir(OUT, { recursive: true });
 const browser = await launch();
 const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
+const client = await page.context().newCDPSession(page);   /* 持续重绘下 page.screenshot 会超时，用 CDP 直捕 */
 const pageErrors = [];
 page.on('pageerror', e => pageErrors.push(String(e && e.message || e)));
 page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); });
@@ -174,13 +175,17 @@ for (const shot of SHOTS) {
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
-  /* 用整页裁切代替元素截图：画布持续重绘时元素截图会卡在"等待稳定" */
+  /* 页面一直在重绘（rAF 循环 + 帧率自检），page.screenshot 会卡在“等待稳定”并超时，
+     所以走 CDP 的 Page.captureScreenshot 直接抓一帧 */
   const clip = await page.evaluate(() => {
     const c = document.querySelector('canvas');
     const r = c.getBoundingClientRect();
     return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
   });
-  const png = await page.screenshot({ type: 'png', clip, animations: 'disabled', timeout: 60000 });
+  const shotRes = await client.send('Page.captureScreenshot', {
+    format: 'png', captureBeyondViewport: true, clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: 1 },
+  });
+  const png = Buffer.from(shotRes.data, 'base64');
   await fsp.writeFile(path.join(OUT, shot.name + '.png'), png);
   const stat = await measure(page, png, shot.name);
   stat.note = shot.note;
