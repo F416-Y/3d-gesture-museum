@@ -48,7 +48,8 @@ body = body.replace(
 
 /* ---- 3. 抓光照 ---- */
 const li = html.indexOf('var sun = new THREE.DirectionalLight');
-const lj = li >= 0 ? html.indexOf('scene.add(new THREE.HemisphereLight', li) : -1;
+let lj = -1;
+if (li >= 0) { lj = html.indexOf('scene.add(hemi)', li); if (lj < 0) lj = html.indexOf('scene.add(new THREE.HemisphereLight', li); }
 let lights = '';
 if (li >= 0 && lj >= 0) {
   lights = html.slice(li, html.indexOf('\n', lj) + 1).trim();
@@ -266,4 +267,4 @@ console.log(slotsNote);
 const fnCount = (body.match(/^\s*function [A-Za-z0-9_]+\(/gm) || []).length;
 console.log('已同步：' + VENDOR);
 console.log('已生成：' + OUT + '  （' + (header + body + footer).split('\n').length + ' 行，' + fnCount + ' 个函数）');
-console.log('光照块：' + (li >= 0 ? '抓到' : '未找到，已用兜底'));
+console.log('光照块：' + (lights.indexOf('DirectionalLight') >= 0 ? '抓到（含太阳光 ' + lights.split('\n').length + ' 行）' : '⚠ 没抓到太阳光，退回兜底'));

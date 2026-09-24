@@ -1805,5 +1805,16 @@ window.MuseumExteriorLayout = (function () {
 })();
 /* ---------- 原型的日光与半球光（从原型主控段自动抓取） ---------- */
 window.MuseumExteriorLayout.addLights = function (scene) {
-scene.add(new THREE.HemisphereLight(0xf2ead9, 0x70795a, 0.5));
+var sun = new THREE.DirectionalLight(0xfff2e0, 1.45);
+  sun.position.set(-48, 66, 62);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
+  sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
+  sun.shadow.camera.near = 10; sun.shadow.camera.far = 280;
+  sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.03;
+  scene.add(sun);
+  var hemi = new THREE.HemisphereLight(0xe4eef6, 0x8a9578, 0.85);
+  scene.add(hemi);
 };
