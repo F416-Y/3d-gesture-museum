@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'tools', 'visual-check'));
+const ONLY = (process.argv[3] || '').trim();   /* 只渲染名字含该串的机位，调试用 */
 
 /* 机位：立面机位走"中距 + 45° 视场"，保证石基(0~0.46) / 墙身 / 瓦压顶 /
  * 马头墙(至 5.7) 同时入画；人眼机位看真实尺度；鸟瞰看群体关系。 */
@@ -31,8 +32,12 @@ const SHOTS = [
   { name: '03-hall1-elevation', x: -25, y: 2.2, z: 3, tx: -25, ty: 2.4, tz: -4, fov: 45, note: '山水厅 hall1 朝院立面' },
   { name: '04-hall2-elevation', x: 0, y: 2.2, z: 0, tx: 0, ty: 2.4, tz: -8, fov: 45, note: '花鸟厅 hall2 朝院立面' },
   { name: '05-hall3-elevation', x: 25, y: 2.2, z: 3, tx: 25, ty: 2.4, tz: -4, fov: 45, note: '人物厅 hall3 朝院立面' },
-  { name: '06-hall4-elevation', x: 8, y: 2.2, z: 13, tx: 16, ty: 2.4, tz: 13, fov: 45, note: '书斋厅 hall4 朝院立面' },
-  { name: '07-hall5-elevation', x: -8, y: 2.2, z: 13, tx: -16, ty: 2.4, tz: 13, fov: 45, note: '文创厅 hall5 朝院立面' },
+  { name: '06-hall4-court', x: 30, y: 3.2, z: 12.5, tx: 40.84, ty: 2.2, tz: 12.5, fov: 50, note: '书斋院朝东看正房（背墙两幅立轴）' },
+  { name: '11-hall4-shuzhai-wall', x: 37.6, y: 1.9, z: 12.5, tx: 40.84, ty: 1.55, tz: 12.5, fov: 78, note: '书斋背墙两幅立轴（近景）' },
+  { name: '12-hall4-chashi-wall', x: 37.6, y: 1.9, z: 26.5, tx: 40.84, ty: 1.55, tz: 26.5, fov: 78, note: '茶室背墙两幅立轴（近景）' },
+  { name: '13-hall5-wenchuang-wall', x: -39.0, y: 1.9, z: 14.5, tx: -43.84, ty: 1.55, tz: 14.5, fov: 78, note: '文创背墙两幅立轴（近景）' },
+  { name: '14-hall5-linmo-wall', x: -39.0, y: 1.9, z: 28.5, tx: -43.84, ty: 1.55, tz: 28.5, fov: 78, note: '临摹背墙两幅立轴（近景）' },
+  { name: '07-hall5-court', x: -31, y: 3.2, z: 14.5, tx: -43.84, ty: 2.2, tz: 14.5, fov: 50, note: '文创院朝西看正房（背墙两幅立轴）' },
   { name: '08-courtyard-axis', x: 0, y: 1.62, z: 20.5, tx: 0, ty: 1.5, tz: -8, fov: 55, note: '人眼高度：庭院望花鸟厅' },
   { name: '09-outer-wall', x: -24, y: 1.62, z: 34, tx: -44, ty: 1.7, tz: 30, fov: 55, note: '人眼高度：西院墙' },
   { name: '10-aerial', x: 0, y: 46, z: 62, tx: 0, ty: 0, tz: 4, fov: 40, note: '鸟瞰：六厅与庭院总关系' },
@@ -171,7 +176,8 @@ const canvasInfo = await page.evaluate(() => {
 console.log('画布诊断：' + JSON.stringify(canvasInfo));console.log('画布数：' + await page.evaluate(() => document.querySelectorAll('canvas').length) + ' 个 canvas');
 
 const results = [];
-for (const shot of SHOTS) {
+const shots = ONLY ? SHOTS.filter(s => s.name.indexOf(ONLY) >= 0) : SHOTS;
+for (const shot of shots) {
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
@@ -192,7 +198,7 @@ for (const shot of SHOTS) {
   stat.bytes = png.length;
   results.push(stat);
   const flag = stat.flags.length ? '  << ' + stat.flags.join(' ') : '';
-  console.log(`[${results.length}/${SHOTS.length}] ${shot.name}  亮度 ${stat.meanLum}  色数 ${stat.colors}  白 ${stat.lightPct}%  黑 ${stat.darkPct}%${flag}`);
+  console.log(`[${results.length}/${shots.length}] ${shot.name}  亮度 ${stat.meanLum}  色数 ${stat.colors}  白 ${stat.lightPct}%  黑 ${stat.darkPct}%${flag}`);
 }
 
 await browser.close();
