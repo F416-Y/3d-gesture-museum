@@ -1,40 +1,21 @@
-# Supabase 配置与建表（组长操作，约 10 分钟）
+# Supabase 配置与建表（组长操作）
 
-## 现状
+## 项目现状（2026-09-24 更新）
 
-- 代码已写好：`src/services/lc.js`（初始化）、`src/services/social.js`（收藏/评论数据层）、`src/views/FavoritesView.vue`（收藏页）
-- **`.env.local` 不存在**（只有 `.env.example` 空模板）→ 所以 Supabase 目前是 `ready = false`，代码会 `console.warn` 后降级，**不影响其他功能**
-- `.env.local` 已在 `.gitignore` 里，**不会入库**
-
-## 第 1 步 · 建项目
-
-1. 打开 https://supabase.com → 用 GitHub 登录（免费版够用）
-2. New project → 名字随意（如 `yunmo-museum`）、选个近的区域（Singapore / Tokyo）
-3. 等 2 分钟初始化完成
-
-## 第 2 步 · 拿凭证
-
-项目页 → 左下 **Settings → API**：
-
-| 要复制的 | 对应字段 |
+| 项 | 状态 |
 |---|---|
-| **Project URL**（形如 `https://xxxx.supabase.co`） | `VITE_SUPABASE_URL` |
-| **anon public** key（很长的一串 JWT） | `VITE_SUPABASE_ANON_KEY` |
+| 项目 | 已建，ref = `qrttacuxnzjoacfhrqyk`，URL = `https://qrttacuxnzjoacfhrqyk.supabase.co` |
+| 凭证 | **已填本地 `.env.local`**（`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`，用的是新的 `sb_publishable_` 格式，等价于原来的 anon key） |
+| `.env.local` | 已被 `.gitignore` 忽略，**不会入库** ✓ |
+| 连通性 | 实测 `GET /auth/v1/settings` → **200**（凭证有效） |
+| **两张表** | ❌ **还没建**（`/rest/v1/favorites` → 404 PGRST205） |
+| 邮箱登录 | ✅ 已开启，但 **默认要求收邮件确认** ← 会挡住答辩现场注册 |
 
-> 注意：是 **anon public**，不是 `service_role`（后者是管理员密钥，绝不能进前端）
+## 还差两步
 
-## 第 3 步 · 本地填 .env.local
+### ① 建表（必须做）
 
-在项目根目录（`3d-gesture-museum\`）复制 `.env.example` 为 `.env.local`，填成：
-
-```
-VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOi...（那一长串）
-```
-
-填完 `npm run dev` 重启一次，控制台不再出现「未配置 Supabase 凭证」即成功。
-
-## 第 4 步 · 建表 + 行级安全（在 SQL Editor 粘贴执行）
+**方式 A（自己动手，1 分钟）**：Supabase 控制台 → 左侧 **SQL Editor** → 把下面整段粘进去 → Run。
 
 ```sql
 -- 收藏
@@ -55,33 +36,53 @@ create table if not exists public.comments (
   created_at timestamptz not null default now()
 );
 
--- 开启行级安全
 alter table public.favorites enable row level security;
 alter table public.comments  enable row level security;
 
--- 所有人可读
 create policy "favorites readable by all" on public.favorites for select using (true);
 create policy "comments readable by all"  on public.comments  for select using (true);
 
--- 仅本人可写/删
 create policy "favorites insert own" on public.favorites for insert with check (auth.uid() = user_id);
 create policy "favorites delete own" on public.favorites for delete using (auth.uid() = user_id);
 create policy "comments insert own"  on public.comments  for insert with check (auth.uid() = user_id);
 create policy "comments delete own"  on public.comments  for delete using (auth.uid() = user_id);
 ```
 
-## 第 5 步 · 打开登录方式
+**方式 B（交给我做）**：在 https://supabase.com/dashboard/account/tokens 生成一个 **Personal Access Token**（只读/管理用，用完可吊销），发我，我用 Management API 的 `POST /v1/projects/{ref}/database/query` 直接把表建好，并回报结果。
 
-Authentication → Providers → **Email** 打开（建议同时关掉 "Confirm email" 方便答辩演示，否则注册后要收邮件确认）。
+> 为什么要 PAT：建表是 DDL，`sb_publishable_` 这种前端密钥只能读写数据（还受 RLS 限制），**不能建表**。
 
-## 第 6 步 · 通知组员
+### ② 关掉邮件确认（强烈建议）
 
-凭证填好后告诉组员5/组员4：`npm run dev` 起来后收藏/评论应该能跑通；
-若报「请先登录」，说明 Auth 的 Email provider 没开。
+Authentication → **Sign In / Providers → Email** → 关掉 **Confirm email**。
+否则组员注册后必须去邮箱点确认链接才能登录，**答辩现场演示会卡住**。
 
-## ⚠️ 上线（GitHub Pages）时的注意
+## 为什么 Supabase 没有中国区
 
-`.env.local` 不会上传，所以**线上站点默认也读不到凭证**，收藏/评论在线上不可用。
-要让线上生效，需在 GitHub 仓库 → Settings → Secrets and variables → Actions 里加
-`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` 两个 Secret，并在构建 workflow 里注入。
-**这条是否要做，答辩前再定即可**（本地演示够用）。
+区域列表全是 AWS/GCP 的海外机房（新加坡、东京、首尔、孟买、悉尼、法兰克福、美东美西、圣保罗）。没有中国大陆，原因：
+
+1. **合规**：大陆境内提供服务需要 **ICP 备案**，且要求主体是境内公司；Supabase 是美国公司，无中国实体与牌照
+2. **云账号体系**：大陆机房是独立体系（独立账号、实名、备案），接不进 Supabase 的部署链路
+3. **数据出境**：账号/收藏/评论属个人信息，放境外涉及合规判断
+
+**对中国用户的实际影响**：延迟 50–100ms（新加坡/东京）够用；实测本机 `supabase.com` 200 / 845ms。
+唯一要留意的是学校/宿舍那种带认证的网络偶尔不稳。
+
+**若必须放国内**：① 腾讯云开发 CloudBase（境内节点，JS SDK 类似，需重写 `src/services/social.js`）
+② 自建 Supabase（Docker 部署到阿里云/腾讯云，要买服务器+备案）③ 放弃后端，收藏存 `localStorage`。
+
+课程作业建议就用 Singapore。
+
+## 上线（GitHub Pages）的注意
+
+`.env.local` 不会上传，**线上默认读不到凭证**，收藏/评论在线上不可用。
+要让线上生效：仓库 Settings → Secrets and variables → Actions 加 `VITE_SUPABASE_URL` /
+`VITE_SUPABASE_ANON_KEY` 两个 Secret，并在构建 workflow 里注入。**答辩前再定即可**（本地演示够用）。
+
+## 本地跑通验证
+
+```powershell
+npm run dev
+```
+控制台**不再**出现「未配置 Supabase 凭证」→ 说明 `.env.local` 生效。
+登录后收藏/评论能写能读 → 说明表与 RLS 都建对了。
