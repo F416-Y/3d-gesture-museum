@@ -2527,6 +2527,27 @@ window.MuseumScene = (function () {
   /* ============================================================
    * 展品热点登记
    * ============================================================ */
+  /* ============================================================
+   * 地面高度查询（给 player.js 做高度跟随）
+   * ------------------------------------------------------------
+   * 新布局里序厅是 1.2m 高台，南侧有六级踏跺；玩家若只按平面移动
+   * 会直接穿进台基。这里把"某点地面标高"暴露出去，player.js 每帧
+   * 查一次、把视点抬到地面之上即可（上升建议做插值，避免瞬移感）。
+   * 数据来自外观原型：台基 x −11~11 / z 24.5~34.5、高 1.2m；
+   * 南入口六级踏跺 z 34.9~36.7，每级 0.2m，顶面 1.2→0.2。
+   * ============================================================ */
+  function terrainHeightAt(x, z) {
+    /* 序厅台基 */
+    if (x >= -11 && x <= 11 && z >= 24.5 && z <= 34.5) return 1.2;
+    /* 南入口六级踏跺（越往北越高，第 0 级顶面 1.2） */
+    if (x >= -7 && x <= 7 && z >= 34.7 && z <= 36.9) {
+      var i = Math.floor((z - 34.9) / 0.36 + 0.5);
+      if (i < 0) i = 0;
+      if (i > 5) i = 5;
+      return 1.2 - i * 0.2;
+    }
+    return 0;
+  }
   function registerSpot(spot) {
     spotMeshes.push(spot);
   }
@@ -2552,6 +2573,9 @@ window.MuseumScene = (function () {
       if (useProtoLayout) {
         window.MuseumExteriorLayout.addLights(scene);
         window.MuseumExteriorLayout.build(scene);
+        /* 真模型接线：读原型的 slots 登记表，把代码件换成 assets/models/parts/opt/ 里的 GLB
+           （门楼/石狮/青铜鼎/太湖石/景观石/树/竹…；任何一件失败就保留代码件） */
+        if (window.MuseumExteriorSlots) window.MuseumExteriorSlots.install(scene);
       } else {
         buildJiangnanCompound(scene);
       }
@@ -2614,6 +2638,11 @@ window.MuseumScene = (function () {
       });
     },
 
+    terrainHeightAt: terrainHeightAt,   // 地面标高查询（player.js 高度跟随用）
+    /* 供 js/windows.js 调用：把我们的落地格扇窗建到指定 parent 里 */
+    buildWindowWallInto: function (parent, x, y0, y1, z0, z1, ry) {
+      buildPartWindowWall(parent, x, y0, y1, z0, z1, ry);
+    },
     obstacles: obstacles,
     spotMeshes: spotMeshes,
     hallRegions: hallRegions,

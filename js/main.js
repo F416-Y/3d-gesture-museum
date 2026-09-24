@@ -40,7 +40,8 @@ window.MuseumMain = (function () {
     renderer.outputEncoding = THREE.sRGBEncoding;
     // 色调映射：把超过 1.0 的高光压回来，避免地面/墙面一片死白（此前中轴道路会被曝成浅灰）
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    // 曝光：走外观原型布局时按原型的 1.12，其余保持 1.0
+  renderer.toneMappingExposure = (window.MuseumExteriorLayout && window.MuseumExteriorLayout.build) ? 1.12 : 1.0;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     MuseumUI.getStage().appendChild(renderer.domElement);
@@ -203,9 +204,20 @@ window.MuseumMain = (function () {
   }
 
   /* ---------- 主循环 ---------- */
+  /* 帧率自检：每 2 秒往控制台报一次（排查"移动很慢"时看这个数字）
+     真机上低于 30fps 说明是渲染卡，不是移动速度参数的问题。 */
+  var fpsFrames = 0, fpsStamp = (typeof performance !== "undefined" ? performance.now() : Date.now());
+
   function animate() {
     requestAnimationFrame(animate);
     var dt = Math.min(clock.getDelta(), 0.05);
+
+    fpsFrames++;
+    var nowMs = (typeof performance !== "undefined" ? performance.now() : Date.now());
+    if (nowMs - fpsStamp >= 2000) {
+      console.info("[帧率] " + Math.round(fpsFrames * 1000 / (nowMs - fpsStamp)) + " fps");
+      fpsFrames = 0; fpsStamp = nowMs;
+    }
 
     var gs = MuseumGesture.getState();
     var input = composeInput(gs);
