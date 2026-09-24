@@ -1666,10 +1666,6 @@ window.MuseumScene = (function () {
     plaque.position.set(x, 3.75, z + 0.31);
     root.add(plaque);
 
-    if (window.MuseumModels) {
-      /* 模型长轴在自身 Z 上，转 90° 让门楼横跨 x 轴、门洞朝南 */
-      window.MuseumModels.attach(root, "gate-front", { x: x, z: z, ry: Math.PI / 2, scale: 1 }, g);
-    }
   }
 
   /* ---------- 4. 植物与景观 ---------- */
@@ -2576,12 +2572,7 @@ window.MuseumScene = (function () {
         /* 真模型接线：读原型的 slots 登记表，把代码件换成 assets/models/parts/opt/ 里的 GLB
            （门楼/石狮/青铜鼎/太湖石/景观石/树/竹…；任何一件失败就保留代码件） */
         if (window.MuseumExteriorSlots) window.MuseumExteriorSlots.install(scene);
-        /* 我们的 Tripo 门楼（gate-front）：放到南墙开口（中央 x ±11、z=40）当外门楼，
-           与原型自画的序厅大门形成"门楼 + 二门"两层入口。
-           模型长轴在自身 Z 上，转 90° 让门楼横跨 x 轴、门洞朝南。 */
-        if (window.MuseumModels) {
-          window.MuseumModels.attach(scene, "gate-front", { x: 0, y: 0, z: 40, ry: Math.PI / 2, scale: 1 });
-        }
+
       } else {
         buildJiangnanCompound(scene);
       }
