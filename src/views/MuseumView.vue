@@ -9,17 +9,19 @@ import { watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 
 // 各展厅的入场传送点 [x, z, yaw]
-// yaw=0 面向 -Z（北，朝建筑）；yaw=Math.PI 面向 +Z（南）
-// 坐标依据：docs/江南院落平面-坐标版.md §五（与 config.js 的 player.startPos 必须一致）
+// yaw=0 面向 -Z（北，朝建筑）；Math.PI 面向 +Z（南）；±Math.PI/2 面向东西
+// 坐标依据：外观原型布局（docs/外观原型-坐标对接表.md）——
+//   落点必须落在 scene.js 的 hallRegions 之内、且不与碰撞体重叠。
+//   校验：node check-proto-seams.mjs（仓库外工具）会逐个丢给 getHallAt() 复判。
 const HALL_SPAWNS = {
-  plaza:     [0, 38, 0],          // 前庭（门内，避开序厅 z 24~34）
-  hall0:     [0, 30, 0],          // 序厅
-  courtyard: [0, 20, 0],          // 中央庭院
-  hall1:     [-25, -8, 0],        // 山水画展区
-  hall2:     [0, -10, 0],         // 花鸟画展区
-  hall3:     [25, -8, 0],         // 人物画展区
-  hall4:     [24, 16, Math.PI],   // 书斋 · 茶室（朝南看茶席）
-  hall5:     [-24, 16, Math.PI],  // 文创区 · 临帖休憩
+  plaza:     [0, 38, 0],                   // 前庭（南大门外台阶脚下）
+  hall0:     [0, 32.5, 0],                 // 序厅（大门内、铜鼎之前，面向鼎）
+  courtyard: [0, 20, 0],                   // 中轴庭院（观澜亭南侧）
+  hall1:     [-30, -12.5, Math.PI / 2],    // 山水画展区（院东侧，面向西的正房）
+  hall2:     [0, -25, 0],                  // 花鸟画展区（院南侧，面向北的正房）
+  hall3:     [36.75, -12, 0],              // 人物画展区（院南侧，面向北的正房）
+  hall4:     [34.8, 12.5, -Math.PI / 2],   // 书斋（院西侧，面向东的正房）
+  hall5:     [-36, 14.5, Math.PI / 2],     // 文创区（院东侧，面向西的正房）
 };
 
 const route = useRoute();
