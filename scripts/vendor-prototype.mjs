@@ -119,6 +119,26 @@ const WIN_NEW = "function addWindow(x, y, z, ry, parent) {\n    if (window.Museu
 if (body.indexOf(WIN_OLD) >= 0) { body = body.replace(WIN_OLD, WIN_NEW); console.log("格扇窗挂钩：已插入 addWindow"); }
 else console.log("格扇窗挂钩：未找到 addWindow");
 
+
+/* 大门修正：匾额文案 + 双扇大敞开（原型写的是"江南文人国画博物馆"、门只开 0.5 弧度） */
+let gateLog = [];
+if (body.indexOf("plaque('江南文人国画博物馆'") >= 0) {
+  body = body.replace("plaque('江南文人国画博物馆'", "plaque('云墨美术馆'");
+  gateLog.push("匾额改云墨美术馆");
+}
+if (body.indexOf("d1.rotation.y = 0.5; d2.rotation.y = -0.5;") >= 0) {
+  body = body.replace("d1.rotation.y = 0.5; d2.rotation.y = -0.5;",
+    "var _ga = 1.42;\n" +
+    "        d1.position.x = -1.7 + 0.85 * Math.cos(_ga);\n" +
+    "        d1.position.z = 34.3 + 0.85 * Math.sin(_ga);\n" +
+    "        d1.rotation.y = -_ga;\n" +
+    "        d2.position.x = 1.7 - 0.85 * Math.cos(_ga);\n" +
+    "        d2.position.z = 34.3 + 0.85 * Math.sin(_ga);\n" +
+    "        d2.rotation.y = _ga;");
+  gateLog.push("大门双扇大敞开");
+}
+console.log("大门修正：" + (gateLog.length ? gateLog.join(" / ") : "未匹配到"));
+
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
 /* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */
 const SLOTS_OUT = path.join(ROOT, 'js', 'slots.js');

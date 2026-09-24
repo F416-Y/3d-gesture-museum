@@ -766,8 +766,14 @@ window.MuseumExteriorLayout = (function () {
     hipRoof(15.2, 2.6, 1.1, 0, 1.2 + 5.1, 34.5, g);
     var d1 = box(1.7, 3.4, 0.1, M.door, -0.9, 1.2 + 1.7, 34.3, 0, g);
     var d2 = box(1.7, 3.4, 0.1, M.door, 0.9, 1.2 + 1.7, 34.3, 0, g);
-    d1.rotation.y = 0.5; d2.rotation.y = -0.5;
-    plaque('江南文人国画博物馆', 4.6, 0, 1.2 + 4.15, 34.86, 0, g);
+    var _ga = 1.42;
+        d1.position.x = -1.7 + 0.85 * Math.cos(_ga);
+        d1.position.z = 34.3 + 0.85 * Math.sin(_ga);
+        d1.rotation.y = -_ga;
+        d2.position.x = 1.7 - 0.85 * Math.cos(_ga);
+        d2.position.z = 34.3 + 0.85 * Math.sin(_ga);
+        d2.rotation.y = _ga;
+    plaque('云墨美术馆', 4.6, 0, 1.2 + 4.15, 34.86, 0, g);
     /* 门前抱厦（按正立面图：大门前双柱卷棚小顶，构成重檐入口） */
     cyl(0.2, 0.24, 0.16, 8, M.stone, -1.9, 1.2 + 0.08, 34.15, g);
     cyl(0.2, 0.24, 0.16, 8, M.stone,  1.9, 1.2 + 0.08, 34.15, g);

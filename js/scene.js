@@ -1887,7 +1887,7 @@ window.MuseumScene = (function () {
     buildPartHorseHeadWall(g, halfW, 1, -halfD, halfD, WH);
 
     // 背景墙（北墙中央馆名 + 山水底纹）
-    buildPartBackdrop(g, W - 1.2, 3.0, "江南文人国画博物馆");
+    buildPartBackdrop(g, W - 1.2, 3.0, "云墨美术馆");
 
     // 四根木柱
     buildPartColumn(g, -6, -3, WH, 0.35);
