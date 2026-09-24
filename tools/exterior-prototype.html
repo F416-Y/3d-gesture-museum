@@ -6,7 +6,7 @@
 <title>江南文人国画博物馆 · 建筑外观布局原型</title>
 <style>
   /* ===== 基础 reset ===== */
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #ece6d8; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #dfe9ec; }
   #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
   /* ===== 右上角视角控制条：宣纸米白半透明 + 中文衬线 ===== */
@@ -1627,8 +1627,8 @@ window.MuseumScene = (function () {
    * ===================================================================== */
   function initMaterials() {
     var lawnT = canvasTex(256, function (ctx, s2) {
-      ctx.fillStyle = '#70795A'; ctx.fillRect(0, 0, s2, s2);
-      speckle(ctx, s2, 900, ['#66704f', '#7a8463', '#5d684a'], 1.5, 5, 0.25);
+      ctx.fillStyle = '#7d8a63'; ctx.fillRect(0, 0, s2, s2);
+      speckle(ctx, s2, 900, ['#728058', '#8a9670', '#687652'], 1.5, 5, 0.25);
     }, 40, 40);
     var gravelT = canvasTex(256, function (ctx, s2) {
       ctx.fillStyle = '#b3a892'; ctx.fillRect(0, 0, s2, s2);
@@ -1704,8 +1704,8 @@ window.MuseumScene = (function () {
     M.leaf    = new THREE.MeshLambertMaterial({ color: C(0x5c6a4a) });
     M.bamboo  = new THREE.MeshLambertMaterial({ color: C(0x6f7d4f) });
     M.water   = new THREE.MeshPhongMaterial({
-      color: C(0x3d4a5c), transparent: true, opacity: 0.76,
-      shininess: 90, specular: new THREE.Color(0xbbccdd)
+      color: C(0x527a6e), transparent: true, opacity: 0.78,
+      shininess: 110, specular: new THREE.Color(0xd8ecf2)
     });
     WATERS.push(M.water);
     M.lampPaper = new THREE.MeshLambertMaterial({
@@ -1759,20 +1759,20 @@ window.MuseumScene = (function () {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.3;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xece6d8).convertSRGBToLinear();
-  scene.fog = new THREE.Fog(0xece6d8, 95, 300);
+  scene.background = new THREE.Color(0xdfe9ec).convertSRGBToLinear();
+  scene.fog = new THREE.Fog(0xdfe9ec, 85, 280);
   scene.fog.color.convertSRGBToLinear();
 
   var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 700);
   camera.position.set(68, 60, 90);
 
-  var sun = new THREE.DirectionalLight(0xffd9a6, 1.18);
-  sun.position.set(-56, 48, 74);
+  var sun = new THREE.DirectionalLight(0xfff2e0, 1.45);
+  sun.position.set(-48, 66, 62);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
@@ -1781,7 +1781,7 @@ window.MuseumScene = (function () {
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.03;
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight(0xf2ead9, 0x70795a, 0.5));
+  scene.add(new THREE.HemisphereLight(0xe4eef6, 0x8a9578, 0.85));
 
   var parts = window.MuseumScene.build(scene);
 
@@ -2081,7 +2081,7 @@ window.MuseumScene = (function () {
       var len = horiz ? h.w : h.d, dep = horiz ? h.d : h.w;
       if (len < 4.5 || dep < 4) return;   /* 过小的门厅不摆 */
       /* 室内暖光一盏（悬挂高度，照亮陈设） */
-      var pl = new THREE.PointLight(0xffe2b8, 0.85, Math.max(len, dep) * 1.5, 1);
+      var pl = new THREE.PointLight(0xffe9cf, 1.1, Math.max(len, dep) * 1.5, 1);
       pl.position.set(h.cx, 2.7, h.cz); scene.add(pl);
       /* b = 由大门指向后墙的单位向量；u = 沿后墙方向的单位向量 */
       var bx = 0, bz = 0;
