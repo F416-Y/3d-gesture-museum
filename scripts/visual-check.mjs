@@ -33,6 +33,8 @@ const SHOTS = [
   { name: '04-hall2-elevation', x: 0, y: 2.2, z: 0, tx: 0, ty: 2.4, tz: -8, fov: 45, note: '花鸟厅 hall2 朝院立面' },
   { name: '05-hall3-elevation', x: 25, y: 2.2, z: 3, tx: 25, ty: 2.4, tz: -4, fov: 45, note: '人物厅 hall3 朝院立面' },
   { name: '06-hall4-court', x: 30, y: 3.2, z: 12.5, tx: 40.84, ty: 2.2, tz: 12.5, fov: 50, note: '书斋院朝东看正房（背墙两幅立轴）' },
+  { name: '15-plan-top', x: 0, y: 115, z: 0.05, tx: 0, ty: 0, tz: 0, fov: 45, plan: true, scale: 1.5, note: '正上方俯视：全园区布局（开发过程图）' },
+  { name: '16-plan-tilt', x: 0, y: 92, z: 58, tx: 0, ty: 0, tz: -2, fov: 45, plan: true, scale: 1.5, note: '高位斜俯视：全园区布局（带屋顶立体感）' },
   { name: '11-hall4-shuzhai-wall', x: 37.6, y: 1.9, z: 12.5, tx: 40.84, ty: 1.55, tz: 12.5, fov: 78, note: '书斋背墙两幅立轴（近景）' },
   { name: '12-hall4-chashi-wall', x: 37.6, y: 1.9, z: 26.5, tx: 40.84, ty: 1.55, tz: 26.5, fov: 78, note: '茶室背墙两幅立轴（近景）' },
   { name: '13-hall5-wenchuang-wall', x: -39.0, y: 1.9, z: 14.5, tx: -43.84, ty: 1.55, tz: 14.5, fov: 78, note: '文创背墙两幅立轴（近景）' },
@@ -127,8 +129,8 @@ page.on('pageerror', e => pageErrors.push(String(e && e.message || e)));
 page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); });
 
 console.log('外观自检：打开页面…');
-await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'load', timeout: 90000 });
-await page.waitForFunction(() => window.MuseumPlayer && window.MuseumScene, null, { timeout: 90000 });
+await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'load', timeout: 240000 });
+await page.waitForFunction(() => window.MuseumPlayer && window.MuseumScene, null, { timeout: 240000 });
 /* 等 GLB 零件模型加载替换完成（models.js 是异步的；等它彻底静下来再拍，否则截图会卡在"等画面稳定"） */
 await page.waitForFunction(() => {
   const M = window.MuseumModels;
@@ -162,6 +164,18 @@ const hook = await page.evaluate(() => {
   return 'patched';
 });
 console.log('相机钩子：' + hook);
+/* 俯视图要提亮/关雾：three 的 render 是实例属性，原型打补丁无效；
+   改为从相机沿 parent 往上找 Scene（渲染前 three 必定调用相机的 updateMatrixWorld，__vizCam 一定在） */
+await page.waitForTimeout(400);
+const sceneHook = await page.evaluate(() => {
+  const c = window.__vizCam;
+  if (!c) return 'no-cam';
+  let s = c, hops = 0;
+  while (s && !s.isScene && hops < 8) { s = s.parent; hops++; }
+  if (s && s.isScene) { window.__vizScene = s; return 'ok（从相机上溯 ' + hops + ' 层）'; }
+  return '未找到 scene（parent=' + (c.parent && c.parent.type) + '，上溯 ' + hops + ' 层）';
+});
+console.log('场景钩子：' + sceneHook);
 if (hook !== 'patched' && hook !== 'already') { console.log('无法接管相机，机位不会生效'); process.exitCode = 1; }/* 只留 3D 画布：Vue 外壳与 HUD 全部隐藏，出图就是场景本身 */
 await page.addStyleTag({ content: '*{visibility:hidden !important} canvas,canvas *{visibility:visible !important} html,body{background:#0b0a09 !important}' });
 const canvasInfo = await page.evaluate(() => {
@@ -178,6 +192,12 @@ console.log('画布诊断：' + JSON.stringify(canvasInfo));console.log('画布�
 const results = [];
 const shots = ONLY ? SHOTS.filter(s => s.name.indexOf(ONLY) >= 0) : SHOTS;
 for (const shot of shots) {
+  /* 俯视机位临时关雾，保证平面看得清 */
+  await page.evaluate(p => {
+    const s = window.__vizScene; if (!s) return;
+    if (p) { const T = window.THREE; if (!window.__vizState) { const L = []; s.traverse(o => { if (o.isLight) L.push([o, o.intensity]); }); window.__vizState = { lights: L, bg: s.background, fog: s.fog }; } const st = window.__vizState; st.lights.forEach(x => { x[0].intensity = x[1] * (x[0].isHemisphereLight ? 1.25 : 1.55); }); s.fog = null; s.background = new T.Color(0xf3f0ea); }
+    else if (window.__vizState) { const st = window.__vizState; st.lights.forEach(x => { x[0].intensity = x[1]; }); s.fog = st.fog; s.background = st.bg; }
+  }, !!shot.plan);
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
@@ -189,12 +209,13 @@ for (const shot of shots) {
     return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
   });
   const shotRes = await client.send('Page.captureScreenshot', {
-    format: 'png', captureBeyondViewport: true, clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: 1 },
+    format: 'png', captureBeyondViewport: true, clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: shot.scale || 1 },
   });
   const png = Buffer.from(shotRes.data, 'base64');
   await fsp.writeFile(path.join(OUT, shot.name + '.png'), png);
   const stat = await measure(page, png, shot.name);
   stat.note = shot.note;
+  if (shot.plan) stat.flags = [];   /* 俯视图的明暗启发式不适用（画面以深色屋面+灰铺地为主） */
   stat.bytes = png.length;
   results.push(stat);
   const flag = stat.flags.length ? '  << ' + stat.flags.join(' ') : '';
