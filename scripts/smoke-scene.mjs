@@ -30,6 +30,8 @@ const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 const problems = [];
 const warnings = [];
 
+/* 元素桩：three 的 ImageLoader 会调 createElementNS + addEventListener */
+function makeEl() { return { width: 0, height: 0, style: {}, getContext: () => makeCtx(), addEventListener() {}, removeEventListener() {}, setAttribute() {}, removeAttribute() {}, remove() {} }; }
 function makeCtx() {
   return {
     fillStyle: "", strokeStyle: "", lineWidth: 1, font: "", textAlign: "", globalAlpha: 1,
@@ -54,8 +56,8 @@ const sandbox = {
   requestAnimationFrame() {},
   document: {
     readyState: "complete",
-    createElement() { return { width: 0, height: 0, style: {}, getContext: () => makeCtx() }; },
-    createElementNS() { return { width: 0, height: 0, style: {}, getContext: () => makeCtx() }; },
+    createElement() { return makeEl(); },
+    createElementNS() { return makeEl(); },
     getElementById() { return null; },
     querySelector() { return null; },
     addEventListener() {},
@@ -66,9 +68,18 @@ sandbox.self = sandbox;
 sandbox.globalThis = sandbox;
 sandbox.THREE = THREE;
 vm.createContext(sandbox);
+/* three 的 ImageLoader 在 Node realm 里查全局 document（贴图加载路径），补一个桩才不会 TypeError */
+const _savedDoc = globalThis.document;
+globalThis.document = sandbox.document;
 
 try {
   vm.runInContext(read("js/config.js"), sandbox, { filename: "js/config.js" });
+  /* 与 index.html 同序加载外观模块：不加载它们会退回旧布局（buildJiangnanCompound），
+     门禁就测不到真实路径——曾因此漏掉「新布局 0 个展品热点、E 键查不到展品」的 bug */
+  ["js/models.js", "js/exterior.js", "js/gallery.js", "js/windows.js",
+   "js/exterior-layout.js", "js/slots.js", "js/foliage.js"].forEach(function (f) {
+    vm.runInContext(read(f), sandbox, { filename: f });
+  });
   vm.runInContext(read("js/scene.js"), sandbox, { filename: "js/scene.js" });
 } catch (e) {
   console.error("x 加载引擎脚本失败：" + e.message);
@@ -135,6 +146,15 @@ Array.prototype.forEach.call(result.spots, (s, i) => {
   else if (!ids.has(s.exhibitId)) problems.push("spotMeshes[" + i + "] 的 exhibitId「" + s.exhibitId + "」在 config.js 里不存在（展品打不开或弹错内容）");
   if (!num(s.x) || !num(s.y) || !num(s.z) || !num(s.radius) || s.radius <= 0) problems.push("spotMeshes[" + i + "] 坐标或半径非法：" + JSON.stringify(s));
 });
+
+/* 热点不能为空：新布局下若一条都没登记，玩家按 E / 捏合都打不开鉴赏弹窗（曾真实发生过） */
+if (Array.isArray(result.spots) && result.spots.length === 0) {
+  problems.push("展品热点为 0：鉴画交互整个不可用（按 docs/外观原型-坐标对接表.md 在 proto 分支登记热点）");
+}
+/* 有展品但没热点：只警告不阻塞（补登记进行中） */
+const withSpot = new Set(Array.prototype.map.call(result.spots || [], (s) => s.exhibitId));
+const noSpot = [...ids].filter((id) => !withSpot.has(id));
+if (noSpot.length) warnings.push("config 里有 " + noSpot.length + " 件展品还没登记热点（暂不可交互）：" + noSpot.join(" "));
 
 if (result.spotTotal > 0 && result.spotWithTarget !== result.spotTotal) {
   problems.push("有 " + (result.spotTotal - result.spotWithTarget) + " 盏射灯没挂 target（会照向世界原点，画打不亮）");
