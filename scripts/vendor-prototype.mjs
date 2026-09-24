@@ -216,6 +216,22 @@ const NG_NEW =
   "    d1.rotation.y = -_na; d2.rotation.y = _na;";
 if (body.indexOf(NG_OLD) >= 0) { body = body.replace(NG_OLD, NG_NEW); openLog.push("北门楼双扇 90° 敞开 + 删暗腔"); }
 console.log("全门敞开：" + (openLog.length ? openLog.join(" / ") : "未匹配到（原型结构变了？）"));
+/* 书斋/茶室/文创/临摹 背墙立轴（组长补：把组员4 新增的 8 件展品落地成实画位）
+   贴墙坐标按 buildHall 的实际墙体算：正房背墙中心 = x1-0.9-0.12（entry=W）/ x0+0.9+0.12（entry=E），
+   立轴再向外让 0.14m，与画廊墙同一做法。seed 601~608 对应 8 件新展品。 */
+const BC_ANCHOR = "      buildHall(hcx, cz, hh, d - 2.2, entry, null, opts);\n    }";
+const BC_ADD = "      buildHall(hcx, cz, hh, d - 2.2, entry, null, opts);\n" +
+  "    }\n" +
+  "    /* 背墙立轴：书斋/茶室/文创/临摹 各 2 幅（面朝院内，画心中心 y=1.5） */\n" +
+  "    var _sc = { '书斋': [601, 602], '茶室': [603, 604], '文创': [605, 606], '临摹': [607, 608] }[opts.tag];\n" +
+  "    if (_sc) {\n" +
+  "      var _fd = (entry === 'W') ? -1 : 1;\n" +
+  "      var _bw = (entry === 'W') ? (x1 - 0.9 - 0.12) : (x0 + 0.9 + 0.12);\n" +
+  "      var _si;\n" +
+  "      for (_si = 0; _si < 2; _si++) hangingScroll(_bw + _fd * 0.14, cz + (_si ? 2.5 : -2.5), _fd, _sc[_si]);\n" +
+  "    }";
+if (body.indexOf(BC_ANCHOR) >= 0) { body = body.replace(BC_ANCHOR, BC_ADD); console.log("背墙立轴：书斋/茶室/文创/临摹 各 2 幅已挂"); }
+else console.log("背墙立轴：未匹配到锚点（原型结构变了？）");
 
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
 /* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */
