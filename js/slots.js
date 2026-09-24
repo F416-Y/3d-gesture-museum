@@ -297,7 +297,7 @@ window.MuseumExteriorSlots = {
         var len = horiz ? h.w : h.d, dep = horiz ? h.d : h.w;
         if (len < 4.5 || dep < 4) return;   /* 过小的门厅不摆 */
         /* 室内暖光一盏（悬挂高度，照亮陈设） */
-        var pl = new THREE.PointLight(0xffe2b8, 0.85, Math.max(len, dep) * 1.5, 1);
+        var pl = new THREE.PointLight(0xffe9cf, 1.1, Math.max(len, dep) * 1.5, 1);
         pl.position.set(h.cx, 2.7, h.cz); scene.add(pl);
         /* b = 由大门指向后墙的单位向量；u = 沿后墙方向的单位向量 */
         var bx = 0, bz = 0;

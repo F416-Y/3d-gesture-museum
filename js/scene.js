@@ -1666,10 +1666,6 @@ window.MuseumScene = (function () {
     plaque.position.set(x, 3.75, z + 0.31);
     root.add(plaque);
 
-    if (window.MuseumModels) {
-      /* 模型长轴在自身 Z 上，转 90° 让门楼横跨 x 轴、门洞朝南 */
-      window.MuseumModels.attach(root, "gate-front", { x: x, z: z, ry: Math.PI / 2, scale: 1 }, g);
-    }
   }
 
   /* ---------- 4. 植物与景观 ---------- */
@@ -1887,7 +1883,7 @@ window.MuseumScene = (function () {
     buildPartHorseHeadWall(g, halfW, 1, -halfD, halfD, WH);
 
     // 背景墙（北墙中央馆名 + 山水底纹）
-    buildPartBackdrop(g, W - 1.2, 3.0, "江南文人国画博物馆");
+    buildPartBackdrop(g, W - 1.2, 3.0, "云墨美术馆");
 
     // 四根木柱
     buildPartColumn(g, -6, -3, WH, 0.35);
@@ -2576,6 +2572,7 @@ window.MuseumScene = (function () {
         /* 真模型接线：读原型的 slots 登记表，把代码件换成 assets/models/parts/opt/ 里的 GLB
            （门楼/石狮/青铜鼎/太湖石/景观石/树/竹…；任何一件失败就保留代码件） */
         if (window.MuseumExteriorSlots) window.MuseumExteriorSlots.install(scene);
+
       } else {
         buildJiangnanCompound(scene);
       }

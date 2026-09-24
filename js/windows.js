@@ -11,8 +11,10 @@ window.MuseumWindows = (function () {
   /* 每个立面：axis 决定墙走向，at 是固定坐标，from~to 是墙面范围，
      ry 是格扇窗面板的朝向（0=朝 +z，PI=朝 −z，±PI/2 朝 ∓x/+x） */
   var FACADES = [
+    /* gap = 门口宽度的一半：正房门宽 2.6m + 门套，留 ±1.6m 不装窗，
+       否则整排格扇窗会把正房大门挡住 */
     { id: "huaniao-hall-south", axis: "x", at: -28.1, from: -9.9, to: 9.9,
-      y0: 0.62, y1: 3.3, ry: 0 }                       // 花鸟厅正房：面朝南（院内）
+      y0: 0.62, y1: 3.3, ry: 0, gap: 1.6 }             // 花鸟厅正房：面朝南（院内）
   ];
   var done = {};
 
@@ -26,8 +28,13 @@ window.MuseumWindows = (function () {
       g.position.set(f.at, 0, cxZ);          // 墙沿 z 走：局部 z 轴 → 世界 z 轴
     }
     scene.add(g);
-    /* 借 scene.js 的实现：它把 x 固定、沿 z 铺开 */
-    window.MuseumScene.buildWindowWallInto(g, 0, f.y0, f.y1, -len / 2, len / 2, f.ry);
+    /* 借 scene.js 的实现：它把 x 固定、沿 z 铺开。
+       有 gap 时分成两段，中间让出门洞。 */
+    var segs = f.gap ? [[-len / 2, -f.gap], [f.gap, len / 2]] : [[-len / 2, len / 2]];
+    for (var i = 0; i < segs.length; i++) {
+      if (segs[i][1] - segs[i][0] < 0.5) continue;
+      window.MuseumScene.buildWindowWallInto(g, 0, f.y0, f.y1, segs[i][0], segs[i][1], f.ry);
+    }
     return g;
   }
 

@@ -494,7 +494,7 @@ window.MuseumExteriorLayout = (function () {
           box(doorW + 0.8, 0.24, 0.6, M.stone, sd.px, 0.12, sd.pz + sd.nz * 1.35, 0, g);
           var lf1 = box(leafW, doorH - 0.08, 0.08, M.door, ox - leafW / 2 - 0.02, wallY0 + doorH / 2, oz + sd.nz * 0.1, 0, g);
           var lf2 = box(leafW, doorH - 0.08, 0.08, M.door, ox + leafW / 2 + 0.02, wallY0 + doorH / 2, oz + sd.nz * 0.1, 0, g);
-          var _op = 1.42;
+          var _op = 1.5708;
           lf1.position.x = ox - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op);
           lf1.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));
           lf1.rotation.y = -_op;
@@ -510,7 +510,7 @@ window.MuseumExteriorLayout = (function () {
           box(0.6, 0.24, doorW + 0.8, M.stone, sd.px + sd.nx * 1.35, 0.12, sd.pz, 0, g);
           var lf3 = box(0.08, doorH - 0.08, leafW, M.door, ox + sd.nx * 0.1, wallY0 + doorH / 2, oz - leafW / 2 - 0.02, 0, g);
           var lf4 = box(0.08, doorH - 0.08, leafW, M.door, ox + sd.nx * 0.1, wallY0 + doorH / 2, oz + leafW / 2 + 0.02, 0, g);
-          var _op2 = 1.42;
+          var _op2 = 1.5708;
           lf3.position.z = oz - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op2);
           lf3.position.x = ox + sd.nx * (0.1 + (leafW / 2) * Math.sin(_op2));
           lf3.rotation.y = _op2;
@@ -574,10 +574,11 @@ window.MuseumExteriorLayout = (function () {
     box(gateW + 1.4, 0.9, 0.44, M.paper, 0, 3.55, 0, 0, g);
     box(gateW + 1.6, 0.12, 0.5, M.ink, 0, 3.96, 0, 0, g);
     hipRoof(gateW + 2.2, 1.8, 0.85, 0, 4.1, 0, g);
-    /* 朱砂双扇门（半开） */
-    var d1 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, -gateW / 4 - 0.02, 1.2, 0.1, 0, g);
-    var d2 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, gateW / 4 + 0.02, 1.2, 0.1, 0, g);
-    d1.rotation.y = 0.45; d2.rotation.y = -0.45;
+    /* 朱砂双扇门：90 度完全大敞开（绕门轴折到墙外，门洞全通透） */
+    var _gw = gateW / 2, _gl = (gateW / 2 - 0.06) / 2, _ga = 1.5708;
+    var d1 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, -_gw + _gl * Math.cos(_ga), 1.2, 0.1 + _gl * Math.sin(_ga), 0, g);
+    var d2 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, _gw - _gl * Math.cos(_ga), 1.2, 0.1 + _gl * Math.sin(_ga), 0, g);
+    d1.rotation.y = -_ga; d2.rotation.y = _ga;
     /* 雀替（门柱顶部贴脸小斗） */
     var q1 = box(0.5, 0.34, 0.12, M.wood, -off + 0.3, 2.92, 0.28, 0, g);
     q1.rotation.z = 0.5;
@@ -766,8 +767,33 @@ window.MuseumExteriorLayout = (function () {
     hipRoof(15.2, 2.6, 1.1, 0, 1.2 + 5.1, 34.5, g);
     var d1 = box(1.7, 3.4, 0.1, M.door, -0.9, 1.2 + 1.7, 34.3, 0, g);
     var d2 = box(1.7, 3.4, 0.1, M.door, 0.9, 1.2 + 1.7, 34.3, 0, g);
-    d1.rotation.y = 0.5; d2.rotation.y = -0.5;
-    plaque('江南文人国画博物馆', 4.6, 0, 1.2 + 4.15, 34.86, 0, g);
+    var _ga = 1.5708;
+        d1.position.x = -1.7 + 0.85 * Math.cos(_ga);
+        d1.position.z = 34.3 + 0.85 * Math.sin(_ga);
+        d1.rotation.y = -_ga;
+        d2.position.x = 1.7 - 0.85 * Math.cos(_ga);
+        d2.position.z = 34.3 + 0.85 * Math.sin(_ga);
+        d2.rotation.y = _ga;
+        /* ---- 大门细部：朱红立柱 + 门套 + 门槛 + 门环门钉 ---- */
+        var _cb = new THREE.MeshLambertMaterial({ color: C(0x8C3B2E) });
+        box(1.0, 5, 1.0, _cb, -2.3, 1.2 + 2.5, 34.55, 0, g);
+        box(1.0, 5, 1.0, _cb,  2.3, 1.2 + 2.5, 34.55, 0, g);
+        box(3.95, 0.3, 0.66, M.wood, 0, 1.2 + 3.45, 34.52, 0, g);
+        box(0.28, 3.45, 0.66, M.wood, -1.98, 1.2 + 1.72, 34.52, 0, g);
+        box(0.28, 3.45, 0.66, M.wood,  1.98, 1.2 + 1.72, 34.52, 0, g);
+        box(3.95, 0.24, 0.95, M.stoneDark, 0, 1.2 + 0.12, 34.35, 0, g);
+        var _si = 0;
+        for (_si = 0; _si < 6; _si++) {
+          box(0.14, 0.14, 0.06, M.tile, -0.45 + (_si % 3) * 0.45, 0.95 + Math.floor(_si / 3) * 1.25, 0.07, 0, d1);
+          box(0.14, 0.14, 0.06, M.tile, -0.45 + (_si % 3) * 0.45, 0.95 + Math.floor(_si / 3) * 1.25, 0.07, 0, d2);
+        }
+        var _ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.032, 8, 18), M.tile);
+        _ring.position.set(0.46, 1.7, 0.09); _ring.castShadow = true; d1.add(_ring);
+        box(0.3, 0.3, 0.05, M.tile, 0.46, 1.7, 0.06, 0, d1);
+        var _ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.032, 8, 18), M.tile);
+        _ring2.position.set(-0.46, 1.7, 0.09); _ring2.castShadow = true; d2.add(_ring2);
+        box(0.3, 0.3, 0.05, M.tile, -0.46, 1.7, 0.06, 0, d2);
+    plaque('云墨美术馆', 4.6, 0, 1.2 + 4.15, 34.86, 0, g);
     /* 门前抱厦（按正立面图：大门前双柱卷棚小顶，构成重檐入口） */
     cyl(0.2, 0.24, 0.16, 8, M.stone, -1.9, 1.2 + 0.08, 34.15, g);
     cyl(0.2, 0.24, 0.16, 8, M.stone,  1.9, 1.2 + 0.08, 34.15, g);
@@ -803,15 +829,14 @@ window.MuseumExteriorLayout = (function () {
     box(14.6, 0.18, 0.9, M.tile, 0, 1.2 + 5.08, 25, 0, g);
     box(5.6, 3.0, 0.14, M.ink, 0, 1.2 + 2.6, 25.32, 0, g);
     box(5.2, 2.6, 0.16, M.plaza, 0, 1.2 + 2.6, 25.34, 0, g);
-    /* 左右小门：暗腔 + 双扇木门（虚掩）+ 石门坎 + 北侧四步踏跺下高台 */
+    /* 左右小门：删暗腔 + 双扇木门 90 度完全大敞开（向北开进中院）+ 石门坎 + 北侧四步踏跺下高台 */
     var dxi, dxx;
     for (dxi = 0; dxi < 2; dxi++) {
       dxx = dxi === 0 ? -4.8 : 4.8;
-      var dcc = box(1.5, 2.4, 0.44, M.ink, dxx, 1.2 + 1.2, 25, 0, g);
-      dcc.castShadow = false;
-      var lf1 = box(0.72, 2.3, 0.08, M.door, dxx - 0.38, 1.2 + 1.15, 25, 0, g);
-      var lf2 = box(0.72, 2.3, 0.08, M.door, dxx + 0.38, 1.2 + 1.15, 25, 0, g);
-      lf1.rotation.y = 0.55; lf2.rotation.y = -0.55;
+      var _sa = 1.5708, _sl = 0.36;
+      var lf1 = box(0.72, 2.3, 0.08, M.door, dxx - 0.75 + _sl * Math.cos(_sa), 1.2 + 1.15, 25 - _sl * Math.sin(_sa), 0, g);
+      var lf2 = box(0.72, 2.3, 0.08, M.door, dxx + 0.75 - _sl * Math.cos(_sa), 1.2 + 1.15, 25 - _sl * Math.sin(_sa), 0, g);
+      lf1.rotation.y = _sa; lf2.rotation.y = -_sa;
       box(1.9, 0.12, 0.74, M.stoneDark, dxx, 1.26, 25, 0, g);
       for (ti = 0; ti < 4; ti++) {
         box(1.9, 0.3, 0.25, M.stone, dxx, 0.15 + ti * 0.3, 24.58 - ti * 0.25, 0, g);
@@ -877,9 +902,11 @@ window.MuseumExteriorLayout = (function () {
     box(3.2, 3.2, 1.1, M.paper, -4.9, 1.6, z, 0, g);
     box(3.2, 3.2, 1.1, M.paper, 4.9, 1.6, z, 0, g);
     box(6.6, 1.1, 1.1, M.paper, 0, 3.0, z, 0, g);
-    box(6.4, 2.6, 0.3, M.ink, 0, 1.3, z, 0, g);
-    var d1 = box(1.5, 2.5, 0.1, M.door, -0.78, 1.25, z + 0.35, 0, g);
-    var d2 = box(1.5, 2.5, 0.1, M.door, 0.78, 1.25, z + 0.35, 0, g);
+    /* 北门楼：删暗腔 + 双扇 90 度完全大敞开 */
+    var _na = 1.5708, _nl = 0.72;
+    var d1 = box(1.5, 2.5, 0.1, M.door, -1.53 + _nl * Math.cos(_na), 1.25, z + 0.35 + _nl * Math.sin(_na), 0, g);
+    var d2 = box(1.5, 2.5, 0.1, M.door, 1.53 - _nl * Math.cos(_na), 1.25, z + 0.35 + _nl * Math.sin(_na), 0, g);
+    d1.rotation.y = -_na; d2.rotation.y = _na;
     d1.castShadow = d2.castShadow = false;
     var xs = [-5.8, 5.8], zs = [z - 1.0, z + 1.0], i, j;
     for (i = 0; i < 2; i++) for (j = 0; j < 2; j++) {
@@ -1571,8 +1598,8 @@ window.MuseumExteriorLayout = (function () {
    * ===================================================================== */
   function initMaterials() {
     var lawnT = canvasTex(256, function (ctx, s2) {
-      ctx.fillStyle = '#70795A'; ctx.fillRect(0, 0, s2, s2);
-      speckle(ctx, s2, 900, ['#66704f', '#7a8463', '#5d684a'], 1.5, 5, 0.25);
+      ctx.fillStyle = '#7d8a63'; ctx.fillRect(0, 0, s2, s2);
+      speckle(ctx, s2, 900, ['#728058', '#8a9670', '#687652'], 1.5, 5, 0.25);
     }, 40, 40);
     var gravelT = canvasTex(256, function (ctx, s2) {
       ctx.fillStyle = '#b3a892'; ctx.fillRect(0, 0, s2, s2);
@@ -1648,8 +1675,8 @@ window.MuseumExteriorLayout = (function () {
     M.leaf    = new THREE.MeshLambertMaterial({ color: C(0x5c6a4a) });
     M.bamboo  = new THREE.MeshLambertMaterial({ color: C(0x6f7d4f) });
     M.water   = new THREE.MeshPhongMaterial({
-      color: C(0x3d4a5c), transparent: true, opacity: 0.76,
-      shininess: 90, specular: new THREE.Color(0xbbccdd)
+      color: C(0x527a6e), transparent: true, opacity: 0.78,
+      shininess: 110, specular: new THREE.Color(0xd8ecf2)
     });
     WATERS.push(M.water);
     M.lampPaper = new THREE.MeshLambertMaterial({
@@ -1694,8 +1721,8 @@ window.MuseumExteriorLayout = (function () {
 })();
 /* ---------- 原型的日光与半球光（从原型主控段自动抓取） ---------- */
 window.MuseumExteriorLayout.addLights = function (scene) {
-var sun = new THREE.DirectionalLight(0xffd9a6, 1.18);
-  sun.position.set(-56, 48, 74);
+var sun = new THREE.DirectionalLight(0xfff2e0, 1.45);
+  sun.position.set(-48, 66, 62);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
@@ -1704,5 +1731,5 @@ var sun = new THREE.DirectionalLight(0xffd9a6, 1.18);
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.03;
   scene.add(sun);
-  scene.add(new THREE.HemisphereLight(0xf2ead9, 0x70795a, 0.5));
+  scene.add(new THREE.HemisphereLight(0xe4eef6, 0x8a9578, 0.85));
 };

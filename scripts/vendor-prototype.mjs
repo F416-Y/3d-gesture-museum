@@ -91,14 +91,14 @@ const DOOR_DEAD = "        if (!isEntry) {   /* 后门保持关闭：门洞填�
   "            : box(0.16, doorH, doorW - 0.1, M.ink, ox, wallY0 + doorH / 2, oz, 0, g);\n" +
   "          dk.castShadow = false;\n" +
   "        }\n";
-const DOOR_OPEN_X = "          var _op = 1.42;\n" +
+const DOOR_OPEN_X = "          var _op = 1.5708;\n" +
   "          lf1.position.x = ox - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op);\n" +
   "          lf1.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));\n" +
   "          lf1.rotation.y = -_op;\n" +
   "          lf2.position.x = ox + doorW / 2 - 0.12 - (leafW / 2) * Math.cos(_op);\n" +
   "          lf2.position.z = oz + sd.nz * (0.1 + (leafW / 2) * Math.sin(_op));\n" +
   "          lf2.rotation.y = _op;\n";
-const DOOR_OPEN_Z = "          var _op2 = 1.42;\n" +
+const DOOR_OPEN_Z = "          var _op2 = 1.5708;\n" +
   "          lf3.position.z = oz - doorW / 2 + 0.12 + (leafW / 2) * Math.cos(_op2);\n" +
   "          lf3.position.x = ox + sd.nx * (0.1 + (leafW / 2) * Math.sin(_op2));\n" +
   "          lf3.rotation.y = _op2;\n" +
@@ -118,6 +118,104 @@ const WIN_OLD = "function addWindow(x, y, z, ry, parent) {";
 const WIN_NEW = "function addWindow(x, y, z, ry, parent) {\n    if (window.MuseumWindows && window.MuseumWindows.replace(x, y, z, ry, (parent || S.scene))) return null;";
 if (body.indexOf(WIN_OLD) >= 0) { body = body.replace(WIN_OLD, WIN_NEW); console.log("格扇窗挂钩：已插入 addWindow"); }
 else console.log("格扇窗挂钩：未找到 addWindow");
+
+
+/* 大门修正：匾额文案 + 双扇大敞开（原型写的是"江南文人国画博物馆"、门只开 0.5 弧度） */
+let gateLog = [];
+if (body.indexOf("plaque('江南文人国画博物馆'") >= 0) {
+  body = body.replace("plaque('江南文人国画博物馆'", "plaque('云墨美术馆'");
+  gateLog.push("匾额改云墨美术馆");
+}
+if (body.indexOf("d1.rotation.y = 0.5; d2.rotation.y = -0.5;") >= 0) {
+  body = body.replace("d1.rotation.y = 0.5; d2.rotation.y = -0.5;",
+    "var _ga = 1.5708;\n" +
+    "        d1.position.x = -1.7 + 0.85 * Math.cos(_ga);\n" +
+    "        d1.position.z = 34.3 + 0.85 * Math.sin(_ga);\n" +
+    "        d1.rotation.y = -_ga;\n" +
+    "        d2.position.x = 1.7 - 0.85 * Math.cos(_ga);\n" +
+    "        d2.position.z = 34.3 + 0.85 * Math.sin(_ga);\n" +
+    "        d2.rotation.y = _ga;");
+  gateLog.push("大门双扇大敞开");
+}
+console.log("大门修正：" + (gateLog.length ? gateLog.join(" / ") : "未匹配到"));
+
+
+/* 大门美化（按参考图 前大门.png：朱红立柱 + 木门套 + 门槛 + 门环门钉） */
+const BEAUTIFY_ANCHOR = "d2.rotation.y = _ga;";
+const BEAUTIFY_ADD = "d2.rotation.y = _ga;\n" +
+  "        /* ---- 大门细部：朱红立柱 + 门套 + 门槛 + 门环门钉 ---- */\n" +
+  "        var _cb = new THREE.MeshLambertMaterial({ color: C(0x8C3B2E) });\n" +
+  "        box(1.0, 5, 1.0, _cb, -2.3, 1.2 + 2.5, 34.55, 0, g);\n" +
+  "        box(1.0, 5, 1.0, _cb,  2.3, 1.2 + 2.5, 34.55, 0, g);\n" +
+  "        box(3.95, 0.3, 0.66, M.wood, 0, 1.2 + 3.45, 34.52, 0, g);\n" +
+  "        box(0.28, 3.45, 0.66, M.wood, -1.98, 1.2 + 1.72, 34.52, 0, g);\n" +
+  "        box(0.28, 3.45, 0.66, M.wood,  1.98, 1.2 + 1.72, 34.52, 0, g);\n" +
+  "        box(3.95, 0.24, 0.95, M.stoneDark, 0, 1.2 + 0.12, 34.35, 0, g);\n" +
+  "        var _si = 0;\n" +
+  "        for (_si = 0; _si < 6; _si++) {\n" +
+  "          box(0.14, 0.14, 0.06, M.tile, -0.45 + (_si % 3) * 0.45, 0.95 + Math.floor(_si / 3) * 1.25, 0.07, 0, d1);\n" +
+  "          box(0.14, 0.14, 0.06, M.tile, -0.45 + (_si % 3) * 0.45, 0.95 + Math.floor(_si / 3) * 1.25, 0.07, 0, d2);\n" +
+  "        }\n" +
+  "        var _ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.032, 8, 18), M.tile);\n" +
+  "        _ring.position.set(0.46, 1.7, 0.09); _ring.castShadow = true; d1.add(_ring);\n" +
+  "        box(0.3, 0.3, 0.05, M.tile, 0.46, 1.7, 0.06, 0, d1);\n" +
+  "        var _ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.032, 8, 18), M.tile);\n" +
+  "        _ring2.position.set(-0.46, 1.7, 0.09); _ring2.castShadow = true; d2.add(_ring2);\n" +
+  "        box(0.3, 0.3, 0.05, M.tile, -0.46, 1.7, 0.06, 0, d2);";
+if (body.indexOf(BEAUTIFY_ANCHOR) >= 0) { body = body.replace(BEAUTIFY_ANCHOR, BEAUTIFY_ADD); console.log("大门美化：朱红柱/门套/门槛/门钉门环 已加"); }
+else console.log("大门美化：未找到锚点（原型结构变了？）");
+/* 全门敞开：原型里还有三处门是关着 / 虚掩的（廊门 26°、序厅左右小门 31°、北门楼完全关闭），
+   而且都在门洞后塞了暗腔。这里统一改成 90° 大敞开，并把暗腔删掉，门洞全通透。 */
+let openLog = [];
+/* 1) 廊门 / 后门 / 侧门（gateHouse 的朱砂双扇门） */
+const GH_OLD =
+  "    /* 朱砂双扇门（半开） */\n" +
+  "    var d1 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, -gateW / 4 - 0.02, 1.2, 0.1, 0, g);\n" +
+  "    var d2 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, gateW / 4 + 0.02, 1.2, 0.1, 0, g);\n" +
+  "    d1.rotation.y = 0.45; d2.rotation.y = -0.45;";
+const GH_NEW =
+  "    /* 朱砂双扇门：90 度完全大敞开（绕门轴折到墙外，门洞全通透） */\n" +
+  "    var _gw = gateW / 2, _gl = (gateW / 2 - 0.06) / 2, _ga = 1.5708;\n" +
+  "    var d1 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, -_gw + _gl * Math.cos(_ga), 1.2, 0.1 + _gl * Math.sin(_ga), 0, g);\n" +
+  "    var d2 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, _gw - _gl * Math.cos(_ga), 1.2, 0.1 + _gl * Math.sin(_ga), 0, g);\n" +
+  "    d1.rotation.y = -_ga; d2.rotation.y = _ga;";
+if (body.indexOf(GH_OLD) >= 0) { body = body.replace(GH_OLD, GH_NEW); openLog.push("廊门/后门/侧门双扇 90° 敞开"); }
+
+/* 2) 序厅高台左右小门（原型虚掩 31° + 暗腔挡视线） */
+const SM_OLD =
+  "    /* 左右小门：暗腔 + 双扇木门（虚掩）+ 石门坎 + 北侧四步踏跺下高台 */\n" +
+  "    var dxi, dxx;\n" +
+  "    for (dxi = 0; dxi < 2; dxi++) {\n" +
+  "      dxx = dxi === 0 ? -4.8 : 4.8;\n" +
+  "      var dcc = box(1.5, 2.4, 0.44, M.ink, dxx, 1.2 + 1.2, 25, 0, g);\n" +
+  "      dcc.castShadow = false;\n" +
+  "      var lf1 = box(0.72, 2.3, 0.08, M.door, dxx - 0.38, 1.2 + 1.15, 25, 0, g);\n" +
+  "      var lf2 = box(0.72, 2.3, 0.08, M.door, dxx + 0.38, 1.2 + 1.15, 25, 0, g);\n" +
+  "      lf1.rotation.y = 0.55; lf2.rotation.y = -0.55;";
+const SM_NEW =
+  "    /* 左右小门：删暗腔 + 双扇木门 90 度完全大敞开（向北开进中院）+ 石门坎 + 北侧四步踏跺下高台 */\n" +
+  "    var dxi, dxx;\n" +
+  "    for (dxi = 0; dxi < 2; dxi++) {\n" +
+  "      dxx = dxi === 0 ? -4.8 : 4.8;\n" +
+  "      var _sa = 1.5708, _sl = 0.36;\n" +
+  "      var lf1 = box(0.72, 2.3, 0.08, M.door, dxx - 0.75 + _sl * Math.cos(_sa), 1.2 + 1.15, 25 - _sl * Math.sin(_sa), 0, g);\n" +
+  "      var lf2 = box(0.72, 2.3, 0.08, M.door, dxx + 0.75 - _sl * Math.cos(_sa), 1.2 + 1.15, 25 - _sl * Math.sin(_sa), 0, g);\n" +
+  "      lf1.rotation.y = _sa; lf2.rotation.y = -_sa;";
+if (body.indexOf(SM_OLD) >= 0) { body = body.replace(SM_OLD, SM_NEW); openLog.push("序厅侧门双扇 90° 敞开 + 删暗腔"); }
+
+/* 3) 北门楼（原型整扇关死，门洞被 6.4m 暗腔填满） */
+const NG_OLD =
+  "    box(6.4, 2.6, 0.3, M.ink, 0, 1.3, z, 0, g);\n" +
+  "    var d1 = box(1.5, 2.5, 0.1, M.door, -0.78, 1.25, z + 0.35, 0, g);\n" +
+  "    var d2 = box(1.5, 2.5, 0.1, M.door, 0.78, 1.25, z + 0.35, 0, g);";
+const NG_NEW =
+  "    /* 北门楼：删暗腔 + 双扇 90 度完全大敞开 */\n" +
+  "    var _na = 1.5708, _nl = 0.72;\n" +
+  "    var d1 = box(1.5, 2.5, 0.1, M.door, -1.53 + _nl * Math.cos(_na), 1.25, z + 0.35 + _nl * Math.sin(_na), 0, g);\n" +
+  "    var d2 = box(1.5, 2.5, 0.1, M.door, 1.53 - _nl * Math.cos(_na), 1.25, z + 0.35 + _nl * Math.sin(_na), 0, g);\n" +
+  "    d1.rotation.y = -_na; d2.rotation.y = _na;";
+if (body.indexOf(NG_OLD) >= 0) { body = body.replace(NG_OLD, NG_NEW); openLog.push("北门楼双扇 90° 敞开 + 删暗腔"); }
+console.log("全门敞开：" + (openLog.length ? openLog.join(" / ") : "未匹配到（原型结构变了？）"));
 
 fs.writeFileSync(OUT, header + body + footer, 'utf8');
 /* ---- 4. 抓 GLB 真模型替换逻辑（原型主控段的 upgradeParts）-> js/slots.js ---- */

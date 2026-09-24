@@ -293,19 +293,6 @@
       "aiPredictSize": false
     },
     {
-      "id": "gate-front",
-      "name": "前大门组件",
-      "replaces": "buildPartGate",
-      "sizeM": 9.2,
-      "faceCount": 120000,
-      "refImage": "assets/models/parts/ref/前大门.png",
-      "prompt": "中式门楼正面：两柱一梁一小坡黑瓦顶，朱红立柱，中央匾额；",
-      "fourView": true,
-      "aiPredictSize": false,
-      "source": "Tripo3D · studio/8fd6c073 · FBX→GLB 本地转换",
-      "note": "门楼（带黑瓦屋顶的入口门楼，含门洞与三级台阶）"
-    },
-    {
       "id": "back-wall",
       "name": "后墙主体",
       "replaces": "buildPartHallWalls 北墙",
@@ -315,19 +302,6 @@
       "prompt": "白粉墙主体，两侧浅灰砖砌边框，顶部黑瓦檐；",
       "fourView": true,
       "aiPredictSize": false
-    },
-    {
-      "id": "back-wall-screen",
-      "name": "后墙含照壁",
-      "replaces": "buildPartBackdrop",
-      "sizeM": 14,
-      "faceCount": 80000,
-      "refImage": "assets/models/parts/ref/后墙组件含照壁.png",
-      "prompt": "白粉墙含中央照壁与顶部黑瓦檐，照壁空白无字；",
-      "fourView": true,
-      "aiPredictSize": false,
-      "source": "Tripo3D · studio/f92e7d32 · FBX→GLB 本地转换",
-      "note": "山墙 / 檐墙（带硬山顶屋面的墙体段）"
     },
     {
       "id": "grass-tuft",
