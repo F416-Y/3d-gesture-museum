@@ -23,6 +23,10 @@ window.MuseumGallery = (function () {
     464: "wuniutu",            // 东廊中 2 · 五牛图
     471: "molantu"             // 东廊中 3 · 墨兰图
     /* 478 东廊南端 留空；999 观澜亭大立轴 留空 */
+    /* 601~608 书斋/茶室/文创/临摹 背墙立轴（组长已挂好画位，暂用程序化立轴贴图）：
+       组员6 出图后，把下面两行注释放开即可换真图 */
+    /* 601: "lantingjixu",   602: "jizhiwengao",  603: "hanshitie",    604: "tingqintu",
+       605: "huishanchahui", 606: "shimingtu",    607: "pinchatu",     608: "luyupengchatu" */
   };
   var cache = {};
   var loader = null;

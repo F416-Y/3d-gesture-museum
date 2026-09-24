@@ -2573,6 +2573,16 @@ window.MuseumScene = (function () {
       ["xieshengzhenqintu",  7.96, 13.79],
       ["wuniutu",            7.96, 16.65],
       ["molantu",            7.96, 19.51],
+      /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
+      ["lantingjixu",        40.84, 10.0],
+      ["jizhiwengao",        40.84, 15.0],
+      ["hanshitie",          40.84, 24.0],
+      ["tingqintu",          40.84, 29.0],
+      /* 文创 / 临摹（立轴在正房背墙 x=-43.84，面朝东） */
+      ["huishanchahui",     -43.84, 12.0],
+      ["shimingtu",         -43.84, 17.0],
+      ["pinchatu",          -43.84, 26.0],
+      ["luyupengchatu",     -43.84, 31.0],
     ];
     var sculptures = [
       ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）
@@ -2926,8 +2936,8 @@ window.MuseumScene = (function () {
           hall1:     { type: "rect",  x0: -46,  z0: -20,  x1: -28.5, z1: -5 },    // 山水画展区（院落 17.5×15）
           hall2:     { type: "rect",  x0: -11,  z0: -37.5, x1: 11,  z1: -21 },    // 花鸟画展区（院落 22×16.5）
           hall3:     { type: "rect",  x0: 28,   z0: -21,  x1: 45.5, z1: -10 },    // 人物画展区（院落 17.5×11）
-          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 42,   z1: 19 },     // 书斋·茶室（8×13）
-          hall5:     { type: "rect",  x0: -45,  z0: 8,    x1: -34,  z1: 21 },     // 文创·临摹（11×13）
+          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 42,   z1: 35.5 },   // 书斋 + 茶室（两个院落，z 6~35.5）
+          hall5:     { type: "rect",  x0: -45,  z0: 8,    x1: -34,  z1: 35.5 },   // 文创 + 临摹（两个院落，z 8~35.5）
         });
       } else {
         Object.assign(hallRegions, {
