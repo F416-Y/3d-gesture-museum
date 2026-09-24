@@ -263,6 +263,99 @@ button { font-family: inherit; cursor: pointer; }
 }
 .panel-close:hover { background: var(--cinnabar); color: var(--paper); }
 
+/* ===== 弹窗内 · 收藏 + 评论区（组员5） ===== */
+.panel-card .p-social {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gold);
+}
+.panel-card .p-fav-row { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+.panel-card .p-fav-btn {
+  padding: 7px 16px;
+  font-size: 13px; letter-spacing: 0.06em;
+  color: var(--cinnabar);
+  background: transparent;
+  border: 1px solid var(--cinnabar);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.panel-card .p-fav-btn:hover { background: rgba(176, 52, 42, 0.1); }
+.panel-card .p-fav-btn.on {
+  background: var(--cinnabar);
+  color: var(--paper);
+}
+.panel-card .p-cmt-title {
+  font-family: var(--serif);
+  font-size: 13px; letter-spacing: 0.2em;
+  color: var(--cinnabar);
+  margin-bottom: 10px;
+}
+.panel-card .p-cmt-title span {
+  font-size: 12px; color: var(--text-on-light-soft);
+  border: 1px solid var(--gold); border-radius: var(--radius-pill);
+  padding: 1px 8px; margin-left: 4px;
+}
+.panel-card .p-cmt-list {
+  max-height: 180px; overflow-y: auto;
+  margin-bottom: 12px;
+}
+.panel-card .p-cmt-empty {
+  font-size: 13px; color: var(--text-on-light-faint);
+  padding: 8px 0;
+}
+.panel-card .p-cmt-rows { list-style: none; margin: 0; padding: 0; }
+.panel-card .p-cmt-rows li {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 10px;
+  background: var(--paper-deep);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.panel-card .p-cmt-who {
+  font-size: 12px; font-weight: 600; color: var(--daiqing);
+  white-space: nowrap;
+}
+.panel-card .p-cmt-time {
+  font-size: 11px; color: var(--text-on-light-faint);
+  margin-left: auto; white-space: nowrap;
+}
+.panel-card .p-cmt-body {
+  flex: 1; font-size: 13px; line-height: 1.7; color: var(--text-on-light);
+  word-break: break-word;
+}
+.panel-card .p-cmt-form {
+  display: flex; gap: 8px;
+}
+.panel-card .p-cmt-input {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--tile);
+  border-radius: var(--radius-sm);
+  font-family: var(--sans);
+}
+.panel-card .p-cmt-input:focus {
+  outline: none; border-color: var(--cinnabar);
+  box-shadow: 0 0 0 3px rgba(176, 52, 42, 0.15);
+}
+.panel-card .p-cmt-send {
+  padding: 0 18px;
+  font-size: 13px; letter-spacing: 0.04em;
+  color: #fff; background: var(--cinnabar);
+  border: none; border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.panel-card .p-cmt-send:hover { background: var(--cinnabar-deep); }
+.panel-card .p-cmt-login {
+  font-size: 13px; color: var(--text-on-light-faint);
+}
+.panel-card .p-cmt-login a { color: var(--cinnabar); }
+
 /* ===== 提示条 ===== */
 .toast {
   position: fixed; left: 50%; bottom: 110px; z-index: var(--z-toast);
