@@ -100,10 +100,20 @@ window.MuseumMain = (function () {
     });
     window.addEventListener("keyup", function (e) { keys[e.code] = false; });
 
-    // 鼠标点击拾取（演示/无摄像头时的备选交互）
+     // 鼠标视角：点击画面锁定鼠标（像游戏一样）；锁定后移动鼠标转动视角
     renderer.domElement.addEventListener("click", function () {
-      if (panorama.on) return;
-      MuseumExhibit.pick();
+      if (document.pointerLockElement === renderer.domElement) {
+        MuseumExhibit.pick();                       // 已锁定 → 点击 = 查看展品
+      } else if (renderer.domElement.requestPointerLock) {
+        renderer.domElement.requestPointerLock();   // 未锁定 → 点击 = 进入鼠标视角
+      }
+    });
+
+    // 鼠标移动 → 转动视角（仅在指针锁定时生效）
+    document.addEventListener("mousemove", function (e) {
+      if (document.pointerLockElement === renderer.domElement) {
+        MuseumPlayer.look(e.movementX || 0, e.movementY || 0);
+      }
     });
 
     MuseumUI.setHandlers({
