@@ -2873,6 +2873,50 @@ window.MuseumScene = (function () {
   }
 
   /* ============================================================
+   * 原型 slots 实体碰撞体：树 / 竹丛 / 大门石狮 / 散落石块 / 两件雕塑
+   * ------------------------------------------------------------
+   * 原型只在 MuseumExteriorLayout.slots 里登记外观坐标，没人把它转成
+   * 碰撞体 —— 上面几节手工登记只覆盖了院墙、建筑、序厅与少数点缀，
+   * 于是树、竹、石狮、散石，以及将军俑/马踏飞燕两件雕塑都能直接穿过去。
+   * 这里读 slots 的现成坐标批量补上，半径取原型建模尺寸：
+   *   树   0.2 × s   树干半径（与既有 (0,-13.4) r=0.32 同口径，不管树冠）
+   *   竹丛 0.5 × k   7 根散在 ±0.45k 内，外缘约 0.5k
+   *   石狮 1.1       须弥座 2.0 × 2.7 的中间值
+   *   散石 用 slots 自带的 r
+   * 已被既有碰撞体覆盖的（同心且不小于它）跳过，不与手写条目重复。
+   * 仍不登记：绿篱、灌木球、水面、台基 —— 上文已注明有意可穿。
+   * ============================================================ */
+  function registerProtoEntities() {
+    var slots = window.MuseumExteriorLayout && window.MuseumExteriorLayout.slots;
+    if (!slots) return;
+
+    function covered(x, z, r) {
+      for (var i = 0; i < obstacles.length; i++) {
+        var o = obstacles[i];
+        if (o.type === "circle") {
+          if (Math.hypot(o.x - x, o.z - z) + r <= o.r + 0.02) return true;
+        } else if (x - r >= o.x0 && x + r <= o.x1 && z - r >= o.z0 && z + r <= o.z1) {
+          return true;
+        }
+      }
+      return false;
+    }
+    function add(x, z, r) {
+      if (r > 0 && !covered(x, z, r)) circleObs(x, z, r);
+    }
+
+    (slots.tree   || []).forEach(function (t) { add(t.x, t.z, 0.2 * (t.s || 1)); });
+    (slots.bamboo || []).forEach(function (b) { add(b.x, b.z, 0.5 * (b.k || 1)); });
+    (slots.lion   || []).forEach(function (l) { add(l.x, l.z, 1.1); });
+    (slots.rock   || []).forEach(function (k) { add(k.x, k.z, k.r || 0.5); });
+
+    /* 两件雕塑：热点在 registerProtoExhibitSpots 里登记过，碰撞体此前漏了。
+       尺寸取自 buildWarrior 的 1.5m 方台座、addPlazaSculpture 的 1.15m 圆底座。 */
+    add(36.75, -13.8, 0.9);   // 将军俑（人物厅正房）
+    add(0, -13, 1.2);         // 马踏飞燕（中心庭）
+  }
+
+  /* ============================================================
    * 对外 API
    * ============================================================ */
   return {
@@ -2898,6 +2942,7 @@ window.MuseumScene = (function () {
         registerProtoHallWalls();
         registerProtoXuting();
         registerProtoDeco();
+        registerProtoEntities();
         /* 展品热点：同上（旧路径自带 20 条，此处只补 proto 布局缺的 12 条） */
         registerProtoExhibitSpots();
       } else {
