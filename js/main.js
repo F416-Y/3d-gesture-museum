@@ -101,13 +101,18 @@ window.MuseumMain = (function () {
     });
     window.addEventListener("keyup", function (e) { keys[e.code] = false; });
 
-     // 鼠标视角：点击画面锁定鼠标（像游戏一样）；锁定后移动鼠标转动视角
+     // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
+      if (panorama.on) return;                      // 全景模式下与键盘/E 键一致，不做拾取
       if (document.pointerLockElement === renderer.domElement) {
-        MuseumExhibit.pick();                       // 已锁定 → 点击 = 查看展品
-      } else if (renderer.domElement.requestPointerLock) {
-        renderer.domElement.requestPointerLock();   // 未锁定 → 点击 = 进入鼠标视角
+        MuseumExhibit.pick();
+        return;
       }
+      if (MuseumExhibit.getCurrentId && MuseumExhibit.getCurrentId()) {
+        MuseumExhibit.pick();                       // 准星对着展品：保留「点一下就看」的老习惯
+        return;
+      }
+      if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
     });
 
     // 鼠标移动 → 转动视角（仅在指针锁定时生效）
