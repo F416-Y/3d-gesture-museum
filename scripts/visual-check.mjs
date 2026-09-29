@@ -35,6 +35,7 @@ const SHOTS = [
   { name: '06-hall4-court', x: 30, y: 3.2, z: 12.5, tx: 40.84, ty: 2.2, tz: 12.5, fov: 50, note: '书斋院朝东看正房（背墙两幅立轴）' },
   { name: '15-plan-top', x: 0, y: 115, z: 0.05, tx: 0, ty: 0, tz: 0, fov: 45, plan: true, scale: 1.5, note: '正上方俯视：全园区布局（开发过程图）' },
   { name: '16-plan-tilt', x: 0, y: 92, z: 58, tx: 0, ty: 0, tz: -2, fov: 45, plan: true, scale: 1.5, note: '高位斜俯视：全园区布局（带屋顶立体感）' },
+  { name: '17-gate-front', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, note: '序厅正门正面（看敞开效果与匾额）' },
   { name: '11-hall4-shuzhai-wall', x: 37.6, y: 1.9, z: 12.5, tx: 40.84, ty: 1.55, tz: 12.5, fov: 78, note: '书斋背墙两幅立轴（近景）' },
   { name: '12-hall4-chashi-wall', x: 37.6, y: 1.9, z: 26.5, tx: 40.84, ty: 1.55, tz: 26.5, fov: 78, note: '茶室背墙两幅立轴（近景）' },
   { name: '13-hall5-wenchuang-wall', x: -39.0, y: 1.9, z: 14.5, tx: -43.84, ty: 1.55, tz: 14.5, fov: 78, note: '文创背墙两幅立轴（近景）' },
