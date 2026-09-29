@@ -13,16 +13,18 @@
 window.MuseumGallery = (function () {
   /* seed -> 画作 id（文件在 assets/images/<id>.jpg，组员6 PR #7 入库的真画） */
   var MAP = {
-    350: "hanxizai",           // 西廊北端 · 韩熙载夜宴图
-    357: "qianlijiangshan",    // 西廊中 1 · 千里江山图
-    364: "fuchunshanjv",       // 西廊中 2 · 富春山居图
-    371: "xishanxinglvtu",     // 西廊中 3 · 溪山行旅图
-    378: "luoshenfu",          // 西廊南端 · 洛神赋图
-    450: "buniantu",           // 东廊北端 · 步辇图
-    457: "xieshengzhenqintu",  // 东廊中 1 · 写生珍禽图
-    464: "wuniutu",            // 东廊中 2 · 五牛图
-    471: "molantu"             // 东廊中 3 · 墨兰图
-    /* 478 东廊南端 留空；999 观澜亭大立轴 留空 */
+    350: "hanxizai",           // 西廊 1（z 11.6）· 韩熙载夜宴图
+    357: "qianlijiangshan",    // 西廊 2（z 14.2）· 千里江山图
+    364: "fuchunshanjv",       // 西廊 3（z 16.8）· 富春山居图
+    371: "xishanxinglvtu",     // 西廊 4（z 19.4）· 溪山行旅图
+    450: "buniantu",           // 东廊 1 · 步辇图
+    457: "xieshengzhenqintu",  // 东廊 2 · 写生珍禽图
+    464: "wuniutu",            // 东廊 3 · 五牛图
+    471: "molantu",            // 东廊 4 · 墨兰图
+    640: "luoshenfu"           // 东长廊第 1 开间 · 洛神赋图
+    /* 2026-09-29：双廊画廊墙由 5 开间改 4 开间（z 11.6/14.2/16.8/19.4），原 378 位取消，
+       洛神赋图移到东长廊（galleryWallX）第 1 开间；
+       651/662/673/684/695 东长廊其余 5 间、999 临水半亭大立轴 —— 暂时留空（等更多真画入库） */
     /* 601~608 书斋/茶室/文创/临摹 背墙立轴（组长已挂好画位，暂用程序化立轴贴图）：
        组员6 出图后，把下面两行注释放开即可换真图 */
     /* 601: "lantingjixu",   602: "jizhiwengao",  603: "hanshitie",    604: "tingqintu",
