@@ -84,12 +84,25 @@ if (body.indexOf(HOOK_OLD) >= 0) {
 }
 
 
-/* 门洞口径（2026-09-29 起按 Kimi 最新原型定稿，不再自己改门）：
-   · 展厅门洞一律敞口无门扇；各院后门洞填暗腔（防穿视）
-   · 序厅正门面南半开；北门楼闭扇
-   · 挂匾正式院门保留朱砂双扇半开 0.45rad；无匾小门楼敞口
-   原先这里「删后门暗腔 + 把正门折大敞开」的补丁已废弃。 */
-console.log("门洞口径：按新原型（不再改门扇）");
+/* 门扇全拆（组长 2026-09-29：不要门扇，所有门大敞开）：
+   删掉三处门扇 + 北门楼暗腔，只留门洞 / 抱厦 / 匾额 / 抱鼓石 / 柱 这些建筑构件。
+   注意：这条与 Kimi 原型定稿（正门半开、北门闭扇）相反，以组长要求为准。 */
+const DOOR_OUT = [
+  "    var d1 = box(1.7, 3.4, 0.1, M.door, -0.9, 1.2 + 1.7, 34.3, 0, g);\n" +
+  "    var d2 = box(1.7, 3.4, 0.1, M.door, 0.9, 1.2 + 1.7, 34.3, 0, g);\n" +
+  "    d1.rotation.y = 0.5; d2.rotation.y = -0.5;\n",
+  "      var d1 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, -gateW / 4 - 0.02, 1.2, 0.1, 0, g);\n" +
+  "      var d2 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, gateW / 4 + 0.02, 1.2, 0.1, 0, g);\n" +
+  "      d1.rotation.y = 0.45; d2.rotation.y = -0.45;\n",
+  "    box(6.4, 2.6, 0.3, M.ink, 0, 1.3, z, 0, g);\n" +
+  "    var d1 = box(1.5, 2.5, 0.1, M.door, -0.78, 1.25, z + 0.35, 0, g);\n" +
+  "    var d2 = box(1.5, 2.5, 0.1, M.door, 0.78, 1.25, z + 0.35, 0, g);\n" +
+  "    d1.castShadow = d2.castShadow = false;\n"
+];
+const DOOR_NAMES = ["序厅正门", "挂匾院门", "北门楼(含暗腔)"];
+let doorLog = [];
+DOOR_OUT.forEach(function (t, i) { if (body.indexOf(t) >= 0) { body = body.replace(t, ""); doorLog.push(DOOR_NAMES[i]); } });
+console.log("门扇全拆：" + (doorLog.length ? doorLog.join(" / ") + " → 门洞大敞开" : "⚠ 未匹配到（原型结构变了？）"));
 
 /* 格扇窗挂钩：命中"朝院立面"时由我们自己的落地格扇窗接管 */
 const WIN_OLD = "function addWindow(x, y, z, ry, parent) {";
@@ -108,29 +121,9 @@ console.log("大门修正：" + (gateLog.length ? gateLog.join(" / ") : "未匹�
 
 
 /* 大门美化（按参考图 前大门.png：朱红立柱 + 木门套 + 门槛 + 门环门钉） */
-const BEAUTIFY_ANCHOR = "    var d2 = box(1.7, 3.4, 0.1, M.door, 0.9, 1.2 + 1.7, 34.3, 0, g);";
-const BEAUTIFY_ADD = "    var d2 = box(1.7, 3.4, 0.1, M.door, 0.9, 1.2 + 1.7, 34.3, 0, g);\n" +
-  "        /* ---- 大门细部：朱红立柱 + 门套 + 门槛 + 门环门钉 ---- */\n" +
-  "        var _cb = new THREE.MeshLambertMaterial({ color: C(0x8C3B2E) });\n" +
-  "        box(1.0, 5, 1.0, _cb, -2.3, 1.2 + 2.5, 34.55, 0, g);\n" +
-  "        box(1.0, 5, 1.0, _cb,  2.3, 1.2 + 2.5, 34.55, 0, g);\n" +
-  "        box(3.95, 0.3, 0.66, M.wood, 0, 1.2 + 3.45, 34.52, 0, g);\n" +
-  "        box(0.28, 3.45, 0.66, M.wood, -1.98, 1.2 + 1.72, 34.52, 0, g);\n" +
-  "        box(0.28, 3.45, 0.66, M.wood,  1.98, 1.2 + 1.72, 34.52, 0, g);\n" +
-  "        box(3.95, 0.24, 0.95, M.stoneDark, 0, 1.2 + 0.12, 34.35, 0, g);\n" +
-  "        var _si = 0;\n" +
-  "        for (_si = 0; _si < 6; _si++) {\n" +
-  "          box(0.14, 0.14, 0.06, M.tile, -0.45 + (_si % 3) * 0.45, 0.95 + Math.floor(_si / 3) * 1.25, 0.07, 0, d1);\n" +
-  "          box(0.14, 0.14, 0.06, M.tile, -0.45 + (_si % 3) * 0.45, 0.95 + Math.floor(_si / 3) * 1.25, 0.07, 0, d2);\n" +
-  "        }\n" +
-  "        var _ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.032, 8, 18), M.tile);\n" +
-  "        _ring.position.set(0.46, 1.7, 0.09); _ring.castShadow = true; d1.add(_ring);\n" +
-  "        box(0.3, 0.3, 0.05, M.tile, 0.46, 1.7, 0.06, 0, d1);\n" +
-  "        var _ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.032, 8, 18), M.tile);\n" +
-  "        _ring2.position.set(-0.46, 1.7, 0.09); _ring2.castShadow = true; d2.add(_ring2);\n" +
-  "        box(0.3, 0.3, 0.05, M.tile, -0.46, 1.7, 0.06, 0, d2);";
-if (body.indexOf(BEAUTIFY_ANCHOR) >= 0) { body = body.replace(BEAUTIFY_ANCHOR, BEAUTIFY_ADD); console.log("大门美化：朱红柱/门套/门槛/门钉门环 已加"); }
-else console.log("大门美化：未找到锚点（原型结构变了？）");
+/* 大门美化（已移除）：组长 2026-09-29 反馈"那个门很土"——原来这里给正门加的
+   朱红立柱 + 木门套 + 门槛 + 门钉门环 全部撤掉；正门改为敞口门洞（无门扇），
+   保留原型自己的抱厦、匾额、抱鼓石与红灯笼。 */
 /* 全门敞开（已废弃）：新原型自己已把门做成「展厅敞口 / 后门暗腔 / 北门闭扇 / 挂匾院门半开」，
    这段原来会把北门楼开成 90 度并删暗腔，与新定稿冲突，按 2026-09-29《原型改动清单》删除。 */
 /* 书斋/茶室/文创/临摹 背墙立轴（组长补：把组员4 新增的 8 件展品落地成实画位）
