@@ -39,10 +39,12 @@ window.MuseumGesture = (function () {
     active: false,       // 是否检测到手
   };
 
-  var cfg = { forwardOpen: 0.62, fistClose: 0.30, pinchDist: 0.055, turnDead: 0.18, turnMax: 0.42, smooth: 0.12, camWidth: 320, camHeight: 240 };
+  var cfg = { forwardOpen: 0.95, fistClose: 0.30, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.24, turnMax: 0.55, forwardFrames: 4, turnFrames: 4, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
 
   var pinchPrev = false;
   var turnSmoothed = 0;
+  var forwardStreak = 0;   // 张掌已连续保持的帧数
+  var turnStreak = 0;      // 指点姿态已连续保持的帧数
 
   var WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm";
   var MODEL_URL =
@@ -252,8 +254,9 @@ window.MuseumGesture = (function () {
     var ratios = tips.map(function (i) { return dist(lm[i], wrist) / base; });
 
     // 捏合：拇指尖(4)与食指尖(8)靠近
-    var pinchDistNorm = dist(lm[4], lm[8]) / base;
-    var pinching = pinchDistNorm < cfg.pinchDist;
+    // 用 2D 距离：MediaPipe 的 z 是估计深度、噪声大，捏合这种小间距判断会被 z 抖动淹没；
+    // 这里只返回距离数值，进入/退出双阈值（迟滞）判定放在 tick 里做
+    var pinchDistNorm = dist2D(lm[4], lm[8]) / base;
 
     // 张掌：五指均伸开
     var allOpen = ratios.every(function (r) { return r > cfg.forwardOpen; });
@@ -273,7 +276,7 @@ window.MuseumGesture = (function () {
     }
 
     return {
-      pinching: pinching,
+      pinchDist: pinchDistNorm,
       allOpen: allOpen,
       allClose: allClose,
       indexOnly: indexOnly,
@@ -283,6 +286,10 @@ window.MuseumGesture = (function () {
 
   function dist(a, b) {
     return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+  }
+
+  function dist2D(a, b) {
+    return Math.sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
   }
 
   /* ---------- 帧循环（每帧识别一次） ---------- */
@@ -299,16 +306,24 @@ window.MuseumGesture = (function () {
       if (result && result.landmarks && result.landmarks.length > 0) {
         var g = classify(result.landmarks[0]);
         state.active = true;
-        state.forward = g.allOpen && !g.pinching;
-        state.pinch = g.pinching;
 
-        // 捏合边沿触发（防重复触发）
-        state.pinchPressed = g.pinching && !pinchPrev;
-        pinchPrev = g.pinching;
+        // 捏合：迟滞判定——已进入捏合后用更宽的退出阈值，未进入用较严的进入阈值，
+        // 单帧抖动不会让状态在「捏/松」之间来回跳，边沿触发也只响一次
+        var pinching = pinchPrev ? g.pinchDist < cfg.pinchOff : g.pinchDist < cfg.pinchOn;
+        state.pinch = pinching;
+        state.pinchPressed = pinching && !pinchPrev;
+        pinchPrev = pinching;
 
-        // 转向平滑
-        turnSmoothed += (g.turn - turnSmoothed) * cfg.smooth;
-        state.turn = Math.abs(turnSmoothed) < 0.02 ? 0 : turnSmoothed;
+        // 张掌前进：需连续保持若干帧才启动，指点/握拳等手势的过渡帧不再误触前进
+        forwardStreak = (g.allOpen && !pinching) ? forwardStreak + 1 : 0;
+        state.forward = forwardStreak >= cfg.forwardFrames;
+
+        // 指点转向：同样需连续保持若干帧才启动；
+        // 松开后换用更大的 release 系数快速回正，避免「手已放下、镜头还在转」的拖尾
+        turnStreak = g.indexOnly ? turnStreak + 1 : 0;
+        var rawTurn = turnStreak >= cfg.turnFrames ? g.turn : 0;
+        turnSmoothed += (rawTurn - turnSmoothed) * (rawTurn !== 0 ? cfg.smooth : cfg.release);
+        state.turn = Math.abs(turnSmoothed) < 0.03 ? 0 : turnSmoothed;
       } else {
         state.active = false;
         state.forward = false;
@@ -316,6 +331,9 @@ window.MuseumGesture = (function () {
         state.pinchPressed = false;
         state.turn = 0;
         pinchPrev = false;
+        forwardStreak = 0;
+        turnStreak = 0;
+        turnSmoothed = 0;
       }
     }
     requestAnimationFrame(tick);
@@ -333,6 +351,8 @@ window.MuseumGesture = (function () {
     state.turn = 0;
     pinchPrev = false;
     turnSmoothed = 0;
+    forwardStreak = 0;
+    turnStreak = 0;
     if (stream) {
       stream.getTracks().forEach(function (t) { t.stop(); });
       stream = null;
@@ -352,10 +372,14 @@ window.MuseumGesture = (function () {
       if (gc) {
         cfg.forwardOpen = gc.forwardOpen;
         cfg.fistClose = gc.fistClose;
-        cfg.pinchDist = gc.pinchDist;
+        cfg.pinchOn = gc.pinchOn;
+        cfg.pinchOff = gc.pinchOff;
         cfg.turnDead = gc.turnDead;
         cfg.turnMax = gc.turnMax;
+        cfg.forwardFrames = gc.forwardFrames;
+        cfg.turnFrames = gc.turnFrames;
         cfg.smooth = gc.smooth;
+        cfg.release = gc.release;
       }
       // 已在运行直接返回；正在启动时再点一次就复用同一条启动链——
       // 既不会再开一条视频流，也不会提前回一句「已就绪」骗过 main.js

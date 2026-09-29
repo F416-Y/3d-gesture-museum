@@ -27,6 +27,7 @@ window.MuseumMain = (function () {
   var NEUTRAL_INPUT = { forward: false, back: false, turnLeft: false, turnRight: false, sprint: false };
 
   var keys = {};
+  var lastPinchPick = 0;   // 上次捏合拾取的时间戳（冷却防抖）
 
   /* ---------- 初始化 ---------- */
   function init() {
@@ -231,6 +232,13 @@ window.MuseumMain = (function () {
 
     var gs = MuseumGesture.getState();
     var input = composeInput(gs);
+
+    // 捏合拾取展品：gesture.js 输出边沿触发信号，这里接给 exhibit（等价于按 E），
+    // 加 600ms 冷却，防止一次捏合的抖动连开多次弹窗；全景模式下与点击拾取一样禁用
+    if (!panorama.on && gs.pinchPressed && nowMs - lastPinchPick > 600) {
+      lastPinchPick = nowMs;
+      MuseumExhibit.pick();
+    }
 
     if (panorama.on) {
       // 冻结漫游位移（人站在原地看着，退出后回到原处），再覆写相机姿态
