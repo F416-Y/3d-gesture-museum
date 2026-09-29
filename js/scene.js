@@ -2562,17 +2562,17 @@ window.MuseumScene = (function () {
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
     var paintings = [
-      /* 西廊（面朝东）：北 → 南 */
-      ["hanxizai",          -7.96, 10.93],
-      ["qianlijiangshan",   -7.96, 13.79],
-      ["fuchunshanjv",      -7.96, 16.65],
-      ["xishanxinglvtu",    -7.96, 19.51],
-      ["luoshenfu",         -7.96, 22.37],
-      /* 东廊（面朝西）：北 → 南；z=22.37 那个开间组长留空，暂不登记 */
-      ["buniantu",           7.96, 10.93],
-      ["xieshengzhenqintu",  7.96, 13.79],
-      ["wuniutu",            7.96, 16.65],
-      ["molantu",            7.96, 19.51],
+      /* 双廊画廊墙（2026-09-29 改 4 开间，z 11.6 / 14.2 / 16.8 / 19.4） */
+      ["hanxizai",          -7.96, 11.6],
+      ["qianlijiangshan",   -7.96, 14.2],
+      ["fuchunshanjv",      -7.96, 16.8],
+      ["xishanxinglvtu",    -7.96, 19.4],
+      ["buniantu",           7.96, 11.6],
+      ["xieshengzhenqintu",  7.96, 14.2],
+      ["wuniutu",            7.96, 16.8],
+      ["molantu",            7.96, 19.4],
+      /* 东长廊半壁画廊（z=-17.1，面朝南）：第 1 开间挂洛神赋图 */
+      ["luoshenfu",          9.91, -15.9],
       /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
       ["lantingjixu",        40.84, 10.0],
       ["jizhiwengao",        40.84, 15.0],
