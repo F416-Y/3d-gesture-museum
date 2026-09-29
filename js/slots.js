@@ -122,7 +122,8 @@ window.MuseumExteriorSlots = {
         woodD: new THREE.MeshStandardMaterial({ color: 0x4a3826, roughness: 0.8 }),
         paper: new THREE.MeshStandardMaterial({ color: 0xe9e0c9, roughness: 0.95 }),
         red: new THREE.MeshStandardMaterial({ color: 0x9e2b23, roughness: 0.6 }),
-        stoneG: new THREE.MeshStandardMaterial({ color: 0x9a938a, roughness: 0.9 })
+        stoneG: new THREE.MeshStandardMaterial({ color: 0x9a938a, roughness: 0.9 }),
+        leafG: new THREE.MeshStandardMaterial({ color: 0x5c6a4a, roughness: 0.9 })
       };
       function handscrollTex(seed) {
         var cv = document.createElement('canvas'); cv.width = 128; cv.height = 64;
@@ -152,6 +153,91 @@ window.MuseumExteriorSlots = {
         var m = new THREE.Mesh(new THREE.LatheGeometry(pts, 18), mat);
         m.castShadow = m.receiveShadow = true;
         return m;
+      }
+      /* 竖幅立轴画心（山水/人物/花鸟各厅墙面挂画用）：远山 + 近坡 + 枯树 + 朱印 */
+      function scrollTexV(seed) {
+        var cv = document.createElement('canvas'); cv.width = 96; cv.height = 192;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ece3cd'; ctx.fillRect(0, 0, 96, 192);
+        var s = (seed >>> 0) || 7;
+        function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+        var i, y;
+        ctx.strokeStyle = 'rgba(50,54,50,0.7)'; ctx.lineWidth = 2.5;
+        for (i = 0; i < 3; i++) {
+          ctx.beginPath();
+          y = 118 - i * 26 - rnd() * 12;
+          ctx.moveTo(8 + rnd() * 10, y);
+          ctx.quadraticCurveTo(30 + rnd() * 20, y - 26 - rnd() * 16, 55 + rnd() * 20, y - 6 - rnd() * 10);
+          ctx.quadraticCurveTo(70 + rnd() * 14, y + 4, 88, y - 8 - rnd() * 8);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(50,54,50,0.3)';
+        ctx.beginPath(); ctx.ellipse(34 + rnd() * 24, 160, 26 + rnd() * 12, 9, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(50,54,50,0.5)'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(70, 168); ctx.quadraticCurveTo(72, 150, 78, 140); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(72, 156); ctx.quadraticCurveTo(66, 148, 60, 146); ctx.stroke();
+        ctx.fillStyle = '#a53328'; ctx.fillRect(74, 12, 10, 10);
+        var t = new THREE.CanvasTexture(cv);
+        t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+        return t;
+      }
+      /* 墙面立轴：画心 + 上下轴杆 + 轴头（ry 决定朝向，挂在 ±|u| 墙或后墙上） */
+      function wallScrollAt(x, z, ry, seed) {
+        var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; scene.add(g);
+        var paper = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.6),
+          new THREE.MeshStandardMaterial({ map: scrollTexV(seed), roughness: 0.92 }));
+        paper.position.set(0, 2.05, 0.05); g.add(paper);
+        var rodT = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.82, 8), MT.woodD);
+        rodT.rotation.z = Math.PI / 2; rodT.position.set(0, 2.88, 0.05); g.add(rodT);
+        var rodB = rodT.clone(); rodB.position.y = 1.22; g.add(rodB);
+        var k1 = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), MT.woodD);
+        k1.position.set(-0.43, 1.22, 0.05); g.add(k1);
+        var k2 = k1.clone(); k2.position.x = 0.43; g.add(k2);
+        g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+      }
+      /* 盆栽：青瓷盆 + 木干 + 三团枝叶（厅堂角落/门口点景） */
+      function potted(x, z, y, seed) {
+        var g = new THREE.Group(); g.position.set(x, y, z); scene.add(g);
+        var pts = [[0.001, 0], [0.11, 0], [0.14, 0.04], [0.115, 0.22], [0.135, 0.26]]
+          .map(function (p) { return new THREE.Vector2(p[0], p[1]); });
+        g.add(new THREE.Mesh(new THREE.LatheGeometry(pts, 14), MT.celadon));
+        var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, 0.34, 6), MT.woodD);
+        tr.position.y = 0.42; g.add(tr);
+        var i, lf, offs = [[0, 0.62, 0, 0.16], [0.1, 0.52, 0.05, 0.12], [-0.09, 0.55, -0.04, 0.1]];
+        for (i = 0; i < 3; i++) {
+          lf = new THREE.Mesh(new THREE.SphereGeometry(offs[i][3], 10, 8), MT.leafG);
+          lf.scale.y = 0.75; lf.position.set(offs[i][0], offs[i][1], offs[i][2]); g.add(lf);
+        }
+        g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+      }
+      /* 三折屏风：木框纸心，折角围合（人物馆背屏 / 书斋侧屏） */
+      function screenMesh(x, z, y, ry) {
+        var g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+        var i, pg, m;
+        for (i = -1; i <= 1; i++) {
+          pg = new THREE.Group(); pg.position.x = i * 0.58; pg.rotation.y = i * 0.22; g.add(pg);
+          m = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.75, 0.05), MT.woodD); m.position.set(-0.26, 0.875, 0); pg.add(m);
+          m = m.clone(); m.position.x = 0.26; pg.add(m);
+          m = new THREE.Mesh(new THREE.BoxGeometry(0.57, 0.06, 0.05), MT.woodD); m.position.set(0, 0.06, 0); pg.add(m);
+          m = m.clone(); m.position.y = 1.7; pg.add(m);
+          m = new THREE.Mesh(new THREE.BoxGeometry(0.47, 1.56, 0.02), MT.paper); m.position.set(0, 0.88, 0); pg.add(m);
+        }
+        g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+      }
+      /* 茶席：木托盘 + 青瓷壶 + 白瓷杯三盏（茶室中央长案案面） */
+      function teaSet(x, z, topY, seed) {
+        var g = new THREE.Group(); g.position.set(x, topY, z); scene.add(g);
+        var m = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.02, 0.34), MT.woodD);
+        m.position.y = 0.01; g.add(m);
+        var pot = vaseMesh(MT.celadon, 0.22); pot.position.set(-0.14, 0.02, 0); g.add(pot);
+        var cupPts = [[0.001, 0], [0.04, 0], [0.055, 0.03], [0.05, 0.06]]
+          .map(function (p) { return new THREE.Vector2(p[0], p[1]); });
+        var i, cup, pos = [[0.08, -0.09], [0.08, 0.09], [0.2, 0]];
+        for (i = 0; i < 3; i++) {
+          cup = new THREE.Mesh(new THREE.LatheGeometry(cupPts, 12), MT.whitePorc);
+          cup.position.set(pos[i][0], 0.02, pos[i][1]); g.add(cup);
+        }
+        g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
       }
       /* 长案案头：青瓷瓶 + 平铺手卷（带画心与轴杆）+ 卷轴捆 + 砚台笔山（书斋）/ 白瓷碗（展厅） */
       function tabletopSet(cx, cz, ux, uz, topY, seed, isBook) {
@@ -288,9 +374,15 @@ window.MuseumExteriorSlots = {
         }
       }
   
-      /* 室内陈设布展：后墙一架排 + 架前长案 + 案两端宫灯 + 案前方凳；
-         书斋/临摹用书架，其余展厅用展示架；人物馆加将军俑一对与马踏飞燕居中展台；
-         长案案头摆卷轴瓷器，架侧书斋配卷轴缸、展厅配独立展台 */
+      /* 室内陈设布展：按厅定式，不再千厅一面——
+         山水=立轴画廊（后墙三联轴 + 侧墙对轴 + 中央长案手卷 + 卷轴缸）
+         花鸟=中岛展台（四墩瓷瓶 + 后墙架排 + 门口盆景 + 侧墙立轴）
+         人物=俑阵（将军俑两对 + 马踏飞燕居中 + 三折背屏 + 侧墙立轴）
+         书斋=文人书房（书架满墙 + 文房长案 + 卷轴缸 + 侧屏 + 盆栽）
+         临摹=摹帖课桌（书架 + 双排书案 + 方凳面案）
+         文创=文创商店（货架 + 展台矩阵 + 角落盆景）
+         茶室=茶寮（中央茶桌四凳 + 茶席 + 后墙双架 + 角落盆景）
+         其余=经典式（后墙架排 + 长案宫灯方凳） */
       function furnishHall(h, L) {
         var floor = 0.62;   /* 台基顶面 */
         var horiz = (h.entry === 'S' || h.entry === 'N');
@@ -306,62 +398,129 @@ window.MuseumExteriorSlots = {
         var ux = horiz ? 1 : 0, uz = horiz ? 0 : 1;
         var faceRy = horiz ? (bz < 0 ? 0 : Math.PI) : (bx < 0 ? Math.PI / 2 : -Math.PI / 2);
         function at(uOff, bOff) { return [h.cx + ux * uOff + bx * bOff, h.cz + uz * uOff + bz * bOff]; }
-        var isBook = (h.tag === '书斋' || h.tag === '临摹');
+        var tag = h.tag;
+        var isBook = (tag === '书斋' || tag === '临摹');
         var seedBase = (Math.floor(Math.abs(h.cx) * 31 + Math.abs(h.cz) * 17) >>> 0);
         var shelfTpl = isBook ? (L.shelf || L.display) : (L.display || L.shelf);
         var i, p;
-        if (shelfTpl) {
-          var n = Math.max(1, Math.floor((len - 2.2) / 1.35));
+  
+        /* ---- 共用构件 ---- */
+        function shelfRow(maxN, bOff) {
+          if (!shelfTpl) return;
+          var n = Math.max(1, Math.min(maxN, Math.floor((len - 2.2) / 1.35)));
           var u0 = -(n - 1) * 1.35 / 2;
           for (i = 0; i < n; i++) {
-            p = at(u0 + i * 1.35, dep / 2 - 0.55);
+            p = at(u0 + i * 1.35, bOff);
             var sg = instantiate(shelfTpl, { mode: 'h', size: isBook ? 2.0 : 1.8, x: p[0], y: floor, z: p[1], ry: faceRy });
             if (sg) { mark(isBook ? '书架' : '展示架'); shelfFill(sg, isBook, seedBase + i * 11); }
           }
-          /* 架排两端：书斋/临摹配卷轴缸，展厅配独立展台瓷瓶 */
-          var uEnd = -u0 + 0.7, side, fp;
-          for (side = -1; side <= 1; side += 2) {
-            var uu = side * (uEnd + 0.55);
-            if (Math.abs(uu) < len / 2 - 0.5) {
-              fp = at(uu, dep / 2 - 0.85);
-              if (isBook) scrollPot(fp[0], fp[1], floor, seedBase + side + 3);
-              else pedestalVase(fp[0], fp[1], floor, seedBase + side + 3);
-            }
-          }
         }
-        if (L.table) {
-          p = at(0, dep / 2 - 1.75);
-          var tg = instantiate(L.table, { mode: 'max', size: 2.4, x: p[0], y: floor, z: p[1], ry: faceRy });
+        function longTable(bOff, size, withLamps, book2) {
+          if (!L.table) return;
+          p = at(0, bOff);
+          var tg = instantiate(L.table, { mode: 'max', size: size || 2.4, x: p[0], y: floor, z: p[1], ry: faceRy });
           if (tg) {
             mark('长案');
             var tbb = new THREE.Box3().setFromObject(tg);
-            tabletopSet(p[0], p[1], ux, uz, tbb.max.y + 0.005, seedBase, isBook);
+            tabletopSet(p[0], p[1], ux, uz, tbb.max.y + 0.005, seedBase + Math.round(bOff * 10), book2 === undefined ? isBook : book2);
           }
-          if (L.lamp) {
-            var lp1 = at(-1.0, dep / 2 - 1.75), lp2 = at(1.0, dep / 2 - 1.75);
+          if (withLamps && L.lamp) {
+            var lp1 = at(-1.0, bOff), lp2 = at(1.0, bOff);
             if (instantiate(L.lamp, { mode: 'h', size: 0.6, x: lp1[0], y: floor + 0.9, z: lp1[1] })) mark('宫灯');
             if (instantiate(L.lamp, { mode: 'h', size: 0.6, x: lp2[0], y: floor + 0.9, z: lp2[1] })) mark('宫灯');
           }
         }
-        if (L.stool) {
-          var s1 = at(-0.7, dep / 2 - 2.6), s2 = at(0.7, dep / 2 - 2.6);
-          if (instantiate(L.stool, { mode: 'h', size: 0.45, x: s1[0], y: floor, z: s1[1], ry: faceRy })) mark('方凳');
-          if (instantiate(L.stool, { mode: 'h', size: 0.45, x: s2[0], y: floor, z: s2[1], ry: faceRy + 0.4 })) mark('方凳');
+        function stoolAt(uOff, bOff, ry) {
+          if (!L.stool) return;
+          p = at(uOff, bOff);
+          if (instantiate(L.stool, { mode: 'h', size: 0.45, x: p[0], y: floor, z: p[1], ry: ry })) mark('方凳');
         }
-        if (h.tag === '人物') {
+        function lampPair(uOff, bOff) {
+          if (!L.lamp) return;
+          var q1 = at(-uOff, bOff), q2 = at(uOff, bOff);
+          if (instantiate(L.lamp, { mode: 'h', size: 0.6, x: q1[0], y: floor + 0.9, z: q1[1] })) mark('宫灯');
+          if (instantiate(L.lamp, { mode: 'h', size: 0.6, x: q2[0], y: floor + 0.9, z: q2[1] })) mark('宫灯');
+        }
+        function backScroll(uOff, seed, bOff2) { p = at(uOff, bOff2 === undefined ? dep / 2 - 0.45 : bOff2); wallScrollAt(p[0], p[1], faceRy, seed); }
+        function sideScroll(sig, bOff, seed) {
+          p = at(sig * (len / 2 - 0.42), bOff);
+          wallScrollAt(p[0], p[1], Math.atan2(-sig * ux, -sig * uz), seed);
+        }
+        function potAt(uOff, bOff, seed) { p = at(uOff, bOff); potted(p[0], p[1], floor, seed); }
+        function pedestalAt(uOff, bOff, seed) { p = at(uOff, bOff); pedestalVase(p[0], p[1], floor, seed); }
+        function pot2(uOff, bOff, seed) { p = at(uOff, bOff); scrollPot(p[0], p[1], floor, seed); }
+  
+        /* ---- 按厅定式 ---- */
+        if (tag === '山水') {
+          backScroll(-2.2, seedBase + 1, dep / 2 - 0.75); backScroll(0, seedBase + 2, dep / 2 - 0.75); backScroll(2.2, seedBase + 3, dep / 2 - 0.75);
+          sideScroll(-1, 1.2, seedBase + 4); sideScroll(-1, -1.6, seedBase + 5);
+          sideScroll(1, 1.2, seedBase + 6); sideScroll(1, -1.6, seedBase + 7);
+          longTable(dep / 2 - 2.6, 2.4, true, false);
+          stoolAt(-0.7, dep / 2 - 3.5, faceRy); stoolAt(0.7, dep / 2 - 3.5, faceRy + 0.4);
+          pot2(-len / 2 + 0.9, dep / 2 - 0.9, seedBase + 8); pot2(len / 2 - 0.9, dep / 2 - 0.9, seedBase + 9);
+          pedestalAt(-1.9, dep / 2 - 2.6, seedBase + 10); pedestalAt(1.9, dep / 2 - 2.6, seedBase + 11);
+        } else if (tag === '花鸟') {
+          shelfRow(6, dep / 2 - 0.55);
+          pedestalAt(-0.95, 0.4, seedBase + 1); pedestalAt(0.95, 0.4, seedBase + 2);
+          pedestalAt(-0.95, -1.3, seedBase + 3); pedestalAt(0.95, -1.3, seedBase + 4);
+          potAt(-1.9, -dep / 2 + 1.2, seedBase + 5); potAt(1.9, -dep / 2 + 1.2, seedBase + 6);
+          sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
+          lampPair(2.2, -0.45);
+        } else if (tag === '人物') {
+          sideScroll(-1, 0.8, seedBase + 1); sideScroll(1, 0.8, seedBase + 2);
           if (L.warrior) {
-            var w1 = at(-len / 4, dep / 2 - 3.4), w2 = at(len / 4, dep / 2 - 3.4);
-            if (instantiate(L.warrior, { mode: 'h', size: 1.6, x: w1[0], y: floor, z: w1[1], ry: faceRy })) mark('将军俑');
-            if (instantiate(L.warrior, { mode: 'h', size: 1.6, x: w2[0], y: floor, z: w2[1], ry: faceRy })) mark('将军俑');
+            var wpos = [[-len / 4, dep / 2 - 3.3], [len / 4, dep / 2 - 3.3], [-len / 4, dep / 2 - 4.5], [len / 4, dep / 2 - 4.5]];
+            for (i = 0; i < 4; i++) {
+              p = at(wpos[i][0], wpos[i][1]);
+              if (instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('将军俑');
+            }
           }
           if (L.horse) {
-            var hp = at(0, dep / 2 - 3.4);
-            var ped = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.8),
-              new THREE.MeshStandardMaterial({ color: 0x9a938a, roughness: 0.9 }));
-            ped.position.set(hp[0], floor + 0.375, hp[1]);
+            p = at(0, dep / 2 - 1.9);
+            var ped = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.8), MT.stoneG);
+            ped.position.set(p[0], floor + 0.375, p[1]);
             ped.rotation.y = faceRy;
             ped.castShadow = ped.receiveShadow = true; scene.add(ped);
-            if (instantiate(L.horse, { mode: 'h', size: 1.1, x: hp[0], y: floor + 0.75, z: hp[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
+            if (instantiate(L.horse, { mode: 'h', size: 1.1, x: p[0], y: floor + 0.75, z: p[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
+          }
+          p = at(0, dep / 2 - 0.6); screenMesh(p[0], p[1], floor, faceRy);
+          lampPair(1.2, dep / 2 - 1.9);
+        } else if (tag === '临摹') {
+          shelfRow(4, dep / 2 - 0.55);
+          longTable(0.6, 2.2, false, true); longTable(-1.6, 2.2, false, true);
+          stoolAt(-0.7, -0.25, faceRy + Math.PI); stoolAt(0.7, -0.25, faceRy + Math.PI - 0.4);
+          stoolAt(-0.7, -2.45, faceRy + Math.PI); stoolAt(0.7, -2.45, faceRy + Math.PI - 0.4);
+          pot2(-len / 2 + 0.8, dep / 2 - 0.85, seedBase + 3); pot2(len / 2 - 0.8, dep / 2 - 0.85, seedBase + 4);
+        } else if (tag === '文创') {
+          shelfRow(5, dep / 2 - 0.55);
+          pedestalAt(-1.4, 0.3, seedBase + 1); pedestalAt(0, 0.3, seedBase + 2); pedestalAt(1.4, 0.3, seedBase + 3);
+          pedestalAt(-1.4, -1.5, seedBase + 4); pedestalAt(0, -1.5, seedBase + 5); pedestalAt(1.4, -1.5, seedBase + 6);
+          potAt(-len / 2 + 0.9, -dep / 2 + 1.0, seedBase + 7);
+        } else if (tag === '茶室') {
+          if (L.table) {
+            p = at(0, 0);
+            var tg2 = instantiate(L.table, { mode: 'max', size: 1.7, x: p[0], y: floor, z: p[1], ry: faceRy });
+            if (tg2) { mark('长案'); teaSet(p[0], p[1], new THREE.Box3().setFromObject(tg2).max.y + 0.005, seedBase); }
+          }
+          stoolAt(-0.95, 0, faceRy + Math.PI / 2); stoolAt(0.95, 0, faceRy - Math.PI / 2);
+          stoolAt(0, -0.85, faceRy); stoolAt(0, 0.85, faceRy + Math.PI);
+          shelfRow(2, dep / 2 - 0.55);
+          potAt(-len / 2 + 0.9, -dep / 2 + 1.0, seedBase + 3);
+          lampPair(1.5, 0);
+        } else {
+          /* 经典式（书斋与其余展厅） */
+          shelfRow(99, dep / 2 - 0.55);
+          if (isBook) {
+            pot2(-len / 2 + 0.8, dep / 2 - 0.85, seedBase + 1); pot2(len / 2 - 0.8, dep / 2 - 0.85, seedBase + 2);
+          } else {
+            pedestalAt(-len / 2 + 0.8, dep / 2 - 0.85, seedBase + 1); pedestalAt(len / 2 - 0.8, dep / 2 - 0.85, seedBase + 2);
+          }
+          longTable(dep / 2 - 1.75, 2.4, true);
+          stoolAt(-0.7, dep / 2 - 2.6, faceRy); stoolAt(0.7, dep / 2 - 2.6, faceRy + 0.4);
+          if (tag === '书斋') {
+            p = at(len / 2 - 0.9, 0);
+            screenMesh(p[0], p[1], floor, Math.atan2(-ux, -uz));
+            potAt(-len / 2 + 0.9, -dep / 2 + 1.0, seedBase + 5);
           }
         }
       }
