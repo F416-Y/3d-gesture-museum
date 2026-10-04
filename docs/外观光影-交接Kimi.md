@@ -44,3 +44,10 @@
 2. `renderer.render` 在 three 里是**实例属性**，给 `THREE.WebGLRenderer.prototype` 打补丁无效——俯视图想关雾/提亮，得从相机沿 parent 上溯拿 Scene（visual-check 已这么改）。
 3. **CDN 风险（待处理）**：`index.html` 从 jsdelivr 引 three.js，2026-09-24 实测 jsdelivr 不可达 → 页面直接起不来。答辩现场若断网就是白屏。`node_modules` 里有 three 0.147.0，可以本地化。
 4. 无头渲染很慢（软件渲染 + 2300 mesh），单机位约 1 分钟，别以为是卡死。
+---
+
+## 状态更新（2026-10-04）
+
+昼夜系统已由组长接进主项目：js/lighting.js（两张参数表 D/N + 10 组灯笼灯位，逐条对应本文件里的 applyNight()），HUD 有「入夜 · 灯火」按钮、快捷键 N，出图工具 scripts/visual-check.mjs 支持 night: true 机位。
+
+Kimi 注意：如果改原型里的灯位 / 颜色 / 曝光，请告诉我，我同步更新 js/lighting.js 的两张表，否则两边会不一致。

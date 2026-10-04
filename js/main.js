@@ -59,6 +59,8 @@ window.MuseumMain = (function () {
 
     // 初始化各模块
     MuseumScene.init({ scene: scene, camera: camera });
+    /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
+    if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
     MuseumPlayer.init(camera);
     MuseumExhibit.init();
 
@@ -101,14 +103,32 @@ window.MuseumMain = (function () {
       }
       if (e.code === "KeyR") { resetView(); }
       if (e.code === "KeyV") { e.preventDefault(); setPanorama(!panorama.on); }
+      if (e.code === "KeyN") { e.preventDefault(); if (window.MuseumLighting) window.MuseumLighting.toggle(); }
       if (e.code === "KeyE" && panorama.on) { e.preventDefault(); return; }
     });
     window.addEventListener("keyup", function (e) { keys[e.code] = false; });
+    var btnNight = document.getElementById("btn-night");
+    if (btnNight && window.MuseumLighting) btnNight.addEventListener("click", function () { window.MuseumLighting.toggle(); });
 
-    // 鼠标点击拾取（演示/无摄像头时的备选交互）
+     // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
-      if (panorama.on) return;
-      MuseumExhibit.pick();
+      if (panorama.on) return;                      // 全景模式下与键盘/E 键一致，不做拾取
+      if (document.pointerLockElement === renderer.domElement) {
+        MuseumExhibit.pick();
+        return;
+      }
+      if (MuseumExhibit.getCurrentId && MuseumExhibit.getCurrentId()) {
+        MuseumExhibit.pick();                       // 准星对着展品：保留「点一下就看」的老习惯
+        return;
+      }
+      if (renderer.domElement.requestPointerLock) renderer.domElement.requestPointerLock();
+    });
+
+    // 鼠标移动 → 转动视角（仅在指针锁定时生效）
+    document.addEventListener("mousemove", function (e) {
+      if (document.pointerLockElement === renderer.domElement) {
+        MuseumPlayer.look(e.movementX || 0, e.movementY || 0);
+      }
     });
 
     MuseumUI.setHandlers({
@@ -248,6 +268,7 @@ window.MuseumMain = (function () {
     }
     MuseumExhibit.update();
     MuseumScene.update();
+    if (window.MuseumLighting) window.MuseumLighting.update(dt);   /* 昼夜平滑过渡 */
 
     renderer.render(scene, camera);
   }

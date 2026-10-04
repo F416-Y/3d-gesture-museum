@@ -44,6 +44,10 @@ function makeCtx() {
     createRadialGradient() { return { addColorStop() {} }; },
     createPattern() { return null; },
     getImageData() { return { data: new Uint8ClampedArray(4) }; },
+    /* 新版原型用到的更多 2D 方法（缺哪个补哪个，避免桩 DOM 误报） */
+    ellipse() {}, roundRect() {}, setLineDash() {}, getLineDash() { return []; },
+    drawImage() {}, putImageData() {}, createImageData() { return { data: new Uint8ClampedArray(4), width: 1, height: 1 }; },
+    setTransform() {}, resetTransform() {}, transform() {}, isPointInPath() { return false; },
   };
 }
 

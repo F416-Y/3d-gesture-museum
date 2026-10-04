@@ -9,7 +9,7 @@
  *   3. 基于 MuseumScene.obstacles 做圆形碰撞检测（圆/矩形统一处理）
  *   4. 判定玩家所在展厅并回调 onHallChange
  * ------------------------------------------------------------
- * 依赖：scene.js（MuseumScene.obstacles / getHallAt）、config.js
+ * 依赖：scene.js（MuseumScene.obstacles / getHallAt / terrainHeightAt）、config.js
  * ============================================================ */
 
 window.MuseumPlayer = (function () {
@@ -20,15 +20,25 @@ window.MuseumPlayer = (function () {
   var yaw = 0;                  // 朝向角，0 表示面向 -Z
   var radius = 0.5;             // 碰撞半径
   var eyeHeight = 1.7;
+  var eyeY = 1.7;               // 当前视点高度（= 地面标高 + eyeHeight），高度跟随用
   var speed = 2.4;
   var turnSpeed = 1.9;
+  var turnVel = 0;              // 平滑后的转向速度（弧度/秒），用于消除卡顿
+  var pitch = 0;                // 俯仰角：0 = 平视，正 = 抬头，负 = 低头
+  var mouseSensitivity = 0.002; // 鼠标灵敏度（弧度/像素），越大转得越快
+  var maxPitch = 1.3;           // 上下看的角度上限（约 75°），防止翻过头
   var currentHall = null;
   var onHallChange = null;
-
   var forwardDir = new _g.Vector3();
   var rightDir = new _g.Vector3();
   var wish = new _g.Vector3();
   var UP = new _g.Vector3(0, 1, 0);   // 自持 up 轴：r147 只有 Object3D.DefaultUp，没有 DEFAULT_UP
+
+  // 查询某点地面标高（scene.js 提供，序厅台基/踏跺高度；没有则按平地 0 处理）
+  function terrainAt(x, z) {
+    return (window.MuseumScene && window.MuseumScene.terrainHeightAt)
+      ? window.MuseumScene.terrainHeightAt(x, z) : 0;
+  }
 
   /* ---------- 初始化 ---------- */
   function init(camera) {
@@ -41,6 +51,8 @@ window.MuseumPlayer = (function () {
       var sp = cfg.player.startPos;
       pos.set(sp[0], eyeHeight, sp[2]);
     }
+    eyeY = terrainAt(pos.x, pos.z) + eyeHeight;
+    pos.y = eyeY;
     camera.position.copy(pos);
     applyRotation(camera);
 
@@ -49,7 +61,8 @@ window.MuseumPlayer = (function () {
   }
 
   function applyRotation(camera) {
-    camera.rotation.set(0, yaw, 0);
+    camera.rotation.order = "YXZ";        // FPS 标准顺序：先偏航(Y) 再俯仰(X)
+    camera.rotation.set(pitch, yaw, 0);
   }
 
   /* ---------- 每帧更新 ---------- */
@@ -57,10 +70,11 @@ window.MuseumPlayer = (function () {
     if (!camera) return;
 
     // 转向（键盘/手势统一输入）
-    // 注意：Three.js 里 rotation.y 正向是镜头向左转（俯视逆时针），
-    // 所以「左转取正、右转取负」，A/← 向左、D/→ 向右
-    var turn = (input.turnLeft ? 1 : 0) - (input.turnRight ? 1 : 0);
-    yaw += turn * turnSpeed * delta;
+    // 方向约定与鼠标一致：右转 yaw 减小、左转 yaw 增大（turnRight=+1 / turnLeft=-1）
+    var turn = (input.turnRight ? 1 : 0) - (input.turnLeft ? 1 : 0);
+    // 平滑过渡到目标角速度：turnVel 逐渐逼近 turn*turnSpeed，起步/松手都顺滑
+    turnVel += (turn * turnSpeed - turnVel) * Math.min(1, delta * 12);
+    yaw -= turnVel * delta;
 
     // 朝向向量（Three.js 相机默认看向 -Z）
     forwardDir.set(0, 0, -1).applyAxisAngle(UP, yaw);
@@ -74,14 +88,16 @@ window.MuseumPlayer = (function () {
     var spd = speed * (input.sprint ? 1.6 : 1);
     var step = wish.multiplyScalar(spd * delta);
 
-    // 分轴移动 + 碰撞（先 x 后 z，滑动感更顺滑）
-    pos.x += step.x;
-    resolveCollisions();
-    pos.z += step.z;
-    resolveCollisions();
+    // 分轴移动 + 碰撞（先 x 后 z，滑动感更顺滑）；子步进防高速穿墙
+    moveWithCollision(step.x, step.z);
+
+    // 高度跟随：每帧查一次地面标高，平滑抬升/下降到「地面 + 眼高」
+    var ground = terrainAt(pos.x, pos.z);
+    eyeY += (ground + eyeHeight - eyeY) * Math.min(1, delta * 8);
+    pos.y = eyeY;
 
     // 应用相机
-    camera.position.set(pos.x, eyeHeight, pos.z);
+    camera.position.set(pos.x, eyeY, pos.z);
     applyRotation(camera);
 
     // 展厅判定
@@ -93,37 +109,52 @@ window.MuseumPlayer = (function () {
   }
 
   /* ---------- 碰撞：圆 / 矩形统一为「点到形状最近点」检测 ---------- */
+  // 单段位移上限：小于「最薄墙厚(0.4) + 半径(0.5)」的捕捉距离，保证一步跨不过薄墙
+  var MAX_SUBSTEP = 0.45;
+
+  // 把单帧位移切成若干小段，逐段移动 + 碰撞，杜绝高速/掉帧时一步穿墙
+  function moveWithCollision(dx, dz) {
+    var n = Math.ceil(Math.max(Math.abs(dx), Math.abs(dz)) / MAX_SUBSTEP);
+    if (n < 1) n = 1;
+    var sx = dx / n, sz = dz / n;
+    for (var k = 0; k < n; k++) {
+      pos.x += sx;
+      resolveCollisions();
+      pos.z += sz;
+      resolveCollisions();
+    }
+  }
+
   function resolveCollisions() {
     var obs = MuseumScene.obstacles;
+    if (!obs) return;
     for (var i = 0; i < obs.length; i++) {
       var o = obs[i];
-      var cx, cz;
+      var cx, cz, minDist;
       if (o.type === "circle") {
         cx = o.x; cz = o.z;
+        minDist = o.r + radius;
       } else {
         // 矩形：取玩家到矩形最近点
         cx = clamp(pos.x, o.x0, o.x1);
         cz = clamp(pos.z, o.z0, o.z1);
+        minDist = radius;
       }
       var dx = pos.x - cx;
       var dz = pos.z - cz;
-      // 正对障碍中心时纯径向推出会变成「顶着不动」，给一点切向偏移以便擦身滑过
-      if (Math.abs(dx) < 1e-3) dx = 1e-3;
       var dist = Math.sqrt(dx * dx + dz * dz);
-      var minDist = (o.type === "circle" ? o.r : 0) + radius;
-      if (dist < minDist) {
-        if (dist < 0.0001) {
-          // 完全重叠时，沿最小轴推出（防止卡死）
-          var pushX = Math.abs(pos.x - (o.type === "circle" ? o.x : (o.x0 + o.x1) / 2));
-          var pushZ = Math.abs(pos.z - (o.type === "circle" ? o.z : (o.z0 + o.z1) / 2));
-          if (pushX < pushZ) pos.x += (pos.x < (o.type === "circle" ? o.x : (o.x0 + o.x1) / 2) ? -1 : 1) * minDist;
-          else pos.z += (pos.z < (o.type === "circle" ? o.z : (o.z0 + o.z1) / 2) ? -1 : 1) * minDist;
-        } else {
-          var nx = dx / dist, nz = dz / dist;
-          pos.x = cx + nx * minDist;
-          pos.z = cz + nz * minDist;
-        }
+      if (dist >= minDist) continue;   // 没碰到，跳过
+
+      var nx, nz;
+      if (dist < 0.0001) {
+        // 与障碍最近点完全重合：沿较小穿透方向推出，避免除零出现 NaN
+        if (Math.abs(dx) < Math.abs(dz)) { nx = 0; nz = (dz >= 0 ? 1 : -1); }
+        else { nx = (dx >= 0 ? 1 : -1); nz = 0; }
+      } else {
+        nx = dx / dist; nz = dz / dist;
       }
+      pos.x = cx + nx * minDist;
+      pos.z = cz + nz * minDist;
     }
   }
 
@@ -138,15 +169,25 @@ window.MuseumPlayer = (function () {
     setOnHallChange: function (fn) { onHallChange = fn; },
     getPosition: function () { return pos; },
     getYaw: function () { return yaw; },
+    look: function (dx, dy) {
+      yaw -= dx * mouseSensitivity;         // 鼠标右移(dx>0) → 右转
+      pitch -= dy * mouseSensitivity;       // 鼠标上移(dy<0) → 抬头
+      if (pitch > maxPitch) pitch = maxPitch;   // 抬头限位
+      if (pitch < -maxPitch) pitch = -maxPitch; // 低头限位
+    },
     reset: function () {
       var cfg = window.MuseumConfig;
       var sp = cfg ? cfg.player.startPos : [0, 0, 16];
-      pos.set(sp[0], eyeHeight, sp[2]);
-      yaw = 0; // 0 = 面向 -Z（建筑方向）
+      eyeY = terrainAt(sp[0], sp[2]) + eyeHeight;
+      pos.set(sp[0], eyeY, sp[2]);
+      yaw = 0;     // 0 = 面向 -Z（建筑方向）
+      pitch = 0;   // 平视
     },
     teleport: function (x, z, y) {
-      pos.set(x, eyeHeight, z);
+      eyeY = terrainAt(x, z) + eyeHeight;
+      pos.set(x, eyeY, z);
       yaw = y || 0;
+      pitch = 0;   // 传送后平视
     },
   };
 })();
