@@ -35,9 +35,26 @@ window.MuseumLighting = (function () {
     [17.5, 1.5, 8.0, 0.6]   /* 荷池西北岸山石组（剪影补光） */
   ];
 
+  /* 序厅（buildXuting）不走 buildHall，因此 slots 的室内布展没给它灯 —— 从大门看进去是一条黑缝。
+     这里补两盏（位置：台基 1.2m 之上 3m，门内两侧），并纳入"馆内暖光"随昼夜一起加强。 */
+  var HALL_FILL = [[-4.0, 4.2, 31.6], [4.0, 4.2, 31.6]];
+  var scanT = 0;
+
   var renderer = null, scene = null, layout = null, sun = null, hemi = null;
   var lampLights = [], hallLights = [], btn = null;
   var goal = 0, cur = -1, ready = false;
+
+  /* 收集室内暖光：slots.js 的 furnishHall 要等 7 个 GLB 加载完才建灯，
+     所以除了 init 时收一次，update 里还会定期补收（newLights）。 */
+  function collectHallLights() {
+    if (!scene) return;
+    scene.traverse(function (n) {
+      if (!n.isPointLight) return;
+      if (n.userData && n.userData.lamp) return;      /* 灯笼灯不算 */
+      for (var i = 0; i < hallLights.length; i++) if (hallLights[i] === n) return;
+      hallLights.push(n);
+    });
+  }
 
   function lerpC(target, dayHex, nightHex, k) {
     target.setHex(dayHex).convertSRGBToLinear()
@@ -94,8 +111,16 @@ window.MuseumLighting = (function () {
     scene.traverse(function (n) {
       if (n.isDirectionalLight && !sun) sun = n;
       if (n.isHemisphereLight && !hemi) hemi = n;
-      if (n.isPointLight) hallLights.push(n);
     });
+    collectHallLights();          /* 先把已存在的收进来（异步布展的后面再补收） */
+    /* 序厅补光：两盏常亮暖光（纳入 hallLights，夜间会随 k 加强） */
+    HALL_FILL.forEach(function (p) {
+      var fl = new THREE.PointLight(0xffe9cf, 1.0, 16, 1);
+      fl.position.set(p[0], p[1], p[2]);
+      scene.add(fl);
+      hallLights.push(fl);
+    });
+
     /* 灯笼点光群（初始强度 0，夜里才亮） */
     LAMPS.forEach(function (a) {
       var pl = new THREE.PointLight(0xffb46a, 0, a[3] * 7, 1);
@@ -115,6 +140,9 @@ window.MuseumLighting = (function () {
   /* 每帧：把 nightCur 平滑逼近 nightGoal（约 2s 收敛，同原型） */
   function update(dt) {
     if (!ready) return;
+    /* 每 0.5 秒补收一次新出现的室内灯（布展是异步的；按时间而不是帧数，慢机器也准） */
+    scanT += (dt || 0.016);
+    if (scanT >= 0.5) { scanT = 0; collectHallLights(); }
     if (cur < 0 || Math.abs(goal - cur) > 0.001) {
       cur = cur < 0 ? goal : cur + (goal - cur) * Math.min(1, (dt || 0.016) * 2.2);
       if (Math.abs(goal - cur) <= 0.001) cur = goal;
