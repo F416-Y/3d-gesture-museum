@@ -1,0 +1,65 @@
+/* ============================================================
+ * intro.css —— 开场粒子序章（水墨宣纸风）
+ * 来源：外观原型 tools/exterior-prototype.html（Kimi 原作），2026-10-04 由组长原样迁入
+ * ============================================================ */
+
+  /* ===== 开场粒子序章（水墨宣纸风 · Three.js + MediaPipe Hands 手势交互） ===== */
+  #intro {
+    position: fixed; inset: 0; z-index: 100; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 62%, #f7f2e6 0%, #f0e9d8 55%, #e5dcc6 100%);
+    font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+    color: #1c1a17; transition: opacity 0.8s ease;
+  }
+  #intro.bye { opacity: 0; pointer-events: none; }
+  #introCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #introTitle { position: absolute; top: 26px; left: 0; right: 0; text-align: center; pointer-events: none; }
+  #introTitle h1 {
+    margin: 0; font-size: 30px; font-weight: 600; letter-spacing: 10px; color: #1c1a17;
+    text-shadow: 0 1px 0 rgba(255, 252, 244, 0.65), 0 0 22px rgba(28, 26, 23, 0.12);
+  }
+  #introPanel {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px; padding: 10px 18px;
+    background: rgba(239, 233, 220, 0.82); border: 1px solid rgba(28, 26, 23, 0.18);
+    border-radius: 12px; backdrop-filter: blur(10px); font-size: 13px; letter-spacing: 2px;
+    box-shadow: 0 6px 24px rgba(28, 26, 23, 0.10);
+  }
+  #introPanel label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  #introPanel input[type="color"] { width: 34px; height: 24px; border: none; background: none; padding: 0; cursor: pointer; }
+  #introPanel input[type="range"] { width: 150px; accent-color: #8c3b2e; }
+  #introPanel .val { color: rgba(28, 26, 23, 0.6); min-width: 56px; }
+  #introCamWrap {
+    position: absolute; left: 18px; bottom: 18px; width: 220px; height: 150px;
+    min-width: 140px; min-height: 100px; max-width: 46vw; max-height: 40vh;
+    resize: both; overflow: hidden; border: 1px solid rgba(28, 26, 23, 0.35);
+    border-radius: 10px; background: #000; box-shadow: 0 8px 30px rgba(28, 26, 23, 0.28);
+  }
+  #introCamWrap video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+  #introCamTag {
+    position: absolute; left: 8px; bottom: 6px; font-size: 11px; letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.78); text-shadow: 0 1px 4px #000; pointer-events: none;
+  }
+  #introBR { position: absolute; right: 18px; bottom: 18px; display: flex; gap: 10px; align-items: center; }
+  #introFull {
+    padding: 10px 16px; font-family: inherit; font-size: 13px; letter-spacing: 2px; color: #1c1a17;
+    background: rgba(239, 233, 220, 0.82); border: 1px solid rgba(28, 26, 23, 0.2);
+    border-radius: 10px; cursor: pointer; backdrop-filter: blur(10px);
+  }
+  #introFull:hover { border-color: rgba(140, 59, 46, 0.6); }
+  #introEnter {
+    padding: 12px 28px; font-family: inherit; font-size: 15px; letter-spacing: 4px; color: #f5efe2;
+    background: linear-gradient(135deg, #a8453a, #8c3b2e); border: none; border-radius: 10px;
+    cursor: pointer; box-shadow: 0 6px 24px rgba(140, 59, 46, 0.35);
+  }
+  #introEnter:hover { filter: brightness(1.08); }
+  #introStatus {
+    position: absolute; top: 20px; right: 20px; padding: 6px 12px;
+    font-size: 12px; letter-spacing: 2px; color: rgba(28, 26, 23, 0.62);
+    background: rgba(239, 233, 220, 0.8); border: 1px solid rgba(28, 26, 23, 0.15);
+    border-radius: 999px; backdrop-filter: blur(8px);
+  }
+  @media (max-width: 900px) {
+    #introTitle h1 { font-size: 22px; letter-spacing: 6px; }
+    #introPanel { gap: 10px; padding: 8px 12px; font-size: 12px; }
+    #introPanel input[type="range"] { width: 100px; }
+  }
