@@ -57,7 +57,9 @@ window.MuseumPlayer = (function () {
     if (!camera) return;
 
     // 转向（键盘/手势统一输入）
-    var turn = (input.turnRight ? 1 : 0) - (input.turnLeft ? 1 : 0);
+    // 注意：Three.js 里 rotation.y 正向是镜头向左转（俯视逆时针），
+    // 所以「左转取正、右转取负」，A/← 向左、D/→ 向右
+    var turn = (input.turnLeft ? 1 : 0) - (input.turnRight ? 1 : 0);
     yaw += turn * turnSpeed * delta;
 
     // 朝向向量（Three.js 相机默认看向 -Z）
