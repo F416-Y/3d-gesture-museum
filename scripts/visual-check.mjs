@@ -35,6 +35,8 @@ const SHOTS = [
   { name: '06-hall4-court', x: 30, y: 3.2, z: 12.5, tx: 40.84, ty: 2.2, tz: 12.5, fov: 50, note: '书斋院朝东看正房（背墙两幅立轴）' },
   { name: '15-plan-top', x: 0, y: 115, z: 0.05, tx: 0, ty: 0, tz: 0, fov: 45, plan: true, scale: 1.5, note: '正上方俯视：全园区布局（开发过程图）' },
   { name: '16-plan-tilt', x: 0, y: 92, z: 58, tx: 0, ty: 0, tz: -2, fov: 45, plan: true, scale: 1.5, note: '高位斜俯视：全园区布局（带屋顶立体感）' },
+  { name: '18-gate-front-night', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, night: true, note: '序厅正门 · 入夜灯火' },
+  { name: '19-courtyard-night', x: 0, y: 2.2, z: 26, tx: 0, ty: 2.4, tz: 14, fov: 60, night: true, note: '中轴南院 → 影壁/双廊 · 入夜' },
   { name: '17-gate-front', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, note: '序厅正门正面（看敞开效果与匾额）' },
   { name: '11-hall4-shuzhai-wall', x: 37.6, y: 1.9, z: 12.5, tx: 40.84, ty: 1.55, tz: 12.5, fov: 78, note: '书斋背墙两幅立轴（近景）' },
   { name: '12-hall4-chashi-wall', x: 37.6, y: 1.9, z: 26.5, tx: 40.84, ty: 1.55, tz: 26.5, fov: 78, note: '茶室背墙两幅立轴（近景）' },
@@ -199,6 +201,10 @@ for (const shot of shots) {
     if (p) { const T = window.THREE; if (!window.__vizState) { const L = []; s.traverse(o => { if (o.isLight) L.push([o, o.intensity]); }); window.__vizState = { lights: L, bg: s.background, fog: s.fog }; } const st = window.__vizState; st.lights.forEach(x => { x[0].intensity = x[1] * (x[0].isHemisphereLight ? 1.25 : 1.55); }); s.fog = null; s.background = new T.Color(0xf3f0ea); }
     else if (window.__vizState) { const st = window.__vizState; st.lights.forEach(x => { x[0].intensity = x[1]; }); s.fog = st.fog; s.background = st.bg; }
   }, !!shot.plan);
+  /* 昼夜状态：每个机位都显式置位（否则夜景会残留到后续机位）；
+     用 setNightNow 立即到位——无头渲染只有 ~2fps，等插值会拍到"还没黑"的中间态 */
+  await page.evaluate(n => { if (window.MuseumLighting) window.MuseumLighting.setNightNow(n ? 1 : 0); }, !!shot.night);
+  if (shot.night) await page.waitForTimeout(800);
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
   await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));

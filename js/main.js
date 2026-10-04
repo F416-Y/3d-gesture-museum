@@ -59,6 +59,8 @@ window.MuseumMain = (function () {
 
     // 初始化各模块
     MuseumScene.init({ scene: scene, camera: camera });
+    /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
+    if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
     MuseumPlayer.init(camera);
     MuseumExhibit.init();
 
@@ -97,9 +99,12 @@ window.MuseumMain = (function () {
       if (e.code === "KeyE") { e.preventDefault(); MuseumExhibit.pick(); }
       if (e.code === "KeyR") { resetView(); }
       if (e.code === "KeyV") { e.preventDefault(); setPanorama(!panorama.on); }
+      if (e.code === "KeyN") { e.preventDefault(); if (window.MuseumLighting) window.MuseumLighting.toggle(); }
       if (e.code === "KeyE" && panorama.on) { e.preventDefault(); return; }
     });
     window.addEventListener("keyup", function (e) { keys[e.code] = false; });
+    var btnNight = document.getElementById("btn-night");
+    if (btnNight && window.MuseumLighting) btnNight.addEventListener("click", function () { window.MuseumLighting.toggle(); });
 
      // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
@@ -254,6 +259,7 @@ window.MuseumMain = (function () {
     }
     MuseumExhibit.update();
     MuseumScene.update();
+    if (window.MuseumLighting) window.MuseumLighting.update(dt);   /* 昼夜平滑过渡 */
 
     renderer.render(scene, camera);
   }
