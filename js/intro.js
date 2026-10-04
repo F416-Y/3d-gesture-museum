@@ -1,0 +1,574 @@
+/* ============================================================
+ * intro.js —— 开场粒子序章：宣纸粒子云 + 预设巡展 + 全园沙盘压轴
+ * 来源：外观原型 tools/exterior-prototype.html（Kimi 原作），2026-10-04 由组长原样迁入。
+ *  - 5 个预设：青铜鼎 / 石狮 / 马踏飞燕 / 太湖石 / 全园沙盘（现采主场景）
+ *  - 自动巡展 4.4s/件、压轴 8.5s，循环不中断；点「进入博物馆 →」收起并释放资源
+ *  - 手势：原型用的是老版 MediaPipe Hands（window.Hands），主项目没有 → 自动走鼠标模式
+ *  - 唯一改动：压轴采样主场景的句柄改为本项目（MuseumExteriorLayout.ctx.scene）
+ * ============================================================ */
+
+/* =====================================================================
+ * 开场粒子序章：Three.js 粒子云 + MediaPipe Hands 手势交互
+ *  - 手掌开合 → 粒子扩散 / 收缩；手掌位置 → 模型旋转
+ *  - 预设模型取自本馆零件库 glb（表面均匀采样为粒子），加载失败回退程序化造型
+ *  - 辉光 = 径向渐变精灵 + 双层叠加（核心亮点 + 外圈光晕），加法混合
+ *  - 色相随旋转角连续偏移；基色 / 密度可调；深空星尘背景
+ * ===================================================================== */
+(function () {
+  var overlay = document.getElementById('intro');
+  if (!overlay || !window.THREE) return;
+  var canvas = document.getElementById('introCanvas');
+  var video = document.getElementById('introVideo');
+  var statusEl = document.getElementById('introStatus');
+  function setStatus(s) { statusEl.textContent = s; }
+
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);   /* 透明底，露出 CSS 宣纸渐变 */
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 160);
+  camera.position.set(0, 0.3, 6.5);
+
+  /* ---------- 辉光精灵贴图 ---------- */
+  function makeGlow() {
+    var c = document.createElement('canvas'); c.width = c.height = 64;
+    var x = c.getContext('2d');
+    var g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(0.28, 'rgba(255,255,255,0.8)');
+    g.addColorStop(0.62, 'rgba(255,255,255,0.22)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  }
+  var glowTex = makeGlow();
+
+  /* ---------- 淡墨远点背景（替深空星尘：暖灰墨点，纸面纵深） ---------- */
+  var SN = 2800, sp = new Float32Array(SN * 3), sc = new Float32Array(SN * 3);
+  var tmpC = new THREE.Color(), i, r, th, ph;
+  for (i = 0; i < SN; i++) {
+    r = 13 + Math.random() * 30;
+    th = Math.random() * Math.PI * 2;
+    ph = Math.acos(2 * Math.random() - 1);
+    sp[i * 3] = r * Math.sin(ph) * Math.cos(th);
+    sp[i * 3 + 1] = r * Math.cos(ph) * 0.7;
+    sp[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
+    tmpC.setHSL(0.09, 0.06 + Math.random() * 0.08, 0.3 + Math.random() * 0.4);
+    sc[i * 3] = tmpC.r; sc[i * 3 + 1] = tmpC.g; sc[i * 3 + 2] = tmpC.b;
+  }
+  var starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  starGeo.setAttribute('color', new THREE.BufferAttribute(sc, 3));
+  var stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
+    size: 0.13, map: glowTex, vertexColors: true, transparent: true, opacity: 0.5,
+    depthWrite: false, blending: THREE.NormalBlending
+  }));
+  scene.add(stars);
+  /* 淡墨远山三叠：大幅柔边墨团，缓慢漂移，衬出水墨纵深 */
+  function makeBlob() {
+    var c = document.createElement('canvas'); c.width = c.height = 256;
+    var x = c.getContext('2d');
+    var g = x.createRadialGradient(128, 128, 8, 128, 128, 128);
+    g.addColorStop(0, 'rgba(96,92,84,0.5)');
+    g.addColorStop(0.55, 'rgba(96,92,84,0.18)');
+    g.addColorStop(1, 'rgba(96,92,84,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  }
+  var blobTex = makeBlob(), blobs = [], bi;
+  for (bi = 0; bi < 3; bi++) {
+    var bm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
+      map: blobTex, transparent: true, opacity: 0.05 + bi * 0.018, depthWrite: false
+    }));
+    bm.position.set((bi - 1) * 7.5, 1.6 - bi * 1.3, -8 - bi * 3);
+    bm.scale.set(10 + bi * 4, 6 + bi * 3, 1);
+    bm.userData.bx = bm.position.x;
+    scene.add(bm); blobs.push(bm);
+  }
+
+  /* ---------- 主粒子云（一份几何，两层渲染：核心 + 光晕） ---------- */
+  var MAXN = 30000;
+  var pos = new Float32Array(MAXN * 3);
+  var col = new Float32Array(MAXN * 3);
+  var base = new Float32Array(MAXN * 3);
+  var hueOff = new Float32Array(MAXN);
+  var phase = new Float32Array(MAXN);
+  for (i = 0; i < MAXN; i++) {
+    hueOff[i] = (Math.random() - 0.5) * 0.3;   /* 兼作墨分五色的浓淡偏移 */
+    phase[i] = Math.random() * Math.PI * 2;
+  }
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
+  var cloud = new THREE.Group();
+  /* 墨点核心：普通混合，叠处更浓，正是积墨效果 */
+  cloud.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.055, map: glowTex, vertexColors: true, transparent: true, opacity: 0.8,
+    depthWrite: false, blending: THREE.NormalBlending
+  })));
+  /* 晕墨层：大一号淡墨，作洇开的边缘 */
+  cloud.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.2, map: glowTex, vertexColors: true, transparent: true, opacity: 0.1,
+    depthWrite: false, blending: THREE.NormalBlending
+  })));
+  scene.add(cloud);
+
+  /* ---------- 程序化回退造型（glb 加载失败时用） ---------- */
+  function mkPts() { return { a: new Float32Array(MAXN * 3), i: 0 }; }
+  function pBox(o, cx, cy, cz, w, h, d, n) {
+    var k, f, u, v, x, y, z;
+    for (k = 0; k < n && o.i < MAXN; k++, o.i++) {
+      f = Math.floor(Math.random() * 6); u = Math.random() - 0.5; v = Math.random() - 0.5;
+      if (f === 0) { x = w / 2; y = v * h; z = u * d; } else if (f === 1) { x = -w / 2; y = v * h; z = u * d; }
+      else if (f === 2) { y = h / 2; x = u * w; z = v * d; } else if (f === 3) { y = -h / 2; x = u * w; z = v * d; }
+      else if (f === 4) { z = d / 2; x = u * w; y = v * h; } else { z = -d / 2; x = u * w; y = v * h; }
+      o.a[o.i * 3] = cx + x; o.a[o.i * 3 + 1] = cy + y; o.a[o.i * 3 + 2] = cz + z;
+    }
+  }
+  function pCyl(o, cx, cy, cz, r, h, n) {
+    var k, t, rr, x, y, z;
+    for (k = 0; k < n && o.i < MAXN; k++, o.i++) {
+      t = Math.random() * Math.PI * 2;
+      if (Math.random() < 0.82) { x = r * Math.cos(t); z = r * Math.sin(t); y = (Math.random() - 0.5) * h; }
+      else { rr = r * Math.sqrt(Math.random()); x = rr * Math.cos(t); z = rr * Math.sin(t); y = (Math.random() < 0.5 ? -1 : 1) * h / 2; }
+      o.a[o.i * 3] = cx + x; o.a[o.i * 3 + 1] = cy + y; o.a[o.i * 3 + 2] = cz + z;
+    }
+  }
+  function pSph(o, cx, cy, cz, rx, ry, rz, n) {
+    var k, t, p2, nx, ny, nz;
+    for (k = 0; k < n && o.i < MAXN; k++, o.i++) {
+      t = Math.random() * Math.PI * 2; p2 = Math.acos(2 * Math.random() - 1);
+      nx = Math.sin(p2) * Math.cos(t); ny = Math.cos(p2); nz = Math.sin(p2) * Math.sin(t);
+      o.a[o.i * 3] = cx + nx * rx; o.a[o.i * 3 + 1] = cy + ny * ry; o.a[o.i * 3 + 2] = cz + nz * rz;
+    }
+  }
+  function finPts(o) {
+    var i;
+    if (o.i < 10) return null;
+    for (i = o.i; i < MAXN; i++) {
+      var s = (i % o.i) * 3;
+      o.a[i * 3] = o.a[s]; o.a[i * 3 + 1] = o.a[s + 1]; o.a[i * 3 + 2] = o.a[s + 2];
+    }
+    return normalizePts(o.a);
+  }
+  function normalizePts(a, target) {
+    var i, mnx = 1e9, mny = 1e9, mnz = 1e9, mxx = -1e9, mxy = -1e9, mxz = -1e9;
+    for (i = 0; i < MAXN; i++) {
+      var x = a[i * 3], y = a[i * 3 + 1], z = a[i * 3 + 2];
+      if (x < mnx) mnx = x; if (x > mxx) mxx = x;
+      if (y < mny) mny = y; if (y > mxy) mxy = y;
+      if (z < mnz) mnz = z; if (z > mxz) mxz = z;
+    }
+    var cx = (mnx + mxx) / 2, cy = (mny + mxy) / 2, cz = (mnz + mxz) / 2;
+    var d = Math.max(mxx - mnx, mxy - mny, mxz - mnz), s = d > 1e-6 ? (target || 3.4) / d : 1;
+    for (i = 0; i < MAXN; i++) {
+      a[i * 3] = (a[i * 3] - cx) * s;
+      a[i * 3 + 1] = (a[i * 3 + 1] - cy) * s;
+      a[i * 3 + 2] = (a[i * 3 + 2] - cz) * s;
+    }
+    return a;
+  }
+  function fbGate() {
+    var o = mkPts();
+    pBox(o, 0, 0.15, 0, 3.2, 0.3, 1.7, 2400);
+    pCyl(o, -1.15, 1.55, 0, 0.22, 2.6, 2100);
+    pCyl(o, 1.15, 1.55, 0, 0.22, 2.6, 2100);
+    pBox(o, 0, 2.35, 0, 2.9, 0.42, 0.4, 1900);
+    pBox(o, 0, 3.0, 0, 3.7, 0.55, 2.0, 5400);
+    pBox(o, 0, 3.45, 0, 2.4, 0.32, 1.1, 2100);
+    pCyl(o, -1.15, 3.05, 0, 0.3, 0.5, 400);
+    pCyl(o, 1.15, 3.05, 0, 0.3, 0.5, 400);
+    return finPts(o);
+  }
+  function fbDing() {
+    var o = mkPts();
+    pBox(o, 0, 1.65, 0, 1.9, 1.25, 1.35, 6800);
+    pBox(o, 0, 1.65, 0, 2.02, 0.34, 1.47, 2400);
+    pBox(o, 0, 2.35, 0, 2.1, 0.2, 1.55, 1700);
+    pCyl(o, -0.68, 0.5, -0.5, 0.15, 1.0, 900); pCyl(o, 0.68, 0.5, -0.5, 0.15, 1.0, 900);
+    pCyl(o, -0.68, 0.5, 0.5, 0.15, 1.0, 900); pCyl(o, 0.68, 0.5, 0.5, 0.15, 1.0, 900);
+    pBox(o, -0.62, 2.78, 0, 0.2, 0.62, 0.28, 800);
+    pBox(o, 0.62, 2.78, 0, 0.2, 0.62, 0.28, 800);
+    return finPts(o);
+  }
+  function fbLion() {
+    var o = mkPts();
+    pBox(o, 0, 0.3, 0, 1.3, 0.6, 1.7, 2400);
+    pSph(o, 0, 1.35, -0.1, 0.72, 0.85, 0.95, 6600);
+    pSph(o, 0, 2.15, 0.45, 0.5, 0.48, 0.5, 4300);
+    pSph(o, 0, 1.95, 0.85, 0.22, 0.18, 0.25, 1100);
+    pCyl(o, -0.4, 0.9, 0.55, 0.16, 0.9, 900);
+    pCyl(o, 0.4, 0.9, 0.55, 0.16, 0.9, 900);
+    pSph(o, 0, 1.25, -0.95, 0.18, 0.5, 0.18, 700);
+    return finPts(o);
+  }
+  function fbHorse() {
+    var o = mkPts();
+    pSph(o, 0, 1.5, 0, 0.5, 0.55, 1.05, 6100);
+    pSph(o, 0, 2.25, 1.0, 0.2, 0.55, 0.3, 1700);
+    pSph(o, 0, 2.72, 1.32, 0.16, 0.2, 0.42, 1300);
+    pCyl(o, -0.28, 0.7, 0.6, 0.09, 1.3, 900); pCyl(o, 0.28, 0.7, 0.6, 0.09, 1.3, 900);
+    pCyl(o, -0.28, 0.7, -0.6, 0.09, 1.3, 900); pCyl(o, 0.28, 0.7, -0.6, 0.09, 1.3, 900);
+    pSph(o, 0, 1.6, -1.15, 0.12, 0.4, 0.3, 800);
+    pBox(o, 0, 0.08, 0, 1.2, 0.16, 1.6, 800);
+    pSph(o, 0, 0.26, 0.42, 0.16, 0.1, 0.26, 500);
+    return finPts(o);
+  }
+  function fbRock() {
+    var o = mkPts(), guard = 0;
+    while (o.i < MAXN && guard++ < MAXN * 5) {
+      var t = Math.random() * Math.PI * 2, p2 = Math.acos(2 * Math.random() - 1);
+      var nx = Math.sin(p2) * Math.cos(t), ny = Math.cos(p2), nz = Math.sin(p2) * Math.sin(t);
+      var w = Math.sin(nx * 3.1 + 1.7) * Math.sin(ny * 2.3 + 0.6) * Math.sin(nz * 2.7 + 2.9);
+      if (w < -0.12) continue;
+      var rr = 1.35 * (1 + 0.3 * w);
+      o.a[o.i * 3] = nx * rr; o.a[o.i * 3 + 1] = ny * rr * 1.3 + 1.6; o.a[o.i * 3 + 2] = nz * rr;
+      o.i++;
+    }
+    return finPts(o);
+  }
+
+  /* ---------- glb 表面均匀采样 ---------- */
+  function sampleObject(root, count) {
+    root.updateMatrixWorld(true);
+    var tris = [], cum = [], total = 0;
+    var a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    var ab = new THREE.Vector3(), ac = new THREE.Vector3();
+    root.traverse(function (n) {
+      if (!n.isMesh) return;
+      var p = n.geometry.attributes.position; if (!p) return;
+      var idx = n.geometry.index, m = n.matrixWorld;
+      var nt = idx ? idx.count / 3 : p.count / 3, t, i0, i1, i2, ar;
+      for (t = 0; t < nt; t++) {
+        i0 = idx ? idx.getX(t * 3) : t * 3;
+        i1 = idx ? idx.getX(t * 3 + 1) : t * 3 + 1;
+        i2 = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
+        a.fromBufferAttribute(p, i0).applyMatrix4(m);
+        b.fromBufferAttribute(p, i1).applyMatrix4(m);
+        c.fromBufferAttribute(p, i2).applyMatrix4(m);
+        ab.subVectors(b, a); ac.subVectors(c, a);
+        ar = ab.cross(ac).length() / 2;
+        if (ar < 1e-8) continue;
+        tris.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+        total += ar; cum.push(total);
+      }
+    });
+    if (!cum.length) return null;
+    var out = new Float32Array(count * 3), k, lo, hi, mid, o, u, v, w;
+    for (k = 0; k < count; k++) {
+      r = Math.random() * total; lo = 0; hi = cum.length - 1;
+      while (lo < hi) { mid = (lo + hi) >> 1; if (cum[mid] < r) lo = mid + 1; else hi = mid; }
+      o = lo * 9;
+      u = Math.random(); v = Math.random();
+      if (u + v > 1) { u = 1 - u; v = 1 - v; }
+      w = 1 - u - v;
+      out[k * 3] = tris[o] * w + tris[o + 3] * u + tris[o + 6] * v;
+      out[k * 3 + 1] = tris[o + 1] * w + tris[o + 4] * u + tris[o + 7] * v;
+      out[k * 3 + 2] = tris[o + 2] * w + tris[o + 5] * u + tris[o + 8] * v;
+    }
+    return normalizePts(out);
+  }
+
+  /* ---------- 压轴：整馆场景表面采样（两遍法，不占大内存） ----------
+     直接对主场景 window.MuseumScene.ctx.scene 做可见网格遍历，
+     跳过 220m 外草坪，只留馆区（100×80），按各网格表面积配额采样 */
+  function sampleMuseum(count) {
+    var root = (window.MuseumScene && window.MuseumScene.ctx && window.MuseumScene.ctx.scene) || (window.MuseumExteriorLayout && window.MuseumExteriorLayout.ctx && window.MuseumExteriorLayout.ctx.scene) || null;
+    if (!root) return null;
+    root.updateMatrixWorld(true);
+    var meshes = [];
+    var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
+    var e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
+    var bbs = new THREE.Vector3(), ws = new THREE.Vector3();
+    function walk(n) {
+      if (!n.visible) return;
+      if (n.isMesh && n.geometry && n.geometry.attributes.position) {
+        var geo = n.geometry;
+        if (!geo.boundingBox) geo.computeBoundingBox();
+        geo.boundingBox.getSize(bbs);
+        n.getWorldScale(ws);
+        if (Math.max(bbs.x * ws.x, bbs.z * ws.z) <= 120) {
+          meshes.push({ p: geo.attributes.position, idx: geo.index, m: n.matrixWorld });
+        }
+      }
+      for (var ci = 0; ci < n.children.length; ci++) walk(n.children[ci]);
+    }
+    walk(root);
+    if (!meshes.length) return null;
+    function triArea(p, idx, m, t) {
+      v1.fromBufferAttribute(p, idx ? idx.getX(t * 3) : t * 3).applyMatrix4(m);
+      v2.fromBufferAttribute(p, idx ? idx.getX(t * 3 + 1) : t * 3 + 1).applyMatrix4(m);
+      v3.fromBufferAttribute(p, idx ? idx.getX(t * 3 + 2) : t * 3 + 2).applyMatrix4(m);
+      e1.subVectors(v2, v1); e2.subVectors(v3, v1);
+      return e1.cross(e2).length() / 2;
+    }
+    /* 第一遍：各网格总面积 */
+    var areas = new Float64Array(meshes.length), total = 0, mi, t, nt, p, idx, m;
+    for (mi = 0; mi < meshes.length; mi++) {
+      p = meshes[mi].p; idx = meshes[mi].idx; m = meshes[mi].m;
+      nt = idx ? idx.count / 3 : p.count / 3;
+      var a2 = 0;
+      for (t = 0; t < nt; t++) a2 += triArea(p, idx, m, t);
+      areas[mi] = a2; total += a2;
+    }
+    if (total <= 0) return null;
+    /* 第二遍：按面积配额逐网格采样，直接写进输出数组 */
+    var out = new Float32Array(count * 3), off = 0;
+    for (mi = 0; mi < meshes.length; mi++) {
+      var quota = Math.floor(count * areas[mi] / total);
+      if (quota < 1) continue;
+      p = meshes[mi].p; idx = meshes[mi].idx; m = meshes[mi].m;
+      nt = idx ? idx.count / 3 : p.count / 3;
+      var cum = new Float64Array(nt), run = 0;
+      for (t = 0; t < nt; t++) { run += triArea(p, idx, m, t); cum[t] = run; }
+      if (run <= 0) continue;
+      for (var k = 0; k < quota && off < count; k++, off++) {
+        var r = Math.random() * run, lo = 0, hi = nt - 1;
+        while (lo < hi) { var mid = (lo + hi) >> 1; if (cum[mid] < r) lo = mid + 1; else hi = mid; }
+        v1.fromBufferAttribute(p, idx ? idx.getX(lo * 3) : lo * 3).applyMatrix4(m);
+        v2.fromBufferAttribute(p, idx ? idx.getX(lo * 3 + 1) : lo * 3 + 1).applyMatrix4(m);
+        v3.fromBufferAttribute(p, idx ? idx.getX(lo * 3 + 2) : lo * 3 + 2).applyMatrix4(m);
+        var u = Math.random(), v = Math.random();
+        if (u + v > 1) { u = 1 - u; v = 1 - v; }
+        var w = 1 - u - v;
+        out[off * 3] = v1.x * w + v2.x * u + v3.x * v;
+        out[off * 3 + 1] = v1.y * w + v2.y * u + v3.y * v;
+        out[off * 3 + 2] = v1.z * w + v2.z * u + v3.z * v;
+      }
+    }
+    var filled = off;
+    if (filled < 10) return null;
+    for (; off < count; off++) {   /* 配额取整余下的回绕补齐 */
+      var s0 = (off % filled) * 3;
+      out[off * 3] = out[s0]; out[off * 3 + 1] = out[s0 + 1]; out[off * 3 + 2] = out[s0 + 2];
+    }
+    return normalizePts(out, 4.4);
+  }
+
+  /* ---------- 预设模型：本馆零件库（门楼已撤）+ 压轴全园鸟瞰 ---------- */
+  var PRESETS = [
+    { id: 'bronze-ding', fb: fbDing },
+    { id: 'stone-lion', fb: fbLion },
+    { id: 'horse', fb: fbHorse },
+    { id: 'taihu-rock', fb: fbRock },
+    { id: '__museum', fb: null }        /* 压轴必须是整体：自动播到时才现采 */
+  ];
+  var store = {}, cur = 0;
+  var loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
+  function applyPreset(P) {
+    if (!store[P.id]) return;
+    base.set(store[P.id]);
+    spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
+    if (P.id === '__museum') {
+      rotXT = 0.55;               /* 三分俯视，呈现沙盘感 */
+      if (density < 24000) {      /* 全园粒子多，自动提密度 */
+        density = 24000;
+        dEl.value = 24000;
+        dVal.textContent = '24000 粒';
+      }
+    }
+  }
+  function loadPreset(P) {
+    if (store[P.id]) { if (PRESETS[cur] === P) applyPreset(P); return; }
+    if (P.id === '__museum') {
+      setStatus('正在生成全园粒子沙盘…');
+      setTimeout(function () {
+        var pts = null;
+        try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
+        store[P.id] = pts || fbGate();
+        if (PRESETS[cur] === P) applyPreset(P);
+        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '全园粒子沙盘就绪 · 移动鼠标旋转');
+      }, 30);
+      return;
+    }
+    if (!loader) { store[P.id] = P.fb(); if (PRESETS[cur] === P) applyPreset(P); return; }
+    loader.load('assets/models/parts/' + P.id + '.glb', function (g) {
+      var pts = null;
+      try { pts = sampleObject(g.scene, MAXN); } catch (e) { pts = null; }
+      store[P.id] = pts || P.fb();
+      if (PRESETS[cur] === P) applyPreset(P);
+    }, undefined, function () {
+      store[P.id] = P.fb();
+      if (PRESETS[cur] === P) applyPreset(P);
+    });
+  }
+  base.set(fbDing());
+  for (var pli = 0; pli < PRESETS.length - 1; pli++) loadPreset(PRESETS[pli]);   /* 压轴不预载，播到时现采 */
+
+  /* ---------- 交互状态 ---------- */
+  var spread = 1, spreadT = 1;
+  var rotX = 0, rotY = 0, rotXT = 0, rotYT = 0, spin = 0;
+  var handSeen = false;
+  var density = 9000;
+  /* 自动巡展：按序播放各预设，压轴全园沙盘，循环不中断（加载动画） */
+  var autoOn = true, autoIdx = 0, autoT = 0;
+  var hsl = { h: 0, s: 0, l: 0 };
+  var baseHue = tmpC.set('#3a3f4a').getHSL(hsl).h;   /* 默认花青墨 */
+
+  function d3(p, q) {
+    var dx = p.x - q.x, dy = p.y - q.y, dz = (p.z || 0) - (q.z || 0);
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+  function onHand(res) {
+    var lms = res.multiHandLandmarks;
+    if (lms && lms.length) {
+      var lm = lms[0];
+      var palm = d3(lm[0], lm[9]) + 1e-6;
+      var open = (d3(lm[0], lm[8]) + d3(lm[0], lm[12]) + d3(lm[0], lm[16]) + d3(lm[0], lm[20])) / 4 / palm;
+      var k = (open - 1.25) / 0.8;
+      k = Math.max(0, Math.min(1, k));
+      spreadT = 0.45 + k * 1.35;
+      rotYT = (0.5 - lm[9].x) * Math.PI * 2.2;
+      rotXT = (lm[9].y - 0.5) * Math.PI * 1.1;
+      if (!handSeen) { handSeen = true; setStatus('手势追踪中 · 张开手掌让粒子散开'); }
+    } else {
+      if (handSeen) setStatus('未检测到手 · 移动鼠标也可旋转');
+      handSeen = false;
+      spreadT = 1;
+    }
+  }
+
+  /* ---------- MediaPipe Hands ---------- */
+  var mpCam = null, mpHands = null;
+  (function initHands() {
+    if (!window.Hands || !window.Camera) {
+      setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）');
+      return;
+    }
+    try {
+      mpHands = new Hands({
+        locateFile: function (f) { return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f; }
+      });
+      mpHands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
+      mpHands.onResults(onHand);
+      mpCam = new Camera(video, {
+        onFrame: function () { mpHands.send({ image: video }); },
+        width: 320, height: 240
+      });
+      var p = mpCam.start();
+      if (p && p.then) {
+        p.then(function () { setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）'); },
+          function () { setStatus('摄像头不可用 · 鼠标模式：移动旋转 / 按住散开'); });
+      } else {
+        setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）');
+      }
+    } catch (e) {
+      setStatus('手势初始化失败 · 鼠标模式：移动旋转 / 按住散开');
+    }
+  })();
+
+  /* ---------- 鼠标 / 触摸回退 ---------- */
+  overlay.addEventListener('pointermove', function (e) {
+    if (handSeen || e.target !== canvas) return;
+    rotYT = (0.5 - e.clientX / window.innerWidth) * Math.PI * 2.2;
+    rotXT = (e.clientY / window.innerHeight - 0.5) * Math.PI * 1.1;
+  });
+  overlay.addEventListener('pointerdown', function (e) {
+    if (e.target === canvas && !handSeen) spreadT = 1.8;
+  });
+  window.addEventListener('pointerup', function () { if (!handSeen) spreadT = 1; });
+
+  /* ---------- UI 控件 ---------- */
+  var mBtns = document.querySelectorAll('#introModels button');
+  function showPreset(idx) {
+    var j;
+    for (j = 0; j < mBtns.length; j++) mBtns[j].classList.toggle('on', j === idx);
+    cur = idx;
+    loadPreset(PRESETS[idx]);
+  }
+  for (i = 0; i < mBtns.length; i++) {
+    mBtns[i].addEventListener('click', function () {
+      /* 加载动画巡展不中断：点选只是跳到该件，随后继续按序播放 */
+      var idx = +this.getAttribute('data-m');
+      autoIdx = idx; autoT = 0;
+      showPreset(idx);
+    });
+  }
+  document.getElementById('introColor').addEventListener('input', function () {
+    baseHue = tmpC.set(this.value).getHSL(hsl).h;
+  });
+  var dEl = document.getElementById('introDensity'), dVal = document.getElementById('introDensityVal');
+  dEl.addEventListener('input', function () {
+    density = +dEl.value;
+    dVal.textContent = density + ' 粒';
+  });
+  var fullBtn = document.getElementById('introFull');
+  fullBtn.addEventListener('click', function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  });
+  document.addEventListener('fullscreenchange', function () {
+    fullBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+  });
+
+  /* ---------- 进入博物馆：收场并释放资源 ---------- */
+  var running = true;
+  document.getElementById('introEnter').addEventListener('click', function () {
+    overlay.classList.add('bye');
+    running = false;
+    try { if (mpCam) mpCam.stop(); } catch (e) {}
+    try { if (mpHands) mpHands.close(); } catch (e) {}
+    try { if (video.srcObject) video.srcObject.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+    setTimeout(function () {
+      overlay.style.display = 'none';
+      renderer.dispose();
+    }, 850);
+  });
+
+  window.addEventListener('resize', function () {
+    if (!running) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  /* ---------- 主循环（无逐帧新对象） ---------- */
+  var clock = new THREE.Clock();
+  function tick() {
+    if (!running) return;
+    requestAnimationFrame(tick);
+    var rdt = clock.getDelta();
+    var dt = Math.min(rdt, 0.05), t = clock.elapsedTime;
+    /* 自动巡展：每个展品停留约 4.4s，压轴全园沙盘停留 8.5s，然后循环（按真实时间走，低帧率不拖慢） */
+    if (autoOn) {
+      autoT += rdt;
+      var autoDur = (autoIdx === PRESETS.length - 1) ? 8.5 : 4.4;
+      if (autoT >= autoDur) {
+        autoT = 0;
+        autoIdx = (autoIdx + 1) % PRESETS.length;
+        showPreset(autoIdx);
+      }
+    }
+    if (!handSeen) spin += dt * 0.25;
+    rotY += (rotYT - rotY) * 0.06;
+    rotX += (rotXT - rotX) * 0.06;
+    spread += (spreadT - spread) * 0.07;
+    cloud.rotation.y = spin + rotY;
+    cloud.rotation.x = rotX * 0.7;
+    var hueBase = baseHue + (spin + rotY) * 0.03;   /* 色相仅随旋转轻微漂移，不走霓虹 */
+    var n = density, i3, br;
+    for (var k = 0; k < n; k++) {
+      i3 = k * 3;
+      br = spread + Math.sin(t * 1.8 + phase[k]) * 0.035;
+      pos[i3] = base[i3] * br;
+      pos[i3 + 1] = base[i3 + 1] * br;
+      pos[i3 + 2] = base[i3 + 2] * br;
+      /* 墨分五色：浓淡偏移为主，微呼吸，积墨处自深 */
+      var li2 = 0.3 + hueOff[k] * 0.9 + 0.05 * Math.sin(t * 2.2 + phase[k] * 2);
+      tmpC.setHSL((hueBase + hueOff[k] * 0.15 + 2) % 1, 0.42, Math.max(0.12, Math.min(0.55, li2)));
+      col[i3] = tmpC.r; col[i3 + 1] = tmpC.g; col[i3 + 2] = tmpC.b;
+    }
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.color.needsUpdate = true;
+    geo.setDrawRange(0, n);
+    stars.rotation.y -= dt * 0.02;
+    stars.rotation.x = Math.sin(t * 0.05) * 0.05;
+    for (bi = 0; bi < blobs.length; bi++) {
+      blobs[bi].position.x = blobs[bi].userData.bx + Math.sin(t * 0.04 + bi * 2.1) * 0.7;
+    }
+    renderer.render(scene, camera);
+  }
+  tick();
+})();
