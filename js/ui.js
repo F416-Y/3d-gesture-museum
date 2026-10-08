@@ -274,6 +274,10 @@ window.MuseumUI = (function () {
     el.panel.setAttribute("aria-hidden", "true");
   }
 
+  function isPanelOpen() {
+    return !!(el.panel && el.panel.classList.contains("open"));
+  }
+
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
@@ -291,6 +295,7 @@ window.MuseumUI = (function () {
     toast: toast,
     showExhibit: showExhibit,
     hidePanel: hidePanel,
+    isPanelOpen: isPanelOpen,
     setHandlers: function (h) {
       for (var k in h) if (h.hasOwnProperty(k)) handlers[k] = h[k];
     },
