@@ -3,9 +3,11 @@
     <div class="map-card">
       <h2 class="card-title">云墨美术馆 · 园区平面图</h2>
       <p class="map-hint">上 = 北（z 负方向）｜ 园区 100 × 80 m ｜ 红点是当前位置</p>
-      <svg class="map-svg" viewBox="0 0 920 920" xmlns="http://www.w3.org/2000/svg">
+      <div class="map-canvas">
+        <img class="map-base" src="../../assets/images/plan-top.png" alt="园区俯视渲染图" />
+        <svg class="map-svg" viewBox="0 0 920 920" xmlns="http://www.w3.org/2000/svg">
         <!-- 围墙围合的园区：世界坐标 x ±50、z ±40 -->
-        <rect x="40" y="124" width="840" height="672" fill="#e8e2d6" stroke="#8a7a68" stroke-width="3" />
+        <rect x="40" y="124" width="840" height="672" fill="none" stroke="rgba(90,74,58,0.5)" stroke-width="2" />
 
         <!-- 水面：荷池庭院 + 水榭庭院 -->
         <rect x="590" y="510" width="93" height="84" fill="#7a8fa0" opacity="0.85" rx="10" />
@@ -14,24 +16,25 @@
         <!-- 装饰院落（亭轩/小院，只做碰撞体） -->
         <g v-for="c in courts" :key="c.id">
           <rect :x="toSvg(c.x0)" :y="toSvg(c.z0)" :width="(c.x1 - c.x0) * SCALE"
-                :height="(c.z1 - c.z0) * SCALE" fill="#ded3bd" stroke="#b3a58c" stroke-width="1.2" />
+                :height="(c.z1 - c.z0) * SCALE" fill="rgba(222,211,189,0.15)" stroke="rgba(179,165,140,0.6)" stroke-width="1.2" />
         </g>
 
         <!-- 八个展厅 / 区域（坐标与新布局 hallRegions 一致） -->
         <g v-for="h in halls" :key="h.id">
           <rect :x="toSvg(h.x0)" :y="toSvg(h.z0)" :width="(h.x1 - h.x0) * SCALE"
-                :height="(h.z1 - h.z0) * SCALE" :fill="h.color" stroke="#5a4a3a" stroke-width="1.5" rx="2" />
+                :height="(h.z1 - h.z0) * SCALE" :fill="h.color" opacity="0.16" stroke="#5a4a3a" stroke-width="1.5" rx="2" />
           <text :x="toSvg((h.x0 + h.x1) / 2)" :y="toSvg((h.z0 + h.z1) / 2) + 5"
                 text-anchor="middle" class="hall-label">{{ h.name }}</text>
         </g>
 
         <!-- 南入口：六级大台阶 + 门楼 -->
-        <rect x="401" y="761" width="118" height="34" fill="#7a3b2e" rx="3" />
+        <rect x="401" y="761" width="118" height="34" fill="rgba(122,59,46,0.35)" rx="3" />
         <text x="460" y="783" text-anchor="middle" class="hall-label" fill="#f5f1e8">南门</text>
 
         <!-- 当前位置红点 -->
         <circle :cx="playerSvg.x" :cy="playerSvg.y" r="7" fill="#c4342a" />
       </svg>
+        </div>
       <RouterLink class="back-link" to="/">← 返回博物馆</RouterLink>
     </div>
   </div>
@@ -86,6 +89,8 @@ onUnmounted(() => {
 .map-page { align-items: flex-start; padding-top: 24px; }
 .map-card { width: 820px; max-width: 96vw; background: #fffdf8; border-radius: 12px; padding: 24px 28px; box-shadow: 0 8px 30px rgba(60,40,20,.15); }
 .map-hint { color: #8a7a68; font-size: 13px; margin: -10px 0 14px; }
-.map-svg { width: 100%; height: auto; display: block; border-radius: 8px; }
+.map-canvas { position: relative; width: 100%; }
+.map-base { width: 100%; height: auto; display: block; border-radius: 8px; }
+.map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hall-label { font-size: 12px; fill: #3a2c22; pointer-events: none; }
 </style>
