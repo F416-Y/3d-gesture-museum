@@ -79,7 +79,6 @@ window.MuseumMain = (function () {
     resize();
 
     // 完成加载，显示主界面
-    MuseumUI.setLoading("展厅布置完成 · 正在唤醒摄像头……");
     setTimeout(function () {
       MuseumUI.hideLoading();
       MuseumUI.toast("欢迎来到云墨美术馆 · 伸出手掌开始漫游");
@@ -145,17 +144,14 @@ window.MuseumMain = (function () {
   /* ---------- 摄像头开关 ---------- */
   function toggleCamera(on) {
     if (on && !cameraOn) {
-      MuseumUI.setLoading("正在请求摄像头权限……");
       MuseumGesture.init(MuseumUI.getVideo()).then(function () {
         cameraOn = true;
         MuseumUI.setCameraButton(true);
         MuseumUI.showCam(true);
-        MuseumUI.setLoading("手势识别已就绪");
       }).catch(function (err) {
         cameraOn = false;
         MuseumUI.setCameraButton(false);
         MuseumUI.showCam(false);
-        MuseumUI.setLoading("摄像头不可用 · 已切换键盘模式");
         console.warn("[云墨美术馆] 手势启动失败：", err && err.message ? err.message : err);
       }).then(function () {
         setTimeout(function () { MuseumUI.hideLoading(); }, 500);
