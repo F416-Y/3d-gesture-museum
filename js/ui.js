@@ -24,8 +24,6 @@ window.MuseumUI = (function () {
 
   /* ---------- 初始化 DOM 引用 ---------- */
   function init() {
-    el.loading = document.getElementById("loading");
-    el.loadingText = document.getElementById("loading-text");
     el.stage = document.getElementById("stage");
     el.topbar = document.getElementById("topbar");
     el.hallLabel = document.getElementById("hall-label");
@@ -75,11 +73,7 @@ window.MuseumUI = (function () {
   }
 
   /* ---------- 加载层 ---------- */
-  function setLoading(text) {
-    if (el.loadingText) el.loadingText.textContent = text || "正在布置展厅……";
-  }
   function hideLoading() {
-    if (el.loading) el.loading.classList.add("hidden");
     if (el.topbar) el.topbar.classList.remove("hidden");
     if (el.toolbar) el.toolbar.classList.remove("hidden");
     if (el.help) el.help.classList.remove("hidden");
