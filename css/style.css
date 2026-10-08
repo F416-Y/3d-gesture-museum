@@ -380,4 +380,10 @@ button { font-family: inherit; cursor: pointer; }
   .camwrap { width: 120px; right: 14px; top: 84px; }
   .camwrap video { height: 80px; }
   .panel-card { padding: 26px 22px 24px; }
+  /* 鉴赏弹窗内收藏 / 评论区窄屏适配（组员5）：输入+发送堆叠、收藏按钮收宽、留言换行 */
+  .panel-card .p-cmt-form { flex-wrap: wrap; }
+  .panel-card .p-cmt-input { flex: 1 1 100%; }
+  .panel-card .p-cmt-send { flex: 1 1 auto; margin-top: 6px; padding: 8px 0; }
+  .panel-card .p-fav-btn { padding: 7px 14px; }
+  .panel-card .p-cmt-rows li { flex-wrap: wrap; }
 }
