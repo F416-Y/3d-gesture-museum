@@ -283,7 +283,6 @@ window.MuseumUI = (function () {
   /* ---------- 对外 API ---------- */
   return {
     init: init,
-    setLoading: setLoading,
     hideLoading: hideLoading,
     toggleHelp: toggleHelp,
     setCameraButton: setCameraButton,
