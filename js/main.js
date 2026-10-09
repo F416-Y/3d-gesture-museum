@@ -64,12 +64,22 @@ window.MuseumMain = (function () {
     /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
     if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
     MuseumPlayer.init(camera);
+    if (window.MuseumInteriorOnly) {
+      var interiorSpawns = {
+        hall0: [0, 29, 0], hall1: [-25, -13, Math.PI / 2],
+        hall2: [0, -16, 0], hall3: [25, -13, 0],
+        hall4: [24, 13, -Math.PI / 2], hall5: [-24, 13, Math.PI / 2]
+      };
+      var interiorSpawn = interiorSpawns[window.MuseumInteriorHall] || interiorSpawns.hall4;
+      MuseumPlayer.teleport(interiorSpawn[0], interiorSpawn[1], interiorSpawn[2]);
+    }
     MuseumExhibit.init();
 
     // 回调接线
     MuseumPlayer.setOnHallChange(function (hallId) {
       MuseumUI.setHall(hallId);
     });
+    if (window.MuseumInteriorOnly) MuseumUI.setHall(window.MuseumInteriorHall || "hall4");
     MuseumExhibit.setOnFocusChange(function (exhibitId) {
       if (exhibitId) {
          MuseumUI.toast("靠近展品 · 捏合两指（三指张开）或按 E 查看");
