@@ -111,15 +111,17 @@
   <!-- three.js 本地化：原 jsdelivr CDN 在国内常不可达，断网/答辩会白屏 -->
   <script src="./js/vendor/three.min.js"></script>
   <script src="./js/vendor/GLTFLoader.js"></script>
-  <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（WASM 与 hand_landmarker.task 由代码运行时从官方 CDN 加载） -->
+  <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（已本地化：js/vendor/mediapipe/，
+       WASM 与 hand_landmarker.task 由 gesture.js 从本地路径加载，断网可用） -->
   <!-- 注意：vision_bundle.js 是「UMD 外层 + 末尾 ESM export」的混合产物，
        用普通 <script src> 会直接报 "Uncaught SyntaxError: Unexpected token 'export'"，
-       所以必须用动态 import() 载入；载入后把 FilesetResolver / HandLandmarker 暴露到全局，
+       所以必须用动态 import() 载入（@vite-ignore 防止 Vite 打包时改写路径）；
+       载入后把 FilesetResolver / HandLandmarker 暴露到全局，
        并派发 mediapipe-ready 事件，供 gesture.js（普通脚本）等待使用。 -->
   <script type="module">
     window.MediaPipeReady = (async function () {
       try {
-        var vision = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/vision_bundle.js");
+        var vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
         window.FilesetResolver = vision.FilesetResolver;
         window.HandLandmarker = vision.HandLandmarker;
         window.MediaPipeVision = vision;
