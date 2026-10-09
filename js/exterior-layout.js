@@ -659,16 +659,6 @@ window.MuseumExteriorLayout = (function () {
           fenceRun(r[0], cz + gateW / 2 + 0.7, r[0], r[3]);
         }
         gateHouse(k, cx, cz, x0, x1, z0, z1, gateW, label);
-      } else if (opts.backdoor && k === { N: 'S', S: 'N', E: 'W', W: 'E' }[entry]) {
-        /* 后门：后墙留 1.8m 门洞 + 小门楼（无匾） */
-        if (k === 'N' || k === 'S') {
-          fenceRun(r[0], r[1], cx - 0.9 - 0.35, r[1]);
-          fenceRun(cx + 0.9 + 0.35, r[1], r[2], r[1]);
-        } else {
-          fenceRun(r[0], r[1], r[0], cz - 0.9 - 0.35);
-          fenceRun(r[0], cz + 0.9 + 0.35, r[0], r[3]);
-        }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, 1.8, null);
       } else if (opts.sideDoors && opts.sideDoors[k] !== undefined) {
         /* 侧门（对齐游廊端头）：围栏留 1.8m 门洞 + 小门楼（无匾），做法同后门 */
         var at = opts.sideDoors[k];
@@ -731,18 +721,13 @@ window.MuseumExteriorLayout = (function () {
    *  区域构建函数（按官方总平面 + 细分参考图尺寸落位）
    * ===================================================================== */
 
-  /* ---------- 外墙一周（按官方墙体平面图：北墙中央 13m 外凸 3m 作北门楼， ---------- *
-   * ---------- 南墙中央内凹两级形成主入口外广场，x ±50 / z ±40 为外包络） ---------- */
+  /* ---------- 外墙一周（北墙拉直，南墙中央内凹形成主入口外广场） ---------- */
   function buildBoundary() {
     /* 西墙、东墙：直墙 */
     wallRun(-50, -40, -50, 40);
     wallRun(50, -40, 50, 40);
-    /* 北墙：主线 z=-40，中央 x±6.5 外凸至 z=-43（北门楼跨坐凸出部） */
-    wallRun(-50, -40, -6.5, -40);
-    wallRun(-6.5, -40, -6.5, -43);
-    wallRun(-6.5, -43, 6.5, -43);
-    wallRun(6.5, -43, 6.5, -40);
-    wallRun(6.5, -40, 50, -40);
+    /* 北墙拉直为 z=-40：北门与中央外凸部整体取消。 */
+    wallRun(-50, -40, 50, -40);
     /* 南墙：角段 z=40（x ±26~±50）→ 内折 → 中段 z=36（x ±11~±26）→ 内折，中央 x±11 开口（序厅大门） */
     wallRun(26, 40, 50, 40);
     wallRun(26, 40, 26, 36);
@@ -755,8 +740,6 @@ window.MuseumExteriorLayout = (function () {
     /* 入口两翼马头墙墩 */
     horseHeadWall(-11.6, 39.6, 0);
     horseHeadWall(11.6, 39.6, 0);
-    horseHeadWall(-7.2, -40, Math.PI);
-    horseHeadWall(7.2, -40, Math.PI);
   }
 
   /* ---------- 南入口（墙外）：六级大台阶从序厅门脸 z34.5 向南下 + 石狮 + 石灯 + 石板路 ---------- */
@@ -982,8 +965,7 @@ window.MuseumExteriorLayout = (function () {
         var bp = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.24), new THREE.MeshBasicMaterial({ map: bt }));
         bp.position.set(0, 1.06, 0.032); gb.add(bp);
       }
-      guideBoard(-3.2, 32.4, 0.3, '全园导览', ['序厅 · 青铜方鼎', '中轴 · 影壁水榭', '中心庭 · 筒车水院', '山水 花鸟 人物三馆', '书斋 茶室 文创 临摹']);
-      guideBoard(3.2, 32.4, -0.3, '观展动线', ['正门入园 → 序厅', '月洞门 → 侧院游廊', '西长廊 → 山水馆', '北行 → 花鸟馆', '东长廊 → 人物馆', '南园 → 书斋文创']);
+      /* 门口不再摆放导览立牌：入口视线留给正门、台阶和青铜方鼎。 */
       /* 序厅暖光一盏（夜间与其他厅同步增强） */
       var xpl = new THREE.PointLight(0xffe9cf, 1.1, 14, 1);
       xpl.position.set(0, 3.6, 29.8); S.scene.add(xpl);
@@ -994,45 +976,22 @@ window.MuseumExteriorLayout = (function () {
     return g;
   }
 
-  /* ---------- 北门楼（13m，跨坐北墙外凸部，z -42.6~-40.6） ---------- */
-  function buildNorthGate() {
-    var g = new THREE.Group(); S.scene.add(g);
-    var z = -41.6;
-    box(3.2, 3.2, 1.1, M.paper, -4.9, 1.6, z, 0, g);
-    box(3.2, 3.2, 1.1, M.paper, 4.9, 1.6, z, 0, g);
-    box(6.6, 1.1, 1.1, M.paper, 0, 3.0, z, 0, g);
-    box(6.4, 2.6, 0.3, M.ink, 0, 1.3, z, 0, g);
-    var d1 = box(1.5, 2.5, 0.1, M.door, -0.78, 1.25, z + 0.35, 0, g);
-    var d2 = box(1.5, 2.5, 0.1, M.door, 0.78, 1.25, z + 0.35, 0, g);
-    d1.castShadow = d2.castShadow = false;
-    var xs = [-5.8, 5.8], zs = [z - 1.0, z + 1.0], i, j;
-    for (i = 0; i < 2; i++) for (j = 0; j < 2; j++) {
-      cyl(0.26, 0.3, 0.35, 8, M.stone, xs[i], 3.6, zs[j], g);
-      cyl(0.17, 0.19, 2.2, 10, M.wood, xs[i], 4.85, zs[j], g);
-    }
-    box(12.6, 0.3, 0.26, M.wood, 0, 6.1, z - 1.0, 0, g);
-    box(12.6, 0.3, 0.26, M.wood, 0, 6.1, z + 1.0, 0, g);
-    hipRoof(14.2, 4.8, 2.2, 0, 6.3, z, g);
-    plaque('北门', 1.6, 0, 4.6, z + 1.35, 0, g);
-    return g;
-  }
-
   /* ---------- 展厅群（细分参考图尺寸，殿厅加大版） ----------
    * 花鸟 22×16.5 主厅重檐 / 山水 17.5×15 / 人物 17.5×11 / 景韵轩 12×9.5
    * 文创·临摹 各 11×13（正房加深至 6m） / 书斋·茶室 各 8×13（小筑加深至 5.5m） */
-  function buildHuaniao()  { buildCourtComplex(0, -29.25, 22, 16.5, 'S', '花鸟', { gateW: 4, wallH: 3.4, hallD: 8.5, chongyan: true, treeScale: 1.0, backdoor: true }); }
+  function buildHuaniao()  { buildCourtComplex(0, -29.25, 22, 16.5, 'S', '花鸟', { gateW: 4, wallH: 3.4, hallD: 8.5, chongyan: true, treeScale: 1.0 }); }
   function buildShanshui() { buildCourtComplex(-37.25, -12.5, 17.5, 15, 'E', '山水', { gateW: 4, wallH: 3.4, hallD: 8.5, treeScale: 1.0 }); }   /* 后门已取消：架排后墙封死 */
-  function buildRenwu()    { buildCourtComplex(36.75, -15.5, 17.5, 11, 'S', '人物', { gateW: 4, wallH: 3.2, hallD: 5.5, backdoor: true, sideDoors: { W: -16 } }); }
-  function buildYaji()     { buildHall(-38, -29.5, 12, 7, 'S', '雅集', { backdoor: true }); }
-  function buildJingyun()  { buildCourtComplex(39, -30, 12, 9.5, 'S', '景韵', { gateW: 2.4, wallH: 3.0, hallD: 4.8, treeScale: 0.75, backdoor: true }); }
+  function buildRenwu()    { buildCourtComplex(36.75, -15.5, 17.5, 11, 'S', '人物', { gateW: 4, wallH: 3.2, hallD: 5.5, sideDoors: { W: -16 } }); }
+  function buildYaji()     { buildHall(-38, -29.5, 12, 7, 'S', '雅集', {}); }
+  function buildJingyun()  { buildCourtComplex(39, -30, 12, 9.5, 'S', '景韵', { gateW: 2.4, wallH: 3.0, hallD: 4.8, treeScale: 0.75 }); }
   /* （收藏室已取消，兰竹庭院东侧留作绿地） */
   function buildWenchuang() {
-    buildCourtComplex(-39.5, 14.5, 11, 13, 'E', '文创', { gateW: 2.4, wallH: 2.8, hallD: 6, backdoor: true });
-    buildCourtComplex(-39.5, 28.5, 11, 13, 'E', '临摹', { gateW: 2.4, wallH: 2.8, hallD: 6, backdoor: true });
+    buildCourtComplex(-39.5, 14.5, 11, 13, 'E', '文创', { gateW: 2.4, wallH: 2.8, hallD: 6 });
+    buildCourtComplex(-39.5, 28.5, 11, 13, 'E', '临摹', { gateW: 2.4, wallH: 2.8, hallD: 6 });
   }
   function buildShuzhaiChashi() {
-    buildCourtComplex(38, 12.5, 8, 13, 'W', '书斋', { gateW: 2.4, wallH: 2.8, hallD: 5.5, backdoor: true });
-    buildCourtComplex(38, 26.5, 8, 13, 'W', '茶室', { gateW: 2.4, wallH: 2.8, hallD: 5.5, backdoor: true });
+    buildCourtComplex(38, 12.5, 8, 13, 'W', '书斋', { gateW: 2.4, wallH: 2.8, hallD: 5.5 });
+    buildCourtComplex(38, 26.5, 8, 13, 'W', '茶室', { gateW: 2.4, wallH: 2.8, hallD: 5.5 });
   }
   /* （西南 / 东南角门房已取消，留作绿地） */
 
@@ -1533,7 +1492,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 兰竹庭院（6×4m 内院 + 南侧 6m 门厅，x 28~38, z -4~6） ---------- */
   function buildLanzhuCourt() {
     /* 南侧门厅（6m 宽 3m 深，墙 4m 高带月洞窗，北向后门通内院） */
-    buildHall(33, 4.4, 6, 3, 'S', '兰竹', { backdoor: true });
+    buildHall(33, 4.4, 6, 3, 'S', '兰竹', {});
     /* 内院：x 30~36, z -3~1 */
     var g = new THREE.Mesh(new THREE.PlaneGeometry(6, 4), M.plaza);
     g.rotation.x = -Math.PI / 2; g.position.set(33, 0.045, -1); g.receiveShadow = true;
@@ -1986,7 +1945,6 @@ window.MuseumExteriorLayout = (function () {
     buildBoundary();
     buildSouthEntry();
     buildXuting();            // 序厅组（22m 宽：14m 中院 + 两侧 4m 侧院）
-    buildNorthGate();
     buildHuaniao();           // 花鸟 18×15（重檐正房）
     buildShanshui();          // 山水 15×15
     buildRenwu();             // 人物 16×9

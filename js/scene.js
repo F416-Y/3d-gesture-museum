@@ -2669,14 +2669,13 @@ window.MuseumScene = (function () {
    * 数据来源：docs/外观原型-坐标对接表.md（组长按原型抽的院墙/台基范围）。
    * 原型只画外观、不提供碰撞体，这里按表逐栋补上。
    * 规则：
-   *   - 院落式：登记一圈院墙，主门洞（表里「洞口宽」）与后门断开；
+   *   - 院落式：登记一圈院墙，只保留主门洞与必要的侧门；
    *     人物厅西墙另有 2.5m 侧门（对齐游廊端头）。
    *   - 单体式（雅集/兰竹）：没有院墙，按正房面阔×进深登记四面墙，
    *     正门 2.6m / 后门 1.8m 断开（与 buildHall 实际留洞一致）。
    *   - ⚠️ 台基一律不登记：序厅 1.2m 高台由 player.js 的 terrainHeightAt 高度跟随处理。
    * ============================================================ */
   var WALL_T = 0.4;        // 墙体厚（对齐原型 wallRun/fenceRun 的量级）
-  var BACK_DOOR_W = 1.8;   // 院落式后门净宽（原型 buildCourtComplex「后墙留 1.8m 门洞」）
 
   function rectObs(x0, z0, x1, z1) {
     obstacles.push({ type: "rect", x0: Math.min(x0, x1), z0: Math.min(z0, z1),
@@ -2704,18 +2703,14 @@ window.MuseumScene = (function () {
     });
   }
 
-  /* 一圈院墙/墙体：四边各挖该边的门洞（主门 / 后门 / 侧门）。
-     b.noBack = true 表示该院无后门（原型调用里不带 backdoor，后墙整面封死） */
+  /* 一圈院墙/墙体：只挖主门与明确登记的侧门，后墙始终封实。 */
   function pushEnclosure(b) {
     var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
-    var back = { N: 'S', S: 'N', E: 'W', W: 'E' }[b.entry];
-    var backW = b.backW || BACK_DOOR_W;
     function gaps(side) {
       var alongX = (side === 'N' || side === 'S');
       var g = [];
       if (side === b.entry) g.push({ c: alongX ? cx : cz, w: b.gate });
-      else if (side === back && !b.noBack) g.push({ c: alongX ? cx : cz, w: backW });
-      if (b.sideDoor && b.sideDoor[side] !== undefined) g.push({ c: b.sideDoor[side], w: BACK_DOOR_W });
+      if (b.sideDoor && b.sideDoor[side] !== undefined) g.push({ c: b.sideDoor[side], w: 1.8 });
       return g;
     }
     pushWallRun('x', b.z0, b.x0, b.x1, gaps('N'));
@@ -2755,10 +2750,7 @@ window.MuseumScene = (function () {
       pushEnclosure({
         x0: h.cx - h.w / 2, x1: h.cx + h.w / 2,
         z0: h.cz - h.d / 2, z1: h.cz + h.d / 2,
-        entry: h.entry, gate: 2.6, backW: 1.8,
-        /* 山水馆后门已取消：原型 buildShanshui 的 opts 里没有 backdoor，
-           该开关同时管「馆本体后墙」与「院墙后门」两处（见原型 buildHall:659 / buildCourtComplex:811） */
-        noBack: h.tag === '山水',
+        entry: h.entry, gate: 2.6,
       });
     });
   }
@@ -2786,15 +2778,8 @@ window.MuseumScene = (function () {
     /* 东、西两墙 */
     seg(-50, -40, -50, 40);
     seg(50, -40, 50, 40);
-    /* 北墙：中央 x±6.5 外凸至 z=-43（北门楼），中间留空为北门 */
-    seg(-50, -40, -6.5, -40);
-    seg(-6.5, -40, -6.5, -43);
-    seg(-6.5, -43, 6.5, -43);
-    seg(6.5, -43, 6.5, -40);
-    seg(6.5, -40, 50, -40);
-    /* 北门楼内两侧墙垛（原型 z -42.15~-41.05、x ±3.3~±6.5 的实体，中间 x±3.3 为门洞） */
-    rectObs(-6.5, -42.15, -3.3, -41.05);
-    rectObs(3.3, -42.15, 6.5, -41.05);
+    /* 北墙拉直为 z=-40，北门与中央外凸部整体取消。 */
+    seg(-50, -40, 50, -40);
     /* 南墙：两角 z=40 → 内折 z=36，中央 x±11 留作序厅大门 */
     seg(26, 40, 50, 40);
     seg(26, 40, 26, 36);
