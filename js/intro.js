@@ -16,6 +16,11 @@
  *  - 色相随旋转角连续偏移；基色 / 密度可调；深空星尘背景
  * ===================================================================== */
 (function () {
+  if (window.MuseumInteriorOnly) {
+    var interiorIntro = document.getElementById('intro');
+    if (interiorIntro) interiorIntro.style.display = 'none';
+    return;
+  }
   var overlay = document.getElementById('intro');
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
