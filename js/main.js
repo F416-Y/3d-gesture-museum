@@ -18,6 +18,7 @@ window.MuseumMain = (function () {
   var clock = new THREE.Clock();
   var cameraOn = false;
   var hallDoorPrompt = { door: null, dismissed: null };
+  var interiorExitPrompt = { armed: false, open: false, dismissed: false, hallId: null, x: 0, z: 0 };
 
   /* ---------- 全景俯瞰模式 ----------
    * player.js 每帧把相机锁在 1.6m 人眼高度、俯仰角为 0，所以只能第一人称。
@@ -64,6 +65,19 @@ window.MuseumMain = (function () {
     /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
     if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
     MuseumPlayer.init(camera);
+    if (!window.MuseumInteriorOnly) {
+      var returnHall = new URLSearchParams(location.search).get("returnHall");
+      if (returnHall) {
+        var returnDoor = (MuseumScene.hallDoors || []).filter(function (d) { return d.hallId === returnHall; })[0];
+        if (returnDoor) {
+          var returnGap = 3.2;
+          var returnYaw = Math.atan2(-returnDoor.nx, returnDoor.nz);
+          MuseumPlayer.teleport(returnDoor.x + returnDoor.nx * returnGap,
+            returnDoor.z + returnDoor.nz * returnGap, returnYaw);
+          hallDoorPrompt.dismissed = returnDoor;
+        }
+      }
+    }
     if (window.MuseumInteriorOnly) {
       var interiorSpawns = {
         hall0: [0, 29, 0], hall1: [-25, -13, Math.PI / 2],
@@ -72,6 +86,9 @@ window.MuseumMain = (function () {
       };
       var interiorSpawn = interiorSpawns[window.MuseumInteriorHall] || interiorSpawns.hall4;
       MuseumPlayer.teleport(interiorSpawn[0], interiorSpawn[1], interiorSpawn[2]);
+      interiorExitPrompt.hallId = window.MuseumInteriorHall || "hall4";
+      interiorExitPrompt.x = interiorSpawn[0];
+      interiorExitPrompt.z = interiorSpawn[1];
     }
     MuseumExhibit.init();
 
@@ -156,12 +173,20 @@ window.MuseumMain = (function () {
         /* 关闭确认窗等同于取消：离开门口后才允许再次触发。 */
         if (hallDoorPrompt.door) hallDoorPrompt.dismissed = hallDoorPrompt.door;
         hallDoorPrompt.door = null;
+        if (window.MuseumInteriorOnly && interiorExitPrompt.open) {
+          interiorExitPrompt.open = false;
+          interiorExitPrompt.dismissed = true;
+        }
       },
     });
   }
 
   /* ---------- 展厅闭门提示 ---------- */
   function updateHallDoorPrompt() {
+    if (window.MuseumInteriorOnly) {
+      updateInteriorExitPrompt();
+      return;
+    }
     if (panorama.on || MuseumUI.isPanelOpen()) return;
     var doors = MuseumScene.hallDoors || [];
     var p = MuseumPlayer.getPosition();
@@ -193,6 +218,31 @@ window.MuseumMain = (function () {
     }, function () {
       hallDoorPrompt.door = null;
       hallDoorPrompt.dismissed = nearest;
+    });
+  }
+
+  /* 内饰出口：先离开起始点再返回，避免刚进入就弹窗。 */
+  function updateInteriorExitPrompt() {
+    if (panorama.on || MuseumUI.isPanelOpen()) return;
+    var p = MuseumPlayer.getPosition();
+    var dx = p.x - interiorExitPrompt.x, dz = p.z - interiorExitPrompt.z;
+    var dist = Math.sqrt(dx * dx + dz * dz);
+    if (!interiorExitPrompt.armed) {
+      if (dist > 4.0) interiorExitPrompt.armed = true;
+      return;
+    }
+    if (dist > 4.2) {
+      interiorExitPrompt.dismissed = false;
+      return;
+    }
+    if (interiorExitPrompt.dismissed || interiorExitPrompt.open) return;
+    interiorExitPrompt.open = true;
+    MuseumUI.showHallPrompt("返回园区", function () {
+      interiorExitPrompt.open = false;
+      location.href = "./index.html?returnHall=" + encodeURIComponent(interiorExitPrompt.hallId) + "#/hall/plaza";
+    }, function () {
+      interiorExitPrompt.open = false;
+      interiorExitPrompt.dismissed = true;
     });
   }
 
@@ -265,7 +315,20 @@ window.MuseumMain = (function () {
       panorama.dist = 78;
       return;
     }
-    MuseumPlayer.reset();
+    if (window.MuseumInteriorOnly) {
+      var interiorSpawns = {
+        hall0: [0, 29, 0], hall1: [-25, -13, Math.PI / 2],
+        hall2: [0, -16, 0], hall3: [25, -13, 0],
+        hall4: [24, 13, -Math.PI / 2], hall5: [-24, 13, Math.PI / 2]
+      };
+      var s = interiorSpawns[window.MuseumInteriorHall] || interiorSpawns.hall4;
+      MuseumPlayer.teleport(s[0], s[1], s[2]);
+      interiorExitPrompt.armed = false;
+      interiorExitPrompt.open = false;
+      interiorExitPrompt.dismissed = false;
+    } else {
+      MuseumPlayer.reset();
+    }
     // 重置后相机姿态由下一帧 update 应用
     var p = MuseumPlayer.getPosition();
     camera.position.copy(p);
