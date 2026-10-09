@@ -3007,12 +3007,45 @@ window.MuseumScene = (function () {
   /* ============================================================
    * 对外 API
    * ============================================================ */
+  function buildInteriorOnly(hallId) {
+    /* 独立内饰页：只生成选中的展厅，不叠加园区外观或外部门。 */
+    var builders = {
+      hall0: buildHall0,
+      hall1: buildHall1,
+      hall2: buildHall2,
+      hall3: buildHall3,
+      hall4: buildHall4,
+      hall5: buildHall5
+    };
+    var buildOne = builders[hallId] || builders.hall4;
+    buildOne(scene);
+    scene.background = new _g.Color(0xece6d8);
+    scene.fog = new _g.Fog(0xece6d8, 28, 90);
+    var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 1.1);
+    scene.add(hemi);
+    var sun = new _g.DirectionalLight(0xfff0d8, 1.2);
+    sun.position.set(10, 16, 12);
+    scene.add(sun);
+    var bounds = {
+      hall0: [-10, 24, 10, 34], hall1: [-34, -22, -16, -4],
+      hall2: [-12, -24, 12, -8], hall3: [16, -22, 34, -4],
+      hall4: [16, 6, 32, 20], hall5: [-32, 6, -16, 20]
+    }[hallId] || [16, 6, 32, 20];
+    hallRegions[hallId || "hall4"] = { type: "rect", x0: bounds[0], z0: bounds[1], x1: bounds[2], z1: bounds[3] };
+  }
+
   return {
     init: function (opts) {
       scene = opts.scene;
       camera = opts.camera;
       obstacles.length = 0;
       spotMeshes.length = 0;
+
+      var interiorOnly = !!window.MuseumInteriorOnly;
+      if (interiorOnly) {
+        buildInteriorOnly(window.MuseumInteriorHall || "hall4");
+        return;
+      }
 
       /* 布局来源：严格遵循外观原型 tools/exterior-prototype.html
          （原作者 Kimi；整块搬入 js/exterior-layout.js）

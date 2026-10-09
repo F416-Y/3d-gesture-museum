@@ -179,7 +179,7 @@ window.MuseumMain = (function () {
     MuseumUI.showHallPrompt(nearest.tag, function () {
       hallDoorPrompt.door = null;
       hallDoorPrompt.dismissed = null;
-      location.hash = "#/hall/" + nearest.hallId;
+      location.href = "./interior.html#/hall/" + nearest.hallId;
     }, function () {
       hallDoorPrompt.door = null;
       hallDoorPrompt.dismissed = nearest;
