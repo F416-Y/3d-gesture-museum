@@ -9,7 +9,7 @@
  *   4. 输出统一手势状态给 main.js（与键盘输入合并）
  *
  * 手势约定（优先级从高到低）：
- *   捏合（拇指+食指靠近）→ pinch：查看展品 / 弹窗打开时关闭弹窗
+ *   捏合（拇指食指相捏、其余三指张开）→ pinch：查看展品 / 弹窗打开时关闭弹窗
  *   张开手掌（五指全伸）→ forward：向前漫游
  *   握拳（五指全收）   → back：向后退
  *   指点（仅食指伸出）→ turn：根据食指指向左右转向
@@ -295,8 +295,8 @@ window.MuseumGesture = (function () {
     var allOpen = ratios.every(function (r) { return r > cfg.forwardOpen; });
 
     // 手指卷曲度：指尖到「自己指根」的距离 ÷ 掌宽。
-    // 捏合时食指是伸着的（指尖够向拇指），握拳时食指卷进掌心——
-    // 两种姿态的「指尖到腕」距离几乎一样，但「指尖到指根」差很多，以此区分捏合与握拳
+    // 小于阈值=蜷曲（握拳判定）、大于阈值=伸展（捏合要求中/环/小三指张开）——
+    // 「指尖到腕」在手型切换时变化含糊，「指尖到指根」对蜷/伸最敏感
     var mcpIds = [5, 9, 13, 17];    // 食/中/环/小指的指根关节
     var tipIds = [8, 12, 16, 20];
     var curls = tipIds.map(function (tip, f) { return dist(lm[tip], lm[mcpIds[f]]) / base; });
@@ -358,11 +358,13 @@ window.MuseumGesture = (function () {
         var g = classify(result.landmarks[0]);
         state.active = true;
 
-        // 捏合：双阈值迟滞 + 食指必须伸展。
-        // 握拳时拇指搭在食指上、两指尖距离同样会越过阈值——但那时食指是蜷曲的，
-        // 用「食指卷曲度」把两种情况干净分开，假捏合不会再掐住握拳后退、也不会误触弹窗
+        // 捏合：双阈值迟滞 + 中/环/小三指必须张开（食指卷不卷都行——
+        // 捏合时食指本就弯成 C 形去够拇指，实测卷曲度 0.44 < 0.6，
+        // 旧版「食指必须伸展」会把真实捏合判成握拳，触发后退）。
+        // 三指张开与握拳的「四指皆蜷」构造上互斥，两种姿态不可能同时成立
         var pinchDistOK = pinchPrev ? g.pinchDist < cfg.pinchOff : g.pinchDist < cfg.pinchOn;
-        var pinching = pinchDistOK && g.curls[0] > cfg.fingerCurl;
+        var threeOpen = g.curls[1] > cfg.fingerCurl && g.curls[2] > cfg.fingerCurl && g.curls[3] > cfg.fingerCurl;
+        var pinching = pinchDistOK && threeOpen;
         state.pinch = pinching;
         state.pinchPressed = pinching && !pinchPrev;
         pinchPrev = pinching;
