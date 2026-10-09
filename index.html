@@ -6,6 +6,7 @@
 <title>云墨美术馆 · 手势交互数字博物馆</title>
 <meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
 <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/intro.css">
 <!--
   ============================================================
   云墨美术馆 CloudInk Art Museum
@@ -25,6 +26,26 @@
 -->
 </head>
 <body>
+<!-- ===== 开场粒子序章覆盖层 ===== -->
+<div id="intro">
+  <canvas id="introCanvas"></canvas>
+  <div id="introTitle">
+    <h1>云墨美术馆</h1>
+  </div>
+  <div id="introPanel">
+    <label>基色 <input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
+    <label>密度 <input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
+  </div>
+  <div id="introCamWrap" aria-label="摄像头实时画面，可拖动右下角调整大小">
+    <video id="introVideo" autoplay muted playsinline></video>
+    <div id="introCamTag">摄像头 · 手势追踪（右下角拖拽调大小）</div>
+  </div>
+  <div id="introBR">
+    <button id="introFull" aria-label="全屏切换">全屏</button>
+    <button id="introEnter" aria-label="进入博物馆">进入博物馆 →</button>
+  </div>
+  <div id="introStatus">正在加载手势模型…</div>
+</div>
 
   <!-- ===== 加载层 ===== -->
   <div id="loading" class="loading">
@@ -122,6 +143,7 @@
   <script src="./js/slots.js"></script>
   <script src="./js/foliage.js"></script>
   <script src="./js/lighting.js"></script>
+  <script src="./js/intro.js"></script>
   <script src="./js/scene.js"></script>
   <script src="./js/player.js"></script>
   <script src="./js/gesture.js"></script>
