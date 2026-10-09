@@ -30,11 +30,11 @@
 | 手势 | 效果 | 键盘备选 |
 |---|---|---|
 | 张开手掌 | 向前漫游 | W / ↑ |
-| 握拳 | 停止 | —— |
-| —— | 后退 | S / ↓ |
+| 握拳 | 向后退 | S / ↓ |
 | 食指指向左/右 | 左右转向 | A / D / ← / → |
-| 捏合拇指+食指 | 查看当前展品 | E |
+| 捏合拇指 + 食指（其余三指张开） | 查看展品 / 关闭弹窗 | E / Q |
 | —— | 重置视角 | R |
+| —— | 全景模式 | V |
 | —— | 加速 | Shift |
 
 ## 上手必读（给组员）
@@ -69,7 +69,8 @@ npm run build
 2. 将 `dist/` 目录推送到 `gh-pages` 分支，或使用 GitHub Actions 自动构建 Pages。
 3. 打开 Pages 链接：`https://<你的用户名>.github.io/3d-gesture-museum/#/`
 
-> 说明：本工程需要联网加载 Three.js 与 MediaPipe 的 CDN 资源（含 WASM 与手部模型）。
+> 说明：Three.js 与 MediaPipe（vision_bundle / WASM / 手部模型）都已随仓库本地分发，
+> 断网也能启动手势识别；运行时不访问任何 CDN。
 
 ## 目录结构（与 7 人分工一一对应）
 
@@ -225,4 +226,5 @@ VITE_SUPABASE_ANON_KEY=eyJ...
 - Vite `^6.0.3`
 - Supabase Storage `^4.15.1`
 - Three.js `0.147.0`（UMD，SRI 锁定）
-- @mediapipe/tasks-vision `0.10.0`（UMD；WASM 与 hand_landmarker.task 由运行时从官方 CDN 加载）
+- @mediapipe/tasks-vision `0.10.0`（`vision_bundle.js` / WASM / `hand_landmarker.task` 已本地化到
+  `js/vendor/mediapipe/` 与 `assets/models/`，运行时不再访问 CDN）
