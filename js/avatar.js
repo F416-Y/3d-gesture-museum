@@ -29,9 +29,9 @@ window.MuseumAvatar = (function () {
       model.traverse(function (o) {
         if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
       });
-      ["L3_Arm_L", "L3_Arm_R", "L3_Leg_L", "L3_Leg_R"].forEach(function (name) {
+      ["L3_Leg_L", "L3_Leg_R", "L3_Shoe_L", "L3_Shoe_R"].forEach(function (name) {
         var part = model.getObjectByName(name);
-        if (part) limbs.push({ node: part, base: part.rotation.z });
+        if (part) limbs.push({ node: part, base: part.rotation.x });
       });
       holder.add(model);
       holder.visible = enabled;
@@ -59,8 +59,8 @@ window.MuseumAvatar = (function () {
     var moving = (dx * dx + dz * dz) > 0.000001;
     if (moving) phase += (dt || 0.016) * 10;
     limbs.forEach(function (item, i) {
-      var swing = moving ? Math.sin(phase + (i % 2) * Math.PI) * 0.18 : 0;
-      item.node.rotation.z = item.base + swing;
+      var swing = moving ? Math.sin(phase + (i % 2) * Math.PI) * 0.28 : 0;
+      item.node.rotation.x = item.base + swing;
     });
     lastX = p.x; lastZ = p.z;
     if (camera) {
