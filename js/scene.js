@@ -2607,25 +2607,24 @@ window.MuseumScene = (function () {
    * 玩家走中间过道、两侧都能触发；3 件雕塑在序厅 / 人物厅 / 中心庭。
    * ============================================================ */
   /* ============================================================
-   * 组员6：中心庭院东侧的「西方艺术角」
+   * 中西对话 · 对话院（景观庭院，x 11.5~18 / z −15~−7）
    *   · 米洛的维纳斯（assets/models/venus.glb，CC0，SMK 扫描）
-   *   · 蒙娜丽莎 / 星月夜（assets/images/*.jpg，缺图时回退程序化示意）
-   * 坐标为 proto 布局的中心庭院广场一带（参考 matayafeiyan 落点）
+   *   · 蒙娜丽莎 / 星月夜（assets/images/*.jpg，PD-old，维基共享资源）
+   * 位置说明：原稿放在中心庭东侧（x≈9, z≈−13）会堵住东长廊西口，现改到景观庭院
+   *           东侧围栏内、与「清泉石上流」影壁同院 —— 展线为"看完中国画三厅 → 进对话院看西画对照"。
+   * 故事线：docs/展陈故事线-中西对话.md（人像 / 风景 / 形体 三组对照）
    * ============================================================ */
   function buildWesternCorner(scene) {
-    var bx = 6.4, bz = -13;      // 中心庭院广场东侧
-    /* 展墙：面朝西，供挂两幅西画 */
-    var wall = new _g.Mesh(new _g.BoxGeometry(0.28, 3.6, 8.0), mat(0xefe9dc, { roughness: 0.9 }));
-    wall.position.set(bx + 2.6, 1.95, bz);
+    var wx = 17.3, wz = -11.5;      // 景观庭院东侧围栏内（画朝西，对着院内）
+    var wall = new _g.Mesh(new _g.BoxGeometry(0.28, 3.6, 5.0), mat(0xefe9dc, { roughness: 0.9 }));
+    wall.position.set(wx, 1.95, wz);
     wall.castShadow = true; wall.receiveShadow = true;
     scene.add(wall);
-    obstacles.push({ type: "rect", x0: bx + 2.45, z0: bz - 4.1, x1: bx + 2.75, z1: bz + 4.1 });
-    addPainting(scene, { x: bx + 2.4, y: 2.45, z: bz - 1.9, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "monalisa");
-    addPainting(scene, { x: bx + 2.4, y: 2.45, z: bz + 1.9, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "starrynight");
-    /* 维纳斯雕塑 */
-    addVenusSculpture(scene, bx - 2.2, 0.8, bz);
+    obstacles.push({ type: "rect", x0: wx - 0.15, z0: wz - 2.6, x1: wx + 0.15, z1: wz + 2.6 });
+    addPainting(scene, { x: wx - 0.05, y: 2.45, z: wz - 1.1, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "monalisa");
+    addPainting(scene, { x: wx - 0.05, y: 2.45, z: wz + 1.1, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "starrynight");
+    addVenusSculpture(scene, wx - 1.9, 0.8, wz);
   }
-
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
     var paintings = [
