@@ -32,6 +32,8 @@ jobs:
           done
       - name: 场景冒烟测试（真实执行 scene.js 的 init）
         run: node scripts/smoke-scene.mjs
+      - name: 展品热点与弹窗全量验收
+        run: npm run verify:exhibits
 
   build:
     name: 生产构建

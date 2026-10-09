@@ -70,6 +70,7 @@ window.MuseumPlayer = (function () {
     if (!camera) return;
 
     // 转向（键盘/手势统一输入）
+    // 方向约定与鼠标一致：右转 yaw 减小、左转 yaw 增大（turnRight=+1 / turnLeft=-1）
     var turn = (input.turnRight ? 1 : 0) - (input.turnLeft ? 1 : 0);
     // 平滑过渡到目标角速度：turnVel 逐渐逼近 turn*turnSpeed，起步/松手都顺滑
     turnVel += (turn * turnSpeed - turnVel) * Math.min(1, delta * 12);

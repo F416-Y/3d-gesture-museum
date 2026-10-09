@@ -9,9 +9,9 @@
  *   4. 输出统一手势状态给 main.js（与键盘输入合并）
  *
  * 手势约定（优先级从高到低）：
- *   捏合（拇指+食指靠近）→ pinch：查看/确认
+ *   捏合（拇指+食指靠近）→ pinch：查看展品 / 弹窗打开时关闭弹窗
  *   张开手掌（五指全伸）→ forward：向前漫游
- *   握拳（五指全收）   → stop：停止
+ *   握拳（五指全收）   → back：向后退
  *   指点（仅食指伸出）→ turn：根据食指指向左右转向
  *
  * 依赖：config.js（MuseumConfig.gesture 阈值）、HTML 中 <video id="cam">
@@ -33,18 +33,51 @@ window.MuseumGesture = (function () {
   /* 手势输出状态（main.js 每帧读取） */
   var state = {
     forward: false,      // 张掌 → 前进
-    turn: 0,             // -1 ~ 1，负=左转 正=右转（0=不转）
+    back: false,         // 握拳 → 后退
+    turn: 0,             // -1 ~ 1，正=指向左 负=指向右（0=不转）
     pinch: false,        // 当前是否捏合
     pinchPressed: false, // 本次捏合刚按下（边沿触发，一次性）
     active: false,       // 是否检测到手
   };
 
-  var cfg = { forwardOpen: 0.95, fistClose: 0.30, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.24, turnMax: 0.55, forwardFrames: 4, turnFrames: 4, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
+  var cfg = { forwardOpen: 0.95, fingerCurl: 0.6, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.7, turnMax: 1.6, forwardFrames: 4, backFrames: 3, turnFrames: 3, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
 
   var pinchPrev = false;
   var turnSmoothed = 0;
   var forwardStreak = 0;   // 张掌已连续保持的帧数
+  var backStreak = 0;      // 握拳已连续保持的帧数
   var turnStreak = 0;      // 指点姿态已连续保持的帧数
+
+  /* ---------- 调试浮层（URL 带 debug 或按 ` 键开关；演示时不用） ---------- */
+  var debugEl = null;
+  var debugOn = false;
+  var debugBound = false;
+
+  function setDebug(on) {
+    debugOn = !!on;
+    if (debugOn && !debugEl) {
+      debugEl = document.createElement("div");
+      debugEl.style.cssText =
+        "position:fixed;left:8px;bottom:8px;z-index:9999;padding:6px 8px;" +
+        "background:rgba(0,0,0,.72);color:#7fffa0;font:11px/1.5 Consolas,monospace;" +
+        "white-space:pre;border-radius:4px;pointer-events:none;";
+      document.body.appendChild(debugEl);
+    }
+    if (debugEl) debugEl.style.display = debugOn ? "block" : "none";
+  }
+
+  function updateDebug(g) {
+    if (!debugOn || !debugEl) return;
+    if (!g) { debugEl.textContent = "未检测到手"; return; }
+    debugEl.textContent =
+      "指比 拇/食/中/环/小: " + g.ratios.map(function (v) { return v.toFixed(2); }).join(" ") + "\n" +
+      "indexOnly=" + (g.indexOnly ? 1 : 0) + " 转向帧=" + turnStreak + "/" + cfg.turnFrames +
+      "  dx=" + g.dx.toFixed(2) + " (死区" + cfg.turnDead + " 满速" + cfg.turnMax + ")  turn=" + state.turn.toFixed(2) + "\n" +
+      "allOpen=" + (g.allOpen ? 1 : 0) + " 前进帧=" + forwardStreak + "/" + cfg.forwardFrames +
+      "  allClose=" + (g.allClose ? 1 : 0) + " 后退帧=" + backStreak + "/" + cfg.backFrames + "\n" +
+      "卷曲 食/中/环/小: " + g.curls.map(function (v) { return v.toFixed(2); }).join(" ") +
+      "  pinchD=" + g.pinchDist.toFixed(2) + " 捏合=" + (state.pinch ? 1 : 0);
+  }
 
   var WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm";
   var MODEL_URL =
@@ -260,13 +293,28 @@ window.MuseumGesture = (function () {
 
     // 张掌：五指均伸开
     var allOpen = ratios.every(function (r) { return r > cfg.forwardOpen; });
-    // 握拳：五指均收起
-    var allClose = ratios.every(function (r) { return r < cfg.fistClose; });
-    // 指点：仅食指伸开
-    var indexOnly = ratios[1] > 1.35 && ratios[0] < 1.05 && ratios[2] < 1.15 && ratios[3] < 1.15 && ratios[4] < 1.15;
 
-    // 转向：镜像后食指尖相对腕的横向偏移（视频显示为镜像，取 1 - x）
-    var dx = (1 - lm[8].x) - (1 - lm[0].x);
+    // 手指卷曲度：指尖到「自己指根」的距离 ÷ 掌宽。
+    // 捏合时食指是伸着的（指尖够向拇指），握拳时食指卷进掌心——
+    // 两种姿态的「指尖到腕」距离几乎一样，但「指尖到指根」差很多，以此区分捏合与握拳
+    var mcpIds = [5, 9, 13, 17];    // 食/中/环/小指的指根关节
+    var tipIds = [8, 12, 16, 20];
+    var curls = tipIds.map(function (tip, f) { return dist(lm[tip], lm[mcpIds[f]]) / base; });
+
+    // 握拳：食指~小指四指均蜷曲（拇指不参与——握拳时拇指或搭或收个体差异最大、最不稳）
+    var allClose = curls.every(function (c) { return c < cfg.fingerCurl; });
+    // 指点：仅食指伸开（拇指不限——手枪式指点时拇指是自然伸出的，
+    // 强制拇指收拢会让大多数人的指点姿态永远判不成立）
+    var indexOnly = ratios[1] > 1.30 && ratios[2] < 1.20 && ratios[3] < 1.20 && ratios[4] < 1.20;
+
+    // 转向：食指尖相对腕的横向偏移 ÷ 手掌画面宽度。
+    // 符号关键：MediaPipe 给的是未镜像原始坐标（用户的左手出现在画面右侧），
+    // 而视频预览是镜像的——两个 x 相减时 1-x 会抵消，真正的镜像修正就是差值的符号。
+    // 取「指尖 - 腕」：指向屏幕左侧时 dx>0 → 镜头向左，与镜像预览的直觉一致。
+    // 除以手掌宽度后判定随手距自动缩放，手离摄像头远近手感一致
+    var base2d = dist2D(lm[9], wrist);
+    if (base2d < 1e-5) base2d = 1e-5;
+    var dx = (lm[8].x - lm[0].x) / base2d;
     var turnAmount = 0;
     if (indexOnly) {
       var abs = Math.abs(dx);
@@ -281,6 +329,9 @@ window.MuseumGesture = (function () {
       allClose: allClose,
       indexOnly: indexOnly,
       turn: turnAmount,
+      ratios: ratios,
+      curls: curls,
+      dx: dx,
     };
   }
 
@@ -307,9 +358,11 @@ window.MuseumGesture = (function () {
         var g = classify(result.landmarks[0]);
         state.active = true;
 
-        // 捏合：迟滞判定——已进入捏合后用更宽的退出阈值，未进入用较严的进入阈值，
-        // 单帧抖动不会让状态在「捏/松」之间来回跳，边沿触发也只响一次
-        var pinching = pinchPrev ? g.pinchDist < cfg.pinchOff : g.pinchDist < cfg.pinchOn;
+        // 捏合：双阈值迟滞 + 食指必须伸展。
+        // 握拳时拇指搭在食指上、两指尖距离同样会越过阈值——但那时食指是蜷曲的，
+        // 用「食指卷曲度」把两种情况干净分开，假捏合不会再掐住握拳后退、也不会误触弹窗
+        var pinchDistOK = pinchPrev ? g.pinchDist < cfg.pinchOff : g.pinchDist < cfg.pinchOn;
+        var pinching = pinchDistOK && g.curls[0] > cfg.fingerCurl;
         state.pinch = pinching;
         state.pinchPressed = pinching && !pinchPrev;
         pinchPrev = pinching;
@@ -318,22 +371,30 @@ window.MuseumGesture = (function () {
         forwardStreak = (g.allOpen && !pinching) ? forwardStreak + 1 : 0;
         state.forward = forwardStreak >= cfg.forwardFrames;
 
+        // 握拳后退：与张掌同理，连续保持若干帧才启动，捏合时不判定
+        backStreak = (g.allClose && !pinching) ? backStreak + 1 : 0;
+        state.back = backStreak >= cfg.backFrames;
+
         // 指点转向：同样需连续保持若干帧才启动；
         // 松开后换用更大的 release 系数快速回正，避免「手已放下、镜头还在转」的拖尾
         turnStreak = g.indexOnly ? turnStreak + 1 : 0;
         var rawTurn = turnStreak >= cfg.turnFrames ? g.turn : 0;
         turnSmoothed += (rawTurn - turnSmoothed) * (rawTurn !== 0 ? cfg.smooth : cfg.release);
         state.turn = Math.abs(turnSmoothed) < 0.03 ? 0 : turnSmoothed;
+        updateDebug(g);
       } else {
         state.active = false;
         state.forward = false;
+        state.back = false;
         state.pinch = false;
         state.pinchPressed = false;
         state.turn = 0;
         pinchPrev = false;
         forwardStreak = 0;
+        backStreak = 0;
         turnStreak = 0;
         turnSmoothed = 0;
+        updateDebug(null);
       }
     }
     requestAnimationFrame(tick);
@@ -346,12 +407,14 @@ window.MuseumGesture = (function () {
     running = false;
     state.active = false;
     state.forward = false;
+    state.back = false;
     state.pinch = false;
     state.pinchPressed = false;
     state.turn = 0;
     pinchPrev = false;
     turnSmoothed = 0;
     forwardStreak = 0;
+    backStreak = 0;
     turnStreak = 0;
     if (stream) {
       stream.getTracks().forEach(function (t) { t.stop(); });
@@ -368,15 +431,24 @@ window.MuseumGesture = (function () {
   return {
     init: function (videoEl) {
       video = videoEl;
+      // 调试浮层：URL 带 debug（hash 路由下形如 /?debug#/）或按 ` 键切换
+      if (!debugBound) {
+        debugBound = true;
+        if ((location.search + location.hash).indexOf("debug") >= 0) setDebug(true);
+        window.addEventListener("keydown", function (e) {
+          if (e.code === "Backquote") setDebug(!debugOn);
+        });
+      }
       var gc = window.MuseumConfig && window.MuseumConfig.gesture;
       if (gc) {
         cfg.forwardOpen = gc.forwardOpen;
-        cfg.fistClose = gc.fistClose;
+        cfg.fingerCurl = gc.fingerCurl;
         cfg.pinchOn = gc.pinchOn;
         cfg.pinchOff = gc.pinchOff;
         cfg.turnDead = gc.turnDead;
         cfg.turnMax = gc.turnMax;
         cfg.forwardFrames = gc.forwardFrames;
+        cfg.backFrames = gc.backFrames;
         cfg.turnFrames = gc.turnFrames;
         cfg.smooth = gc.smooth;
         cfg.release = gc.release;

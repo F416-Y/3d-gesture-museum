@@ -79,7 +79,6 @@ window.MuseumMain = (function () {
     resize();
 
     // 完成加载，显示主界面
-    MuseumUI.setLoading("展厅布置完成 · 正在唤醒摄像头……");
     setTimeout(function () {
       MuseumUI.hideLoading();
       MuseumUI.toast("欢迎来到云墨美术馆 · 伸出手掌开始漫游");
@@ -97,6 +96,10 @@ window.MuseumMain = (function () {
     window.addEventListener("keydown", function (e) {
       keys[e.code] = true;
       if (e.code === "KeyE") { e.preventDefault(); MuseumExhibit.pick(); }
+      // Q / Esc：关闭展品弹窗（看完信息后退出）
+      if ((e.code === "KeyQ" || e.code === "Escape") && MuseumUI.isPanelOpen()) {
+        e.preventDefault(); MuseumUI.hidePanel();
+      }
       if (e.code === "KeyR") { resetView(); }
       if (e.code === "KeyV") { e.preventDefault(); setPanorama(!panorama.on); }
       if (e.code === "KeyN") { e.preventDefault(); if (window.MuseumLighting) window.MuseumLighting.toggle(); }
@@ -145,17 +148,14 @@ window.MuseumMain = (function () {
   /* ---------- 摄像头开关 ---------- */
   function toggleCamera(on) {
     if (on && !cameraOn) {
-      MuseumUI.setLoading("正在请求摄像头权限……");
       MuseumGesture.init(MuseumUI.getVideo()).then(function () {
         cameraOn = true;
         MuseumUI.setCameraButton(true);
         MuseumUI.showCam(true);
-        MuseumUI.setLoading("手势识别已就绪");
       }).catch(function (err) {
         cameraOn = false;
         MuseumUI.setCameraButton(false);
         MuseumUI.showCam(false);
-        MuseumUI.setLoading("摄像头不可用 · 已切换键盘模式");
         console.warn("[云墨美术馆] 手势启动失败：", err && err.message ? err.message : err);
       }).then(function () {
         setTimeout(function () { MuseumUI.hideLoading(); }, 500);
@@ -217,9 +217,10 @@ window.MuseumMain = (function () {
   function composeInput(gs) {
     return {
       forward: !!keys["KeyW"] || !!keys["ArrowUp"] || gs.forward,
-      back: !!keys["KeyS"] || !!keys["ArrowDown"],
-      turnLeft: !!keys["KeyA"] || !!keys["ArrowLeft"] || (gs.turn < -0.05),
-      turnRight: !!keys["KeyD"] || !!keys["ArrowRight"] || (gs.turn > 0.05),
+      back: !!keys["KeyS"] || !!keys["ArrowDown"] || gs.back,
+      // 手势约定：指向左时 gs.turn>0（与镜像预览直觉一致），故映射到 turnLeft
+      turnLeft: !!keys["KeyA"] || !!keys["ArrowLeft"] || (gs.turn > 0.05),
+      turnRight: !!keys["KeyD"] || !!keys["ArrowRight"] || (gs.turn < -0.05),
       sprint: !!keys["ShiftLeft"] || !!keys["ShiftRight"],
     };
   }
@@ -243,11 +244,15 @@ window.MuseumMain = (function () {
     var gs = MuseumGesture.getState();
     var input = composeInput(gs);
 
-    // 捏合拾取展品：gesture.js 输出边沿触发信号，这里接给 exhibit（等价于按 E），
-    // 加 600ms 冷却，防止一次捏合的抖动连开多次弹窗；全景模式下与点击拾取一样禁用
-    if (!panorama.on && gs.pinchPressed && nowMs - lastPinchPick > 600) {
+    // 捏合：弹窗打开时关闭弹窗，否则拾取当前展品（等价于按 E）。
+    // 边沿触发 + 600ms 冷却防连开连关；全景模式下不拾取（与点击一致），但仍可关弹窗
+    if (gs.pinchPressed && nowMs - lastPinchPick > 600) {
       lastPinchPick = nowMs;
-      MuseumExhibit.pick();
+      if (MuseumUI.isPanelOpen()) {
+        MuseumUI.hidePanel();
+      } else if (!panorama.on) {
+        MuseumExhibit.pick();
+      }
     }
 
     if (panorama.on) {
