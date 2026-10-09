@@ -595,11 +595,13 @@ window.MuseumExteriorLayout = (function () {
     box(gateW + 1.4, 0.9, 0.44, M.paper, 0, 3.55, 0, 0, g);
     box(gateW + 1.6, 0.12, 0.5, M.ink, 0, 3.96, 0, 0, g);
     hipRoof(gateW + 2.2, 1.8, 0.85, 0, 4.1, 0, g);
-    /* 朱砂双扇门（半开）：只有挂匾的正式院门才装门扇；后门/侧门小门楼一律敞口（与展厅门洞统一） */
+    /* 朱砂双扇闭门：正式展厅院门关闭，门扇完整覆盖门洞，不露白墙缝。 */
     if (label) {
-      var d1 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, -gateW / 4 - 0.02, 1.2, 0.1, 0, g);
-      var d2 = box(gateW / 2 - 0.08, 2.4, 0.08, M.door, gateW / 4 + 0.02, 1.2, 0.1, 0, g);
-      d1.rotation.y = 0.45; d2.rotation.y = -0.45;
+      var leafW = gateW / 2;
+      var d1 = box(leafW, 2.4, 0.12, M.door, -leafW / 2, 1.2, 0.08, 0, g);
+      var d2 = box(leafW, 2.4, 0.12, M.door,  leafW / 2, 1.2, 0.08, 0, g);
+      /* 中缝只留深色压条，避免白墙从双扇之间漏出。 */
+      box(0.06, 2.4, 0.04, M.ink, 0, 1.2, 0.15, 0, g);
     }
     /* 雀替（门柱顶部贴脸小斗） */
     var q1 = box(0.5, 0.34, 0.12, M.wood, -off + 0.3, 2.92, 0.28, 0, g);
@@ -780,10 +782,14 @@ window.MuseumExteriorLayout = (function () {
     box(3.6, 1.6, 0.5, M.paper, 0, 1.2 + 4.2, 34.5, 0, g);
     box(14.4, 0.16, 0.6, M.ink, 0, 1.2 + 4.95, 34.5, 0, g);
     hipRoof(15.2, 2.6, 1.1, 0, 1.2 + 5.1, 34.5, g);
-    /* 朱砂双扇门大敞开：两扇贴平门柱内侧（x≈±1.72，沿墙进深方向），3.4m 门洞全让出，行人直行不擦门 */
-    var d1 = box(1.7, 3.4, 0.1, M.door, -1.72, 1.2 + 1.7, 34.3, 0, g);
-    var d2 = box(1.7, 3.4, 0.1, M.door,  1.72, 1.2 + 1.7, 34.3, 0, g);
-    d1.rotation.y = 1.47; d2.rotation.y = -1.47;
+    /* 朱砂双扇门内开 90°：铰链落在门洞两帮内角，门扇贴帮收进院侧，
+       正面门洞完整让出；深色木门框遮住白墙断面，不形成白色竖缝。 */
+    var p1 = new THREE.Group(); p1.position.set(-1.72, 1.2 + 1.7, 34.3); p1.rotation.y = Math.PI / 2; g.add(p1);
+    var p2 = new THREE.Group(); p2.position.set( 1.72, 1.2 + 1.7, 34.3); p2.rotation.y = -Math.PI / 2; g.add(p2);
+    var d1 = box(1.7, 3.4, 0.12, M.door,  0.85, 0, 0, 0, p1);
+    var d2 = box(1.7, 3.4, 0.12, M.door, -0.85, 0, 0, 0, p2);
+    box(0.16, 3.4, 0.2, M.wood, -1.78, 1.2 + 1.7, 34.3, 0, g);
+    box(0.16, 3.4, 0.2, M.wood,  1.78, 1.2 + 1.7, 34.3, 0, g);
     /* 鎏金铺首衔环（每扇一环，挂在门扇上随扇转动；圆盘兽座 + 下垂吊环） */
     (function () {
       function knocker(leaf, sx) {
