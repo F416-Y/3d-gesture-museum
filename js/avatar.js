@@ -7,6 +7,8 @@ window.MuseumAvatar = (function () {
   var holder = null;
   var model = null;
   var enabled = false;
+  var limbs = [];
+  var lastX = 0, lastZ = 0, phase = 0;
 
   function init(root) {
     scene = root;
@@ -27,6 +29,10 @@ window.MuseumAvatar = (function () {
       model.traverse(function (o) {
         if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
       });
+      ["L3_Arm_L", "L3_Arm_R", "L3_Leg_L", "L3_Leg_R"].forEach(function (name) {
+        var part = model.getObjectByName(name);
+        if (part) limbs.push({ node: part, base: part.rotation.z });
+      });
       holder.add(model);
       holder.visible = enabled;
     }, undefined, function (err) {
@@ -40,7 +46,7 @@ window.MuseumAvatar = (function () {
     return enabled;
   }
 
-  function update(camera) {
+  function update(camera, dt) {
     if (!enabled || !holder || !model || !window.MuseumPlayer) return;
     var p = MuseumPlayer.getPosition();
     var yaw = MuseumPlayer.getYaw();
@@ -49,6 +55,14 @@ window.MuseumAvatar = (function () {
     holder.position.set(p.x, groundY, p.z);
     // eggman.glb 的正面朝 +Z，而项目玩家的前进方向是 -Z，补半圈后人物才会面向行进方向。
     holder.rotation.y = yaw + Math.PI;
+    var dx = p.x - lastX, dz = p.z - lastZ;
+    var moving = (dx * dx + dz * dz) > 0.000001;
+    if (moving) phase += (dt || 0.016) * 10;
+    limbs.forEach(function (item, i) {
+      var swing = moving ? Math.sin(phase + (i % 2) * Math.PI) * 0.18 : 0;
+      item.node.rotation.z = item.base + swing;
+    });
+    lastX = p.x; lastZ = p.z;
     if (camera) {
       camera.position.set(p.x + Math.sin(yaw) * 3.4, groundY + 2.25, p.z + Math.cos(yaw) * 3.4);
       camera.lookAt(p.x, groundY + 1.05, p.z);

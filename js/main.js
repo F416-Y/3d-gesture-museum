@@ -310,7 +310,7 @@ window.MuseumMain = (function () {
       updatePanorama(dt, input);
     } else {
       MuseumPlayer.update(dt, input, camera);
-      if (window.MuseumAvatar) MuseumAvatar.update(camera);
+      if (window.MuseumAvatar) MuseumAvatar.update(camera, dt);
     }
     updateHallDoorPrompt();
     MuseumExhibit.update();
