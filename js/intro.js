@@ -3,13 +3,14 @@
  * 来源：外观原型 tools/exterior-prototype.html（Kimi 原作），2026-10-04 由组长原样迁入。
  *  - 5 个预设：青铜鼎 / 石狮 / 马踏飞燕 / 太湖石 / 全园沙盘（现采主场景）
  *  - 自动巡展 4.4s/件、压轴 8.5s，循环不中断；点「进入博物馆 →」收起并释放资源
- *  - 手势：原型用的是老版 MediaPipe Hands（window.Hands），主项目没有 → 自动走鼠标模式
+ *  - 手势：原型用老版 MediaPipe Hands（window.Hands），主项目不分发该库，
+ *          2026-10-09 已删除残留的 CDN 加载代码 → 序章固定走鼠标 / 触摸模式
  *  - 唯一改动：压轴采样主场景的句柄改为本项目（MuseumExteriorLayout.ctx.scene）
  * ============================================================ */
 
 /* =====================================================================
- * 开场粒子序章：Three.js 粒子云 + MediaPipe Hands 手势交互
- *  - 手掌开合 → 粒子扩散 / 收缩；手掌位置 → 模型旋转
+ * 开场粒子序章：Three.js 粒子云（鼠标 / 触摸交互）
+ *  - 拖动鼠标 → 模型旋转，按住 → 粒子扩散；手势漫游留给进馆后的主场景
  *  - 预设模型取自本馆零件库 glb（表面均匀采样为粒子），加载失败回退程序化造型
  *  - 辉光 = 径向渐变精灵 + 双层叠加（核心亮点 + 外圈光晕），加法混合
  *  - 色相随旋转角连续偏移；基色 / 密度可调；深空星尘背景
@@ -18,7 +19,6 @@
   var overlay = document.getElementById('intro');
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
-  var video = document.getElementById('introVideo');
   var statusEl = document.getElementById('introStatus');
   function setStatus(s) { statusEl.textContent = s; }
 
@@ -407,57 +407,12 @@
   var hsl = { h: 0, s: 0, l: 0 };
   var baseHue = tmpC.set('#3a3f4a').getHSL(hsl).h;   /* 默认花青墨 */
 
-  function d3(p, q) {
-    var dx = p.x - q.x, dy = p.y - q.y, dz = (p.z || 0) - (q.z || 0);
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
-  }
-  function onHand(res) {
-    var lms = res.multiHandLandmarks;
-    if (lms && lms.length) {
-      var lm = lms[0];
-      var palm = d3(lm[0], lm[9]) + 1e-6;
-      var open = (d3(lm[0], lm[8]) + d3(lm[0], lm[12]) + d3(lm[0], lm[16]) + d3(lm[0], lm[20])) / 4 / palm;
-      var k = (open - 1.25) / 0.8;
-      k = Math.max(0, Math.min(1, k));
-      spreadT = 0.45 + k * 1.35;
-      rotYT = (0.5 - lm[9].x) * Math.PI * 2.2;
-      rotXT = (lm[9].y - 0.5) * Math.PI * 1.1;
-      if (!handSeen) { handSeen = true; setStatus('手势追踪中 · 张开手掌让粒子散开'); }
-    } else {
-      if (handSeen) setStatus('未检测到手 · 移动鼠标也可旋转');
-      handSeen = false;
-      spreadT = 1;
-    }
-  }
-
-  /* ---------- MediaPipe Hands ---------- */
-  var mpCam = null, mpHands = null;
-  (function initHands() {
-    if (!window.Hands || !window.Camera) {
-      setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）');
-      return;
-    }
-    try {
-      mpHands = new Hands({
-        locateFile: function (f) { return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + f; }
-      });
-      mpHands.setOptions({ maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.5 });
-      mpHands.onResults(onHand);
-      mpCam = new Camera(video, {
-        onFrame: function () { mpHands.send({ image: video }); },
-        width: 320, height: 240
-      });
-      var p = mpCam.start();
-      if (p && p.then) {
-        p.then(function () { setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）'); },
-          function () { setStatus('摄像头不可用 · 鼠标模式：移动旋转 / 按住散开'); });
-      } else {
-        setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）');
-      }
-    } catch (e) {
-      setStatus('手势初始化失败 · 鼠标模式：移动旋转 / 按住散开');
-    }
-  })();
+  /* ---------- 交互模式：鼠标 / 触摸 ----------
+   * 原型里另有一段老版 MediaPipe Hands（window.Hands / Camera）手势控制，
+   * 但主项目不分发该库，这段代码从未执行，只留下一条 jsdelivr CDN 地址。
+   * 2026-10-09 连同 onHand() 一并删除；手势漫游由进馆后的 js/gesture.js
+   * （本地 MediaPipe Tasks Vision）提供，序章固定走鼠标 / 触摸。 */
+  setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）');
 
   /* ---------- 鼠标 / 触摸回退 ---------- */
   overlay.addEventListener('pointermove', function (e) {
@@ -508,9 +463,6 @@
   document.getElementById('introEnter').addEventListener('click', function () {
     overlay.classList.add('bye');
     running = false;
-    try { if (mpCam) mpCam.stop(); } catch (e) {}
-    try { if (mpHands) mpHands.close(); } catch (e) {}
-    try { if (video.srcObject) video.srcObject.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
     setTimeout(function () {
       overlay.style.display = 'none';
       renderer.dispose();

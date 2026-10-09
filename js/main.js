@@ -70,7 +70,7 @@ window.MuseumMain = (function () {
     });
     MuseumExhibit.setOnFocusChange(function (exhibitId) {
       if (exhibitId) {
-        MuseumUI.toast("靠近展品 · 捏合两指或按 E 查看");
+         MuseumUI.toast("靠近展品 · 捏合两指（三指张开）或按 E 查看");
       }
     });
 

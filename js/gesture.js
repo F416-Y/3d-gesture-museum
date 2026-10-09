@@ -4,12 +4,12 @@
  * ------------------------------------------------------------
  * 职责：
  *   1. 启动摄像头（getUserMedia）
- *   2. 加载 MediaPipe HandLandmarker（WASM 与模型从官方 CDN 运行时加载）
+ *   2. 加载 MediaPipe HandLandmarker（vision_bundle / WASM / 模型均已本地化，断网可用）
  *   3. 每帧识别手部 21 关键点，判定手势状态
  *   4. 输出统一手势状态给 main.js（与键盘输入合并）
  *
  * 手势约定（优先级从高到低）：
- *   捏合（拇指+食指靠近）→ pinch：查看展品 / 弹窗打开时关闭弹窗
+ *   捏合（拇指食指相捏、其余三指张开）→ pinch：查看展品 / 弹窗打开时关闭弹窗
  *   张开手掌（五指全伸）→ forward：向前漫游
  *   握拳（五指全收）   → back：向后退
  *   指点（仅食指伸出）→ turn：根据食指指向左右转向
@@ -40,7 +40,7 @@ window.MuseumGesture = (function () {
     active: false,       // 是否检测到手
   };
 
-  var cfg = { forwardOpen: 0.95, fingerCurl: 0.6, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.7, turnMax: 1.6, forwardFrames: 4, backFrames: 3, turnFrames: 3, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
+  var cfg = { forwardOpen: 0.95, fingerCurl: 0.6, thumbFist: 0.85, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.7, turnMax: 1.6, forwardFrames: 4, backFrames: 3, turnFrames: 3, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
 
   var pinchPrev = false;
   var turnSmoothed = 0;
@@ -79,9 +79,10 @@ window.MuseumGesture = (function () {
       "  pinchD=" + g.pinchDist.toFixed(2) + " 捏合=" + (state.pinch ? 1 : 0);
   }
 
-  var WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm";
-  var MODEL_URL =
-    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+  // 离线化：WASM 四件套与 hand_landmarker.task 随仓库分发（js/vendor/mediapipe/ 与 assets/models/），
+  // 答辩现场断网也能启动手势；路径相对页面根，dist 由 postbuild 原样拷贝
+  var WASM_URL = "./js/vendor/mediapipe/wasm";
+  var MODEL_URL = "./assets/models/hand_landmarker.task";
   var VISION_WAIT_MS = 12000;   // 等 index.html 的动态 import 完成
   var MODEL_LOAD_MS = 25000;    // 等 WASM + 模型初始化（GPU delegate 卡死时靠它兜底）
 
@@ -113,13 +114,13 @@ window.MuseumGesture = (function () {
     return "摄像头启动失败：" + (name || (err && err.message) || "未知原因");
   }
 
-  // 模型阶段（CDN / WASM / .task 下载 / GPU 初始化）的原始报错统一打上 stage=model，
+  // 模型阶段（vendor 文件 / WASM / .task 读取 / GPU 初始化）的原始报错统一打上 stage=model，
   // 并换成照着能做的中文提示——答辩现场断网最先撞上的就是这一类
   function tagModelError(err) {
     if (err && err.stage) return err;
     var msg = (err && err.message) || (err && err.name) || "未知错误";
     var hint = /fetch|network|404|Failed to|load/i.test(msg)
-      ? "手势模型下载失败（首次需从 CDN 拉取约 10MB）：请检查网络后重试，或使用键盘模式"
+      ? "手势模型文件加载失败（本地文件缺失或被拦截）：请刷新重试，或使用键盘模式"
       : "手势模型初始化失败：" + msg + "（可改用键盘模式参观）";
     return makeError("model", hint, err);
   }
@@ -164,16 +165,21 @@ window.MuseumGesture = (function () {
     }).then(function (s) {
       stream = s;
       video.srcObject = s;
-      // 黑屏排查自检：打印实际被浏览器选中的设备（虚拟摄像头在这现形），
-      // 1 秒后仍无帧则给出可操作原因——授权成功但画面全黑时不用开盲盒
+      // 黑屏排查自检：打印实际被浏览器选中的设备（虚拟摄像头在这现形）。
+      // 黑帧探针扎两次（1 秒 + 3 秒）：流启动瞬间自动曝光常把遮挡画面拉成
+      // 灰噪（亮度 >3），单扎 1 秒会漏掉随后稳定输出的真黑帧（实测：Lenovo
+      // 物理拨片关闭后，1 秒时为灰噪、2 秒后才稳定纯黑）；每种问题只报一次
       var track = s.getVideoTracks && s.getVideoTracks()[0];
       if (track) {
         console.log("[云墨美术馆] 已选中的摄像头：", track.label || "(无设备名)");
       }
-      setTimeout(function () {
+      var probeWarned = { noFrame: false, black: false };
+      function probeBlackFrame() {
         if (!video.srcObject) return;
         var hasFrame = video.readyState >= 2 && video.videoWidth > 0;
         if (!hasFrame) {
+          if (probeWarned.noFrame) return;
+          probeWarned.noFrame = true;
           console.warn(
             "[云墨美术馆] 摄像头已授权但无画面：浏览器没拿到视频帧",
             track && track.label ? "（设备：" + track.label + "）。" : "。",
@@ -181,8 +187,10 @@ window.MuseumGesture = (function () {
           );
           return;
         }
-        // 有帧不等于有画面：抽一帧量平均亮度，
-        // 区分「浏览器不画帧」（亮度正常）和「设备在出黑帧」（亮度≈0，物理遮挡/隐私模式）
+        // 有帧不等于有画面：抽一帧量亮度与波动。
+        // 区分「正常画面」和「黑帧/纯色替代帧」——物理遮挡片、隐私模式下驱动
+        // 会输出纯色合成帧而非纯黑（实测 Lenovo 拨片关闭：亮度 26.0/255、波动 0.0），
+        // 真实场景再暗也有传感器噪点（波动 >3），故「亮度 <60 且波动 <3」判定
         try {
           var probe = document.createElement("canvas");
           probe.width = video.videoWidth;
@@ -191,11 +199,21 @@ window.MuseumGesture = (function () {
           pctx.drawImage(video, 0, 0);
           var px = pctx.getImageData(0, 0, probe.width, probe.height).data;
           var sum = 0;
-          for (var i = 0; i < px.length; i += 4) { sum += px[i] + px[i + 1] + px[i + 2]; }
-          var mean = sum / (px.length / 4) / 3;
-          if (mean < 3) {
+          var sumSq = 0;
+          for (var i = 0; i < px.length; i += 4) {
+            var lum = px[i] + px[i + 1] + px[i + 2];
+            sum += lum;
+            sumSq += lum * lum;
+          }
+          var n = px.length / 4;
+          var mean = sum / n / 3;
+          var std = Math.sqrt(Math.max(sumSq / n - (sum / n) * (sum / n), 0)) / 3;
+          // 亮度数值始终留痕（无论是否越阈）：排查「看着黑但没报警」时需要知道实测值
+          console.log("[云墨美术馆] 启动画面亮度 " + mean.toFixed(1) + "/255 波动 " + std.toFixed(1) + "（黑帧判定：亮度<60 且波动<3）");
+          if (mean < 60 && std < 3 && !probeWarned.black) {
+            probeWarned.black = true;
             console.warn(
-              "[云墨美术馆] 摄像头在出黑帧（平均亮度 " + mean.toFixed(1) + "/255）：",
+              "[云墨美术馆] 摄像头在出黑帧/纯色替代帧（亮度 " + mean.toFixed(1) + "/255，波动 " + std.toFixed(1) + "）：",
               "最常见是笔记本物理遮挡片或 Lenovo Vantage 相机隐私模式；",
               "打开系统「相机」应用确认，再检查机身滑片 / 按 Fn+F8 / 在 Vantage 里解除隐私模式",
             );
@@ -203,7 +221,9 @@ window.MuseumGesture = (function () {
         } catch (probeErr) {
           console.warn("[云墨美术馆] 黑帧检测失败：", probeErr && probeErr.message);
         }
-      }, 1000);
+      }
+      setTimeout(probeBlackFrame, 1000);
+      setTimeout(probeBlackFrame, 3000);
       // 预览播不出来不影响识别（detectForVideo 直接读视频轨），只记警告
       // 老浏览器 play() 不返回 Promise，所以先判一下再挂 catch
       var played = video.play();
@@ -232,7 +252,7 @@ window.MuseumGesture = (function () {
         if (typeof FilesetResolver !== "undefined" && typeof HandLandmarker !== "undefined") {
           resolve();
         } else {
-          reject(makeError("model", "MediaPipe 依赖未加载（CDN 拉取失败）：请检查网络后重试，或使用键盘模式"));
+          reject(makeError("model", "MediaPipe 依赖未加载（js/vendor/mediapipe 文件缺失）：请刷新重试，或使用键盘模式"));
         }
       }
       window.addEventListener("mediapipe-ready", finish, { once: true });
@@ -295,14 +315,17 @@ window.MuseumGesture = (function () {
     var allOpen = ratios.every(function (r) { return r > cfg.forwardOpen; });
 
     // 手指卷曲度：指尖到「自己指根」的距离 ÷ 掌宽。
-    // 捏合时食指是伸着的（指尖够向拇指），握拳时食指卷进掌心——
-    // 两种姿态的「指尖到腕」距离几乎一样，但「指尖到指根」差很多，以此区分捏合与握拳
+    // 小于阈值=蜷曲（握拳判定）、大于阈值=伸展（捏合要求中/环/小三指张开）——
+    // 「指尖到腕」在手型切换时变化含糊，「指尖到指根」对蜷/伸最敏感
     var mcpIds = [5, 9, 13, 17];    // 食/中/环/小指的指根关节
     var tipIds = [8, 12, 16, 20];
     var curls = tipIds.map(function (tip, f) { return dist(lm[tip], lm[mcpIds[f]]) / base; });
 
-    // 握拳：食指~小指四指均蜷曲（拇指不参与——握拳时拇指或搭或收个体差异最大、最不稳）
-    var allClose = curls.every(function (c) { return c < cfg.fingerCurl; });
+    // 握拳：食指~小指四指均蜷曲 + 拇指未外伸。
+    // 拇指不参与「蜷曲」判定（握拳时拇指或搭或收个体差异最大），但不能完全不看它——
+    // 「竖起大拇指」同样是四指皆蜷，不卡拇指外伸会把点赞误判成握拳后退。
+    // 实测：握拳时拇指尖到腕 0.71~0.75，竖大拇指 ≥1.0，阈值 0.85 居中
+    var allClose = curls.every(function (c) { return c < cfg.fingerCurl; }) && ratios[0] < cfg.thumbFist;
     // 指点：仅食指伸开（拇指不限——手枪式指点时拇指是自然伸出的，
     // 强制拇指收拢会让大多数人的指点姿态永远判不成立）
     var indexOnly = ratios[1] > 1.30 && ratios[2] < 1.20 && ratios[3] < 1.20 && ratios[4] < 1.20;
@@ -358,11 +381,13 @@ window.MuseumGesture = (function () {
         var g = classify(result.landmarks[0]);
         state.active = true;
 
-        // 捏合：双阈值迟滞 + 食指必须伸展。
-        // 握拳时拇指搭在食指上、两指尖距离同样会越过阈值——但那时食指是蜷曲的，
-        // 用「食指卷曲度」把两种情况干净分开，假捏合不会再掐住握拳后退、也不会误触弹窗
+        // 捏合：双阈值迟滞 + 中/环/小三指必须张开（食指卷不卷都行——
+        // 捏合时食指本就弯成 C 形去够拇指，实测卷曲度 0.44 < 0.6，
+        // 旧版「食指必须伸展」会把真实捏合判成握拳，触发后退）。
+        // 三指张开与握拳的「四指皆蜷」构造上互斥，两种姿态不可能同时成立
         var pinchDistOK = pinchPrev ? g.pinchDist < cfg.pinchOff : g.pinchDist < cfg.pinchOn;
-        var pinching = pinchDistOK && g.curls[0] > cfg.fingerCurl;
+        var threeOpen = g.curls[1] > cfg.fingerCurl && g.curls[2] > cfg.fingerCurl && g.curls[3] > cfg.fingerCurl;
+        var pinching = pinchDistOK && threeOpen;
         state.pinch = pinching;
         state.pinchPressed = pinching && !pinchPrev;
         pinchPrev = pinching;
@@ -443,6 +468,7 @@ window.MuseumGesture = (function () {
       if (gc) {
         cfg.forwardOpen = gc.forwardOpen;
         cfg.fingerCurl = gc.fingerCurl;
+        if (gc.thumbFist != null) cfg.thumbFist = gc.thumbFist;
         cfg.pinchOn = gc.pinchOn;
         cfg.pinchOff = gc.pinchOff;
         cfg.turnDead = gc.turnDead;
@@ -466,7 +492,7 @@ window.MuseumGesture = (function () {
       var chain = startCamera()
         .then(function () {
           return withTimeout(loadModel(), MODEL_LOAD_MS, "model",
-            "手势模型加载超时（首次需从 CDN 下载约 10MB）：请检查网络后重试，或使用键盘模式");
+            "手势模型加载超时：请刷新重试，或使用键盘模式");
         })
         .then(
           function () {
