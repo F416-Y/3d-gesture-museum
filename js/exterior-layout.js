@@ -1279,6 +1279,9 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
+    /* 外观页采用开敞庭院动线；展厅内饰已拆到 interior.html，暂不生成游廊。 */
+    return;
+    /* 保留旧参数块，后续如需恢复连廊可从这里开启。 */
     corridor(-7, 9.5, -7, 20.4, undefined, 3.8);   // 中轴南院西廊·画廊（净宽扩大）
     corridor(7, 9.5, 7, 20.4, undefined, 3.8);     // 中轴南院东廊·画廊（净宽扩大）
     corridor(-8.5, -12.5, -28.5, -12.5); // 西长廊：中心庭 → 山水馆东门
@@ -1971,7 +1974,8 @@ window.MuseumExteriorLayout = (function () {
     buildHechiCourt();        // 荷池庭院（加深至 z 5.5~17）
     buildLanzhuCourt();       // 兰竹庭院（6×4 + 门厅）
     buildJingguanCourt();     // 景观庭院（4×6）
-    buildCorridors();         // 游廊系统（中轴双廊 + 东西横廊 + 南花园两廊）
+    window.MuseumNoCorridors = true;
+    buildCorridors();         // 外观页当前采用开敞庭院，不生成游廊
     buildPocketGardens();
     buildLandscapeFill();     // 空旷草地：曲池、曲廊、山石组
     return { waters: WATERS };

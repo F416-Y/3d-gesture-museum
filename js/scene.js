@@ -2721,7 +2721,7 @@ window.MuseumScene = (function () {
 
   function registerProtoObstacles() {
     /* 院落式：矩形取对接表的「院墙范围」，gate 取「洞口宽」 */
-    [
+    if (!window.MuseumNoCorridors) [
       { x0: -11, x1: 11,    z0: -37.5,  z1: -21,    entry: 'S', gate: 5.4 },                        // 花鸟 hall2
       { x0: 28,  x1: 45.5,  z0: -21,    z1: -10,    entry: 'S', gate: 5.4, sideDoor: { W: -16 } },  // 人物 hall3（西墙侧门接东长廊）
       { x0: -46, x1: -28.5, z0: -20,    z1: -5,     entry: 'E', gate: 5.4, noBack: true },         // 山水 hall1（后门已取消：架排后墙封死）
