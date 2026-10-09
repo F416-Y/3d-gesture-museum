@@ -918,8 +918,22 @@ window.MuseumScene = (function () {
         buildBox(g, 0.16, oh + 0.12, th + 0.08, o.u + ow / 2 + 0.08, bodyY + (oh + 0.12) / 2, 0, brick);
         buildBox(g, ow + 0.32, 0.18, th + 0.08, o.u, bodyY + oh + 0.09, 0, brick);
         if (opt.steps !== false) buildPartDoorSteps(g, o.u, ow, bodyY, opt.outward || 1, th);
-        /* 双扇门：大敞开 —— 绕门轴转到 80°，两扇都朝墙外侧折开，洞口全通透 */
-        var leafW = ow / 2 - 0.04, openA = 1.40;
+      /* 独立展厅内饰使用闭合门；园区外观仍保持原来的敞开门效果。 */
+      var leafW = ow / 2 - 0.04;
+      if (window.MuseumInteriorOnly) {
+        [-1, 1].forEach(function (s) {
+          var leaf = new _g.Mesh(new _g.BoxGeometry(leafW, oh - 0.06, 0.06), wood);
+          leaf.position.set(o.u + s * (leafW / 2),
+                            bodyY + (oh - 0.06) / 2,
+                            0);
+          leaf.castShadow = true;
+          g.add(leaf);
+        });
+        /* 中缝略加深，避免两扇门看起来像一整块墙 */
+        buildBox(g, 0.045, oh - 0.06, 0.075, o.u,
+          bodyY + (oh - 0.06) / 2, 0, brick);
+      } else {
+        var openA = 1.40;
         [-1, 1].forEach(function (s) {
           var hinge = o.u + s * (ow / 2);
           var leaf = new _g.Mesh(new _g.BoxGeometry(leafW, oh - 0.06, 0.06), wood);
@@ -930,6 +944,7 @@ window.MuseumScene = (function () {
           leaf.castShadow = true;
           g.add(leaf);
         });
+      }
       } else {
         var wh = oh || 1.2;
         if (sill > 0) buildBox(g, ow, sill, th, o.u, bodyY + sill / 2, 0, plaster);
