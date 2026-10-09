@@ -60,6 +60,7 @@ window.MuseumMain = (function () {
 
     // 初始化各模块
     MuseumScene.init({ scene: scene, camera: camera });
+    if (window.MuseumAvatar) MuseumAvatar.init(scene);
     /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
     if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
     MuseumPlayer.init(camera);
@@ -103,6 +104,13 @@ window.MuseumMain = (function () {
       }
       if (e.code === "KeyR") { resetView(); }
       if (e.code === "KeyV") { e.preventDefault(); setPanorama(!panorama.on); }
+      if (e.code === "KeyT") {
+        e.preventDefault();
+        if (window.MuseumAvatar) {
+          var third = MuseumAvatar.setEnabled(!MuseumAvatar.isEnabled());
+          MuseumUI.toast(third ? "已切换第三人称 · T 返回第一人称" : "已返回第一人称漫游");
+        }
+      }
       if (e.code === "KeyN") { e.preventDefault(); if (window.MuseumLighting) window.MuseumLighting.toggle(); }
       if (e.code === "KeyE" && panorama.on) { e.preventDefault(); return; }
     });
@@ -302,6 +310,7 @@ window.MuseumMain = (function () {
       updatePanorama(dt, input);
     } else {
       MuseumPlayer.update(dt, input, camera);
+      if (window.MuseumAvatar) MuseumAvatar.update(camera);
     }
     updateHallDoorPrompt();
     MuseumExhibit.update();
