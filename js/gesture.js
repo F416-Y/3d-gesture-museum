@@ -40,7 +40,7 @@ window.MuseumGesture = (function () {
     active: false,       // 是否检测到手
   };
 
-  var cfg = { forwardOpen: 0.95, fingerCurl: 0.6, thumbFist: 0.85, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.7, turnMax: 1.6, forwardFrames: 4, backFrames: 3, turnFrames: 3, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
+  var cfg = { forwardOpen: 0.95, fingerCurl: 0.72, pinchOpenCurl: 0.6, thumbFist: 0.92, pinchOn: 0.25, pinchOff: 0.35, turnDead: 0.7, turnMax: 1.6, forwardFrames: 4, backFrames: 2, turnFrames: 3, smooth: 0.12, release: 0.35, camWidth: 320, camHeight: 240 };
 
   var pinchPrev = false;
   var turnSmoothed = 0;
@@ -315,8 +315,8 @@ window.MuseumGesture = (function () {
     var allOpen = ratios.every(function (r) { return r > cfg.forwardOpen; });
 
     // 手指卷曲度：指尖到「自己指根」的距离 ÷ 掌宽。
-    // 小于阈值=蜷曲（握拳判定）、大于阈值=伸展（捏合要求中/环/小三指张开）——
-    // 「指尖到腕」在手型切换时变化含糊，「指尖到指根」对蜷/伸最敏感
+    // 握拳与捏合各用各的阈值：握拳要四指 < fingerCurl，捏合要中/环/小 > pinchOpenCurl。
+    // 两者解耦，调松握拳不会把捏合的「三指张开」一起抬高
     var mcpIds = [5, 9, 13, 17];    // 食/中/环/小指的指根关节
     var tipIds = [8, 12, 16, 20];
     var curls = tipIds.map(function (tip, f) { return dist(lm[tip], lm[mcpIds[f]]) / base; });
@@ -324,7 +324,8 @@ window.MuseumGesture = (function () {
     // 握拳：食指~小指四指均蜷曲 + 拇指未外伸。
     // 拇指不参与「蜷曲」判定（握拳时拇指或搭或收个体差异最大），但不能完全不看它——
     // 「竖起大拇指」同样是四指皆蜷，不卡拇指外伸会把点赞误判成握拳后退。
-    // 实测：握拳时拇指尖到腕 0.71~0.75，竖大拇指 ≥1.0，阈值 0.85 居中
+    // 拇指阈值放宽到 0.92：实测握拳 0.71~0.75、竖大拇指 ≥1.0，
+    // 但要容忍「拇指搭在拳头上」的自然握法（0.85 时这种握法会被判不是拳）
     var allClose = curls.every(function (c) { return c < cfg.fingerCurl; }) && ratios[0] < cfg.thumbFist;
     // 指点：仅食指伸开（拇指不限——手枪式指点时拇指是自然伸出的，
     // 强制拇指收拢会让大多数人的指点姿态永远判不成立）
@@ -382,11 +383,11 @@ window.MuseumGesture = (function () {
         state.active = true;
 
         // 捏合：双阈值迟滞 + 中/环/小三指必须张开（食指卷不卷都行——
-        // 捏合时食指本就弯成 C 形去够拇指，实测卷曲度 0.44 < 0.6，
+        // 捏合时食指本就弯成 C 形去够拇指，实测卷曲度 0.44 < 0.72，
         // 旧版「食指必须伸展」会把真实捏合判成握拳，触发后退）。
-        // 三指张开与握拳的「四指皆蜷」构造上互斥，两种姿态不可能同时成立
+        // 三指张开用 pinchOpenCurl（不是握拳的 fingerCurl），两套判定解耦
         var pinchDistOK = pinchPrev ? g.pinchDist < cfg.pinchOff : g.pinchDist < cfg.pinchOn;
-        var threeOpen = g.curls[1] > cfg.fingerCurl && g.curls[2] > cfg.fingerCurl && g.curls[3] > cfg.fingerCurl;
+        var threeOpen = g.curls[1] > cfg.pinchOpenCurl && g.curls[2] > cfg.pinchOpenCurl && g.curls[3] > cfg.pinchOpenCurl;
         var pinching = pinchDistOK && threeOpen;
         state.pinch = pinching;
         state.pinchPressed = pinching && !pinchPrev;
@@ -468,6 +469,7 @@ window.MuseumGesture = (function () {
       if (gc) {
         cfg.forwardOpen = gc.forwardOpen;
         cfg.fingerCurl = gc.fingerCurl;
+        if (gc.pinchOpenCurl != null) cfg.pinchOpenCurl = gc.pinchOpenCurl;
         if (gc.thumbFist != null) cfg.thumbFist = gc.thumbFist;
         cfg.pinchOn = gc.pinchOn;
         cfg.pinchOff = gc.pinchOff;
