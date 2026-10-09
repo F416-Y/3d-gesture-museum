@@ -1310,6 +1310,19 @@ window.MuseumScene = (function () {
       new _g.PlaneGeometry(w, h),
       canvasMat(drawPainting(ex), { side: _g.DoubleSide })
     );
+    // 组员6：优先加载 assets/images/<展品id>.jpg 真实名画，失败回退程序化示意
+    if (_g.TextureLoader) {
+      (function (mesh, exhibit) {
+        new _g.TextureLoader().load("assets/images/" + exhibit.id + ".jpg",
+          function (tex) {
+            tex.encoding = _g.sRGBEncoding;
+            tex.anisotropy = 8;
+            mesh.material = new _g.MeshStandardMaterial({ map: tex, roughness: 0.9, metalness: 0.0, side: _g.DoubleSide });
+            mesh.material.needsUpdate = true;
+          }, undefined,
+          function () { /* 图片缺失：保留程序化示意 */ });
+      })(art, ex);
+    }
     art.position.set(pos.x, pos.y, pos.z);
     art.rotation.y = pos.ry || 0;
     art.castShadow = true;
@@ -1686,6 +1699,39 @@ window.MuseumScene = (function () {
     }
   }
 
+  /* 组员6：通用 glb 雕塑加载（失败保留原几何体） */
+  function tryReplaceWithGlb(parent, url, x, y, z, targetH, fallbackMesh) {
+    if (!_g.GLTFLoader) return;
+    new _g.GLTFLoader().load(url, function (gltf) {
+      var model = gltf.scene;
+      var box = new _g.Box3().setFromObject(model);
+      var size = box.getSize(new _g.Vector3());
+      var s = targetH / (size.y || 1);
+      model.scale.set(s, s, s);
+      box.setFromObject(model);
+      var c = box.getCenter(new _g.Vector3());
+      model.position.set(-c.x, -box.min.y, -c.z);
+      model.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      var holder = new _g.Group();
+      holder.position.set(x, y, z);
+      holder.add(model);
+      parent.add(holder);
+      if (fallbackMesh) fallbackMesh.visible = false;
+    }, undefined, function () { /* 失败保留 fallback */ });
+  }
+
+  /* 组员6：米洛的维纳斯（assets/models/venus.glb，CC0） */
+  function addVenusSculpture(parent, x, y, z) {
+    var pedestal = new _g.Mesh(new _g.CylinderGeometry(0.55, 0.62, y, 16), mat(0xd8d2c6, { roughness: 0.85 }));
+    pedestal.position.set(x, y / 2, z);
+    pedestal.castShadow = true; pedestal.receiveShadow = true;
+    parent.add(pedestal);
+    obstacles.push({ type: "circle", x: x, z: z, r: 0.9 });
+    tryReplaceWithGlb(parent, "assets/models/venus.glb", x, y, z, 1.9, null);
+    addSign(parent, x, 1.05, z + 1.1, "米洛的维纳斯 · 古希腊");
+    registerSpot({ exhibitId: "venus", x: x, y: y + 1.1, z: z, radius: 2.4 });
+  }
+
   function buildPartCourtyard(root) {
     // 水池
     var pond = new _g.Mesh(
@@ -1707,6 +1753,7 @@ window.MuseumScene = (function () {
     buildPartBamboo(root, 13.5, 2.5);
     buildPartBamboo(root, -13.5, 19.5);
     buildPartBamboo(root, 13.5, 19.5);
+
 
     /* 草丛 + 灌木：程序化生成（合并几何，几十丛也不心疼），
        避开中央水池 14×8 与中轴道路 */
@@ -2559,6 +2606,25 @@ window.MuseumScene = (function () {
    * 9 幅画挂中轴双廊的画廊墙（半壁墙 x=±8.1，画面在 x=±7.96），
    * 玩家走中间过道、两侧都能触发；3 件雕塑在序厅 / 人物厅 / 中心庭。
    * ============================================================ */
+  /* ============================================================
+   * 中西对话 · 对话院（景观庭院，x 11.5~18 / z −15~−7）
+   *   · 米洛的维纳斯（assets/models/venus.glb，CC0，SMK 扫描）
+   *   · 蒙娜丽莎 / 星月夜（assets/images/*.jpg，PD-old，维基共享资源）
+   * 位置说明：原稿放在中心庭东侧（x≈9, z≈−13）会堵住东长廊西口，现改到景观庭院
+   *           东侧围栏内、与「清泉石上流」影壁同院 —— 展线为"看完中国画三厅 → 进对话院看西画对照"。
+   * 故事线：docs/展陈故事线-中西对话.md（人像 / 风景 / 形体 三组对照）
+   * ============================================================ */
+  function buildWesternCorner(scene) {
+    var wx = 17.3, wz = -11.5;      // 景观庭院东侧围栏内（画朝西，对着院内）
+    var wall = new _g.Mesh(new _g.BoxGeometry(0.28, 3.6, 5.0), mat(0xefe9dc, { roughness: 0.9 }));
+    wall.position.set(wx, 1.95, wz);
+    wall.castShadow = true; wall.receiveShadow = true;
+    scene.add(wall);
+    obstacles.push({ type: "rect", x0: wx - 0.15, z0: wz - 2.6, x1: wx + 0.15, z1: wz + 2.6 });
+    addPainting(scene, { x: wx - 0.05, y: 2.45, z: wz - 1.1, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "monalisa");
+    addPainting(scene, { x: wx - 0.05, y: 2.45, z: wz + 1.1, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "starrynight");
+    addVenusSculpture(scene, wx - 1.9, 0.8, wz);
+  }
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
     var paintings = [
@@ -2923,6 +2989,8 @@ window.MuseumScene = (function () {
         registerProtoDeco();
         /* 展品热点：同上（旧路径自带 20 条，此处只补 proto 布局缺的 12 条） */
         registerProtoExhibitSpots();
+        /* 组员6：西方绘画与雕塑（新增展品，置于中心庭院东侧）*/
+        buildWesternCorner(scene);
       } else {
         buildJiangnanCompound(scene);
       }

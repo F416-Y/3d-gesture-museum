@@ -37,6 +37,7 @@ const SHOTS = [
   { name: '16-plan-tilt', x: 0, y: 92, z: 58, tx: 0, ty: 0, tz: -2, fov: 45, plan: true, scale: 1.5, note: '高位斜俯视：全园区布局（带屋顶立体感）' },
   { name: '18-gate-front-night', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, night: true, note: '序厅正门 · 入夜灯火' },
   { name: '19-courtyard-night', x: 0, y: 2.2, z: 26, tx: 0, ty: 2.4, tz: 14, fov: 60, night: true, note: '中轴南院 → 影壁/双廊 · 入夜' },
+  { name: '21-eastwest-courtyard', x: 13.2, y: 1.8, z: -11.5, tx: 17.3, ty: 2.2, tz: -11.5, fov: 65, note: '对话院（景观庭院）：蒙娜丽莎 + 星月夜 + 米洛的维纳斯' },
   { name: '17-gate-front', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, note: '序厅正门正面（看敞开效果与匾额）' },
   { name: '11-hall4-shuzhai-wall', x: 37.6, y: 1.9, z: 12.5, tx: 40.84, ty: 1.55, tz: 12.5, fov: 78, note: '书斋背墙两幅立轴（近景）' },
   { name: '12-hall4-chashi-wall', x: 37.6, y: 1.9, z: 26.5, tx: 40.84, ty: 1.55, tz: 26.5, fov: 78, note: '茶室背墙两幅立轴（近景）' },
