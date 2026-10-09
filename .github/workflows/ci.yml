@@ -72,14 +72,20 @@ jobs:
           echo "密钥扫描通过"
       - name: 大文件守卫（单个跟踪文件不超过 5MB）
         run: |
+          # 例外（2026-10-09 放行）：MediaPipe 离线推理要把 wasm 与手部模型随仓库分发（Apache-2.0），
+          # 这 3 个文件天然 >5MB；其余文件仍严格受 5MB 限制。
+          ALLOW='^(js/vendor/mediapipe/|assets/models/hand_landmarker\.task$)'
           big=""
+          allow_cnt=0
           while IFS= read -r f; do
             [ -f "$f" ] || continue
+            if printf '%s' "$f" | grep -Eq "$ALLOW"; then allow_cnt=$((allow_cnt + 1)); continue; fi
             s=$(wc -c < "$f")
             if [ "$s" -gt 5242880 ]; then
               big="$big"$'\n'"  $f ($((s / 1024))KB)"
             fi
           done < <(git ls-files)
+          echo "白名单放行 $allow_cnt 个文件（MediaPipe 离线件）"
           if [ -n "$big" ]; then
             echo "::error::以下文件超过 5MB，请压缩或启用 Git LFS"
             echo "$big"
