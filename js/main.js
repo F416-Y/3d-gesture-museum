@@ -17,6 +17,7 @@ window.MuseumMain = (function () {
   var renderer, scene, camera;
   var clock = new THREE.Clock();
   var cameraOn = false;
+  var hallDoorPrompt = { door: null, dismissed: null };
 
   /* ---------- 全景俯瞰模式 ----------
    * player.js 每帧把相机锁在 1.6m 人眼高度、俯仰角为 0，所以只能第一人称。
@@ -133,7 +134,47 @@ window.MuseumMain = (function () {
     MuseumUI.setHandlers({
       onCameraToggle: function () { toggleCamera(!cameraOn); },
       onReset: function () { resetView(); },
-      onClosePanel: function () { /* 可在此补充：恢复手势状态等 */ },
+      onClosePanel: function () {
+        /* 关闭确认窗等同于取消：离开门口后才允许再次触发。 */
+        if (hallDoorPrompt.door) hallDoorPrompt.dismissed = hallDoorPrompt.door;
+        hallDoorPrompt.door = null;
+      },
+    });
+  }
+
+  /* ---------- 展厅闭门提示 ---------- */
+  function updateHallDoorPrompt() {
+    if (panorama.on || MuseumUI.isPanelOpen()) return;
+    var doors = MuseumScene.hallDoors || [];
+    var p = MuseumPlayer.getPosition();
+    var nearest = null, best = 2.8;
+    for (var i = 0; i < doors.length; i++) {
+      var d = doors[i];
+      if (!d.hallId) continue;
+      var dx = p.x - d.x, dz = p.z - d.z;
+      /* 只在门外触发；厅内通过路由进入，不重复弹窗。 */
+      if (dx * d.nx + dz * d.nz <= 0) continue;
+      var dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < best) { best = dist; nearest = d; }
+    }
+    if (!nearest) {
+      if (hallDoorPrompt.dismissed) {
+        var dd = hallDoorPrompt.dismissed;
+        var dxd = p.x - dd.x, dzd = p.z - dd.z;
+        if (Math.sqrt(dxd * dxd + dzd * dzd) > 3.8) hallDoorPrompt.dismissed = null;
+      }
+      return;
+    }
+    if (hallDoorPrompt.dismissed === nearest) return;
+    if (hallDoorPrompt.door === nearest) return;
+    hallDoorPrompt.door = nearest;
+    MuseumUI.showHallPrompt(nearest.tag, function () {
+      hallDoorPrompt.door = null;
+      hallDoorPrompt.dismissed = null;
+      location.hash = "#/hall/" + nearest.hallId;
+    }, function () {
+      hallDoorPrompt.door = null;
+      hallDoorPrompt.dismissed = nearest;
     });
   }
 
@@ -262,6 +303,7 @@ window.MuseumMain = (function () {
     } else {
       MuseumPlayer.update(dt, input, camera);
     }
+    updateHallDoorPrompt();
     MuseumExhibit.update();
     MuseumScene.update();
     if (window.MuseumLighting) window.MuseumLighting.update(dt);   /* 昼夜平滑过渡 */

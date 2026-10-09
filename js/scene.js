@@ -2755,6 +2755,20 @@ window.MuseumScene = (function () {
     });
   }
 
+  /* 闭门展厅：门体本身是外观生成物，碰撞层按同一坐标补一条薄门障碍。
+     玩家必须在门外确认进入，避免从门缝直接穿入院内。 */
+  function registerProtoHallDoors() {
+    var doors = (window.MuseumExteriorLayout && window.MuseumExteriorLayout.hallDoors) || [];
+    doors.forEach(function (d) {
+      var half = d.width / 2;
+      if (Math.abs(d.nz) > 0.5) {
+        obstacles.push({ type: 'rect', x0: d.x - half, z0: d.z - 0.18, x1: d.x + half, z1: d.z + 0.18 });
+      } else {
+        obstacles.push({ type: 'rect', x0: d.x - 0.18, z0: d.z - half, x1: d.x + 0.18, z1: d.z + half });
+      }
+    });
+  }
+
   /* ============================================================
    * 园区外墙登记（proto 布局）
    * ------------------------------------------------------------
@@ -3014,6 +3028,7 @@ window.MuseumScene = (function () {
         registerProtoObstacles();
         registerProtoBoundary();
         registerProtoHallWalls();
+        registerProtoHallDoors();
         registerProtoXuting();
         registerProtoDeco();
         registerProtoEntities();
@@ -3089,6 +3104,7 @@ window.MuseumScene = (function () {
       buildPartWindowWall(parent, x, y0, y1, z0, z1, ry);
     },
     obstacles: obstacles,
+    hallDoors: (window.MuseumExteriorLayout && window.MuseumExteriorLayout.hallDoors) || [],
     spotMeshes: spotMeshes,
     hallRegions: hallRegions,
     getHallAt: function (x, z) {

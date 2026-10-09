@@ -121,6 +121,24 @@ window.MuseumUI = (function () {
     }, ms || 2200);
   }
 
+  /* ---------- 展厅闭门确认 ---------- */
+  function showHallPrompt(tag, onEnter, onCancel) {
+    if (!el.panel || !el.panelBody) return;
+    el.panelBody.innerHTML =
+      '<h2>进入' + esc(tag) + '展厅？</h2>' +
+      '<p class="p-desc">展厅大门已关闭。确认后进入' + esc(tag) + '展厅，取消则留在连廊。</p>' +
+      '<div class="p-hall-actions">' +
+        '<button id="hall-enter-btn" class="p-hall-enter" type="button">进入展厅</button>' +
+        '<button id="hall-cancel-btn" class="p-hall-cancel" type="button">取消</button>' +
+      '</div>';
+    el.panel.classList.add("open");
+    el.panel.setAttribute("aria-hidden", "false");
+    var enter = document.getElementById("hall-enter-btn");
+    var cancel = document.getElementById("hall-cancel-btn");
+    if (enter) enter.addEventListener("click", function () { hidePanel(); if (onEnter) onEnter(); });
+    if (cancel) cancel.addEventListener("click", function () { hidePanel(); if (onCancel) onCancel(); });
+  }
+
   /* ---------- 鉴赏弹窗（含收藏 + 评论区） ---------- */
   function showExhibit(ex) {
     if (!el.panel || !el.panelBody) return;
@@ -293,6 +311,7 @@ window.MuseumUI = (function () {
     showCam: showCam,
     setHall: setHall,
     toast: toast,
+    showHallPrompt: showHallPrompt,
     showExhibit: showExhibit,
     hidePanel: hidePanel,
     isPanelOpen: isPanelOpen,

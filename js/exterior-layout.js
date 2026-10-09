@@ -10,7 +10,7 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 共享上下文 ---------- */
   /* slots：给 glb 真模型接线用的登记表（代码件先建，模型加载成功后替换隐藏） */
-  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], lion: [], ding: [], hall: [] }, anims: [] };
+  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], lion: [], ding: [], hall: [] }, anims: [], hallDoors: [] };
   var M = {};
   var WATERS = [];
 
@@ -586,6 +586,11 @@ window.MuseumExteriorLayout = (function () {
     if (side === 'N') { gx = cx; gz = z0; ry = Math.PI; }
     if (side === 'E') { gx = x1; gz = cz; ry = Math.PI / 2; }
     if (side === 'W') { gx = x0; gz = cz; ry = -Math.PI / 2; }
+    if (label) {
+      var doorIds = { '山水': 'hall1', '花鸟': 'hall2', '人物': 'hall3', '书斋': 'hall4', '茶室': 'hall4', '文创': 'hall5', '临摹': 'hall5' };
+      var normal = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] }[side];
+      if (doorIds[label]) S.hallDoors.push({ tag: label, hallId: doorIds[label], x: gx, z: gz, nx: normal[0], nz: normal[1], width: gateW });
+    }
     var g = new THREE.Group(); g.position.set(gx, 0, gz); g.rotation.y = ry; S.scene.add(g);
     /* 门柱两根（0.7m 见方，3.2m 高） */
     var off = gateW / 2 + 0.35;
@@ -1946,6 +1951,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 总装入口 ---------- */
   function build(scene) {
     S.scene = scene;
+    S.hallDoors.length = 0;
     initMaterials();
     buildGreenery();
     buildBoundary();
@@ -1971,7 +1977,7 @@ window.MuseumExteriorLayout = (function () {
     return { waters: WATERS };
   }
 
-  return { build: build, slots: S.slots, mats: M, ctx: S };
+  return { build: build, slots: S.slots, hallDoors: S.hallDoors, mats: M, ctx: S };
 })();
 /* ---------- 原型的日光与半球光（从原型主控段自动抓取） ---------- */
 window.MuseumExteriorLayout.addLights = function (scene) {
