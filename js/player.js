@@ -36,8 +36,17 @@ window.MuseumPlayer = (function () {
 
   // 查询某点地面标高（scene.js 提供，序厅台基/踏跺高度；没有则按平地 0 处理）
   function terrainAt(x, z) {
-    return (window.MuseumScene && window.MuseumScene.terrainHeightAt)
-      ? window.MuseumScene.terrainHeightAt(x, z) : 0;
+    var f = window.MuseumScene && window.MuseumScene.terrainHeightAt;
+    if (!f) return 0;
+    // 脚底周围采样几个点、取最高：避免中心点恰好落在地形数据的小缝隙（如
+    // 前庭大门台基与台阶之间的 0.2m 空当）时，视点被瞬间拉到低处
+    var r = radius * 0.6;   // 0.3m，覆盖 0.2m 的缝隙
+    var h = f(x, z);
+    if (f(x - r, z) > h) h = f(x - r, z);
+    if (f(x + r, z) > h) h = f(x + r, z);
+    if (f(x, z - r) > h) h = f(x, z - r);
+    if (f(x, z + r) > h) h = f(x, z + r);
+    return h;
   }
 
   /* ---------- 初始化 ---------- */
