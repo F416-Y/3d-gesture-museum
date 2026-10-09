@@ -47,7 +47,8 @@ window.MuseumAvatar = (function () {
     var eye = (window.MuseumConfig && MuseumConfig.player && MuseumConfig.player.eyeHeight) || 1.7;
     var groundY = p.y - eye;
     holder.position.set(p.x, groundY, p.z);
-    holder.rotation.y = yaw;
+    // eggman.glb 的正面朝 +Z，而项目玩家的前进方向是 -Z，补半圈后人物才会面向行进方向。
+    holder.rotation.y = yaw + Math.PI;
     if (camera) {
       camera.position.set(p.x + Math.sin(yaw) * 3.4, groundY + 2.25, p.z + Math.cos(yaw) * 3.4);
       camera.lookAt(p.x, groundY + 1.05, p.z);
