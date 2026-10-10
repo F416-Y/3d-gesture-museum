@@ -2532,16 +2532,65 @@ window.MuseumScene = (function () {
    * 数据来自外观原型：台基 x −11~11 / z 24.5~34.5、高 1.2m；
    * 南入口六级踏跺 z 34.9~36.7，每级 0.2m，顶面 1.2→0.2。
    * ============================================================ */
+  /* 各厅正房 0.5m 台基（buildHall 的 platTop=0.5；台基面阔/进深在厅 w/d 上各外扩 1.2m）。
+     数据从外观原型 slots.hall 抽取，与 registerProtoHallWalls 同源，换方案不用重写本表。 */
+  var _hallPlatforms = [];
+
+  function buildTerrainPlatforms() {
+    _hallPlatforms.length = 0;
+    var slots = window.MuseumExteriorLayout && window.MuseumExteriorLayout.slots;
+    var halls = (slots && slots.hall) || [];
+    halls.forEach(function (h) {
+      var pw = h.w + 2.4, pd = h.d + 2.4;
+      _hallPlatforms.push({
+        x0: h.cx - pw / 2, x1: h.cx + pw / 2,
+        z0: h.cz - pd / 2, z1: h.cz + pd / 2,
+      });
+    });
+  }
+
   function terrainHeightAt(x, z) {
-    /* 序厅台基 */
-    if (x >= -11 && x <= 11 && z >= 24.5 && z <= 34.5) return 1.2;
+    /* 序厅 1.2m 高台：x ±11.3 含两侧 4m 侧院（旧值 ±11 漏掉侧院外带，会 1.2m 直降） */
+    if (x >= -11.3 && x <= 11.3 && z >= 24.5 && z <= 34.5) return 1.2;
+
     /* 南入口六级踏跺（越往北越高，第 0 级顶面 1.2） */
-    if (x >= -7 && x <= 7 && z >= 34.7 && z <= 36.9) {
+    if (x >= -7 && x <= 7 && z >= 34.5 && z <= 36.9) {
       var i = Math.floor((z - 34.9) / 0.36 + 0.5);
       if (i < 0) i = 0;
       if (i > 5) i = 5;
       return 1.2 - i * 0.2;
     }
+
+    /* 序厅北侧中央大踏跺：六级（面阔 4.2m，x ±2.1），1.2m 下到中轴南院 */
+    if (x >= -2.1 && x <= 2.1 && z >= 22.1 && z < 24.5) {
+      var c = Math.floor((24.5 - z) / 0.34);
+      if (c < 0) c = 0;
+      if (c > 5) c = 5;
+      return Math.max(0, 1.2 - c * 0.2);
+    }
+
+    /* 序厅北出口：后墙照壁两侧门（x=±4.8，净 1.6m）外四步踏跺，下 1.2m 高台到中轴庭院 */
+    if (z >= 23.7 && z < 24.5 && ((x >= -5.6 && x <= -4.0) || (x >= 4.0 && x <= 5.6))) {
+      var j = Math.min(3, Math.floor((24.5 - z) / 0.2));
+      return 1.2 - j * 0.3;
+    }
+
+    /* 侧院东西廊门踏跺：侧院(1.2m) → 游廊(0m) 逐级下（东门 z=26.5、西门 z=28.5） */
+    if (x >= 11.3 && x <= 12.5 && z >= 25.6 && z <= 27.4) {
+      var e = Math.min(3, Math.floor((x - 11.3) / 0.3));
+      return Math.max(0, 1.2 - e * 0.3);
+    }
+    if (x >= -12.5 && x <= -11.3 && z >= 27.6 && z <= 29.4) {
+      var w = Math.min(3, Math.floor((-11.3 - x) / 0.3));
+      return Math.max(0, 1.2 - w * 0.3);
+    }
+
+    /* 各厅正房 0.5m 台基 */
+    for (var k = 0; k < _hallPlatforms.length; k++) {
+      var p = _hallPlatforms[k];
+      if (x >= p.x0 && x <= p.x1 && z >= p.z0 && z <= p.z1) return 0.5;
+    }
+
     return 0;
   }
   function registerSpot(spot) {
@@ -2896,6 +2945,7 @@ window.MuseumScene = (function () {
         registerProtoObstacles();
         registerProtoBoundary();
         registerProtoHallWalls();
+        buildTerrainPlatforms();
         registerProtoXuting();
         registerProtoDeco();
         /* 展品热点：同上（旧路径自带 20 条，此处只补 proto 布局缺的 12 条） */

@@ -99,11 +99,11 @@ window.MuseumPlayer = (function () {
     // 分轴移动 + 碰撞（先 x 后 z，滑动感更顺滑）；子步进防高速穿墙
     moveWithCollision(step.x, step.z);
 
-    // 高度跟随：逐级离散——每帧直接锁到「当前地面标高 + 眼高」。
-    // 不再平滑插值：南入口六级台阶每级 0.2m，走到台阶分界处“顿一下上一级”，
-    // 有登台阶感；否则会被 lerp 磨成缓坡、感觉不到在爬台阶
+    // 高度跟随：逐级离散 + 快速逼近。
+    // 目标高度仍是离散台阶（每级 0.2m），但用较快 lerp 逼近而非瞬间跳变，
+    // 既保留“登台阶”的顿感，又避免 0.2m 瞬时跳变造成的走路一卡一卡
     var ground = terrainAt(pos.x, pos.z);
-    eyeY = ground + eyeHeight;
+    eyeY += (ground + eyeHeight - eyeY) * Math.min(1, delta * 30);
     pos.y = eyeY;
 
     // 应用相机

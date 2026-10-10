@@ -847,7 +847,8 @@ window.MuseumExteriorLayout = (function () {
       lf1.rotation.y = _sa; lf2.rotation.y = -_sa;
       box(1.9, 0.12, 0.74, M.stoneDark, dxx, 1.26, 25, 0, g);
       for (ti = 0; ti < 4; ti++) {
-        box(1.9, 0.3, 0.25, M.stone, dxx, 0.15 + ti * 0.3, 24.58 - ti * 0.25, 0, g);
+        /* 四步踏跺：靠近墙(z=24.58)一级最高(顶1.2)，越往北(z 减小)越低 → 顶 1.2/0.9/0.6/0.3 */
+        box(1.9, 0.3, 0.25, M.stone, dxx, 1.05 - ti * 0.3, 24.58 - ti * 0.25, 0, g);
       }
     }
     /* 中院侧墙（各带一樘月洞门通向北院） */
