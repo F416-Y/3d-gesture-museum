@@ -456,51 +456,65 @@ window.MuseumScene = (function () {
     }
   }
 
-  /* ---------- 月洞门（苏州园林正统做法：落地整圆洞径 2.6m、深色砖衬 + 双面砖雕镶边、
-       4m 高墙身拔作门楼、小青瓦压顶，与两侧 3.6m 院墙成起伏） ---------- */
+  /* ---------- 月洞门（苏州园林正统做法：落地整圆洞径 3.3m、深色砖衬 + 双面砖雕镶边、
+       4.4.4m 高墙身拔作门楼、小青瓦压顶，与两侧 3.6m 院墙成起伏） ---------- */
   function moonGate(x, z, ry) {
-    var g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; S.scene.add(g);
-    /* 带整圆洞的墙身两片（canvas alpha 镂空：圆心 1.4m、半径 1.3m，洞底贴地只留 0.1m 门槛） */
+    var g = new THREE.Group(); g.position.set(x, 1.226, z); g.rotation.y = ry; S.scene.add(g);
+    /* 带整圆洞的墙身两片（canvas alpha 镂空：圆心 1.7m、半径 1.65m，洞底贴地只留 0.05m 门槛） */
     if (!M.moonWall) {
       var mc = document.createElement('canvas'); mc.width = mc.height = 512;
       var mx = mc.getContext('2d');
       mx.fillStyle = '#ffffff'; mx.fillRect(0, 0, 512, 512);
       mx.fillStyle = '#000000';
       mx.beginPath();
-      mx.ellipse(256, 512 - 1.4 / 4.0 * 512, 1.3 / 4.4 * 512, 1.3 / 4.0 * 512, 0, 0, Math.PI * 2);
+      mx.ellipse(256, 512 - 1.7 / 4.4 * 512, 1.65 / 4.4 * 512, 1.65 / 4.4 * 512, 0, 0, Math.PI * 2);
       mx.fill();
       M.moonWall = new THREE.MeshStandardMaterial({
         color: 0xe9e0c9, roughness: 0.95,
         alphaMap: new THREE.CanvasTexture(mc), alphaTest: 0.5, side: THREE.DoubleSide
       });
     }
-    var w1 = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 4.0), M.moonWall);
-    w1.position.set(0, 2.0, -0.22); w1.receiveShadow = true; g.add(w1);
-    var w2 = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 4.0), M.moonWall);
-    w2.position.set(0, 2.0, 0.22); w2.receiveShadow = true; g.add(w2);
+    var w1 = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 4.4), M.moonWall);
+    w1.position.set(0, 2.2, -0.22); w1.receiveShadow = true; g.add(w1);
+    var w2 = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 4.4), M.moonWall);
+    w2.position.set(0, 2.2, 0.22); w2.receiveShadow = true; g.add(w2);
     /* 洞口深色砖衬（整圆一圈，给洞口 0.44m 厚度） */
-    var ring = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.44, 32, 1, true), M.ink);
-    ring.rotation.z = Math.PI / 2; ring.rotation.y = Math.PI / 2;
-    ring.position.set(0, 1.4, 0);
+    var liningMat = M.ink.clone();
+    liningMat.side = THREE.DoubleSide;
+    var ring = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.65, 0.44, 64, 1, true), liningMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(0, 1.7, 0);
     ring.castShadow = true;
     g.add(ring);
     /* 双面整圆砖雕镶边（遮住镂空切边，一眼读出圆月轮廓） */
-    var trim1 = new THREE.Mesh(new THREE.TorusGeometry(1.36, 0.07, 8, 44), M.ink);
-    trim1.position.set(0, 1.4, 0.23); trim1.castShadow = true; g.add(trim1);
-    var trim2 = new THREE.Mesh(new THREE.TorusGeometry(1.36, 0.07, 8, 44), M.ink);
-    trim2.position.set(0, 1.4, -0.23); trim2.castShadow = true; g.add(trim2);
-    /* 石门槛 + 两侧石墩 */
-    box(2.6, 0.1, 0.5, M.stone, 0, 0.05, 0, 0, g);
-    box(1.0, 0.3, 0.56, M.stone, -1.75, 0.15, 0, 0, g);
-    box(1.0, 0.3, 0.56, M.stone, 1.75, 0.15, 0, 0, g);
+    var trim1 = new THREE.Mesh(new THREE.TorusGeometry(1.71, 0.07, 12, 80), M.ink);
+    trim1.position.set(0, 1.7, 0.23); trim1.castShadow = true; g.add(trim1);
+    var trim2 = new THREE.Mesh(new THREE.TorusGeometry(1.71, 0.07, 12, 80), M.ink);
+    trim2.position.set(0, 1.7, -0.23); trim2.castShadow = true; g.add(trim2);
+    /* 整块青石门槛：下缘嵌入铺地，两端接门帮，顶缘倒角便于跨过。 */
+    var sillShape = new THREE.Shape();
+    sillShape.moveTo(-1.68, -0.025);
+    sillShape.lineTo(1.68, -0.025);
+    sillShape.lineTo(1.68, 0.14);
+    sillShape.lineTo(-1.68, 0.14);
+    sillShape.closePath();
+    var sillGeo = new THREE.ExtrudeGeometry(sillShape, {
+      depth: 0.56, bevelEnabled: true, bevelThickness: 0.025,
+      bevelSize: 0.025, bevelSegments: 2, steps: 1
+    });
+    var sill = new THREE.Mesh(sillGeo, M.stoneDark);
+    sill.name = 'moon-gate-stone-threshold';
+    sill.position.z = -0.28;
+    sill.castShadow = sill.receiveShadow = true;
+    g.add(sill);
     /* 两侧墙柱 + 圆洞上方墙身（实体封口，与两侧院墙咬接） */
-    box(0.9, 4.0, 0.44, M.paper, -1.75, 2.0, 0, 0, g);
-    box(0.9, 4.0, 0.44, M.paper, 1.75, 2.0, 0, 0, g);
-    box(4.4, 1.3, 0.44, M.paper, 0, 3.35, 0, 0, g);
+    box(0.55, 4.4, 0.44, M.paper, -1.925, 2.2, 0, 0, g);
+    box(0.55, 4.4, 0.44, M.paper, 1.925, 2.2, 0, 0, g);
+    box(4.4, 1.05, 0.44, M.paper, 0, 3.875, 0, 0, g);
     /* 墨线 + 小青瓦压顶 + 正脊 */
-    box(4.6, 0.14, 0.56, M.ink, 0, 4.06, 0, 0, g);
-    box(4.8, 0.16, 0.72, M.tile, 0, 4.22, 0, 0, g);
-    box(4.9, 0.1, 0.14, M.tile, 0, 4.36, 0, 0, g);
+    box(4.6, 0.14, 0.56, M.ink, 0, 4.46, 0, 0, g);
+    box(4.8, 0.16, 0.72, M.tile, 0, 4.61, 0, 0, g);
+    box(4.9, 0.1, 0.14, M.tile, 0, 4.74, 0, 0, g);
     return g;
   }
 
@@ -724,7 +738,9 @@ window.MuseumScene = (function () {
     if (opts && opts.chongyan) {
       hipRoof(w + 5.0, d + 5.0, 1.1, cx, beamY - 0.75, cz, g);
     }
-    var rw = w + 3.4, rd = d + 3.4;
+    /* 小型侧院相邻布置时收窄屋檐外挑，避免屋面互压；墙体和门洞尺寸保持不变。 */
+    var roofOverhang = (opts && /^(文创|临摹|书斋|茶室)$/.test(opts.tag)) ? 0.8 : 3.4;
+    var rw = w + roofOverhang, rd = d + roofOverhang;
     var rh = Math.min(Math.max(rw, rd) * 0.24, 4.4);
     hipRoof(rw, rd, rh, cx, beamY + 0.2, cz, g);
     /* 登记厅堂槽位：供室内陈设自动布展（位置 / 面阔进深 / 朝向 / 馆名） */
@@ -991,10 +1007,10 @@ window.MuseumScene = (function () {
        不再堵在台基北缘；中院北面就此敞开，视线直透水榭庭院，人从台基北缘中央大踏跺下院绕行影壁两侧 */
     /* 中院侧墙月洞门与廊门、游廊同轴：东门 z=26.5 对东廊门/东游廊，西门 z=28.5 对西廊门/西游廊，
        每侧一条直线：游廊 → 廊门 → 侧院 → 月洞门 → 中院 */
-    wallRun(-7.25, 24.5, -7.25, 27.0, 0, 3.6);
-    wallRun(-7.25, 30.0, -7.25, 34.5, 0, 3.6);
-    wallRun(7.25, 24.5, 7.25, 25.0, 0, 3.6);
-    wallRun(7.25, 28.1, 7.25, 34.5, 0, 3.6);
+    wallRun(-7.25, 24.5, -7.25, 26.85, 0, 3.6);
+    wallRun(-7.25, 30.15, -7.25, 34.5, 0, 3.6);
+    wallRun(7.25, 24.5, 7.25, 24.85, 0, 3.6);
+    wallRun(7.25, 28.15, 7.25, 34.5, 0, 3.6);
     moonGate(-7.25, 28.5, Math.PI / 2);
     moonGate(7.25, 26.5, Math.PI / 2);
     /* 左右侧院改透空围栏（各 4m 宽）+ 西南/东南角阙楼；
@@ -1060,33 +1076,33 @@ window.MuseumScene = (function () {
     addWindow(7.44, 2.3, 29.5, Math.PI / 2);
     addWindow(7.44, 2.3, 32.5, Math.PI / 2);
     /* 中庭铜鼎：3m 见方石座 + 三足两耳大鼎（通高约 2.4m） */
-    box(3, 0.5, 3, M.stoneDark, 0, 1.2 + 0.25, 29.5, 0, g);
+    box(3, 0.5, 3, M.stoneDark, 0, 1.2 + 0.25, 27.5, 0, g);
     var dingY = 1.2 + 0.5, legA;
     var dingG = new THREE.Group(); g.add(dingG);
     for (legA = 0; legA < 3; legA++) {
       var la = legA * 2.094;
-      cyl(0.09, 0.12, 0.7, 8, M.ink, Math.cos(la) * 0.55, dingY + 0.35, 29.5 + Math.sin(la) * 0.55, dingG);
+      cyl(0.09, 0.12, 0.7, 8, M.ink, Math.cos(la) * 0.55, dingY + 0.35, 27.5 + Math.sin(la) * 0.55, dingG);
     }
-    cyl(0.95, 0.75, 1.0, 16, M.ink, 0, dingY + 1.15, 29.5, dingG);
-    cyl(1.02, 1.02, 0.16, 16, M.ink, 0, dingY + 1.72, 29.5, dingG);
-    box(0.14, 0.5, 0.3, M.ink, -0.6, dingY + 2.0, 29.5, 0, dingG);
-    box(0.14, 0.5, 0.3, M.ink, 0.6, dingY + 2.0, 29.5, 0, dingG);
-    S.slots.ding.push({ group: dingG, x: 0, y: dingY, z: 29.5 });
+    cyl(0.95, 0.75, 1.0, 16, M.ink, 0, dingY + 1.15, 27.5, dingG);
+    cyl(1.02, 1.02, 0.16, 16, M.ink, 0, dingY + 1.72, 27.5, dingG);
+    box(0.14, 0.5, 0.3, M.ink, -0.6, dingY + 2.0, 27.5, 0, dingG);
+    box(0.14, 0.5, 0.3, M.ink, 0.6, dingY + 2.0, 27.5, 0, dingG);
+    S.slots.ding.push({ group: dingG, x: 0, y: dingY, z: 27.5 });
     /* 导览序厅陈设：铜鼎四周木柱红绳护栏（南面留观瞻口）+ 展签 + 门内两侧导览立牌 + 暖光 */
     (function () {
       var py = 1.2;   /* 台基面 */
       var posts = [[-2.3, -2.3], [0, -2.3], [2.3, -2.3], [2.3, 0], [2.3, 2.3], [-2.3, 2.3], [-2.3, 0]], pi;
       for (pi = 0; pi < posts.length; pi++) {
-        cyl(0.045, 0.055, 0.85, 8, M.wood, posts[pi][0], py + 0.425, 29.5 + posts[pi][1], g);
+        cyl(0.045, 0.055, 0.85, 8, M.wood, posts[pi][0], py + 0.425, 27.5 + posts[pi][1], g);
         var pb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), M.ink);
-        pb.position.set(posts[pi][0], py + 0.9, 29.5 + posts[pi][1]); pb.castShadow = true; g.add(pb);
+        pb.position.set(posts[pi][0], py + 0.9, 27.5 + posts[pi][1]); pb.castShadow = true; g.add(pb);
       }
       var yUp = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3();
       for (pi = 0; pi < posts.length; pi++) {
         var q0 = posts[pi], q1 = posts[(pi + 1) % posts.length];
         if (q0[1] === 2.3 && q1[1] === 2.3) continue;   /* 南面留观瞻口 */
         var rl = Math.sqrt((q1[0] - q0[0]) * (q1[0] - q0[0]) + (q1[1] - q0[1]) * (q1[1] - q0[1]));
-        var rope = cyl(0.02, 0.02, rl, 6, M.lampRed, (q0[0] + q1[0]) / 2, py + 0.68, 29.5 + (q0[1] + q1[1]) / 2, g);
+        var rope = cyl(0.02, 0.02, rl, 6, M.lampRed, (q0[0] + q1[0]) / 2, py + 0.68, 27.5 + (q0[1] + q1[1]) / 2, g);
         dir.set(q1[0] - q0[0], 0, q1[1] - q0[1]).normalize();
         rope.quaternion.setFromUnitVectors(yUp, dir);
       }
