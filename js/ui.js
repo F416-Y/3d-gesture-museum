@@ -128,17 +128,25 @@ window.MuseumUI = (function () {
     social.favLoading = false;
     social.comments = [];
 
+    var artCol = ex.image
+      ? '<div class="p-art"><img class="p-art-img" src="' + ex.image + '" alt="' + esc(ex.title) + ' 画作" /></div>'
+      : '<div class="p-art"><div class="p-art-ph"><span>' + esc(ex.title) + '</span></div></div>';
     el.panelBody.innerHTML =
       '<h2>' + esc(ex.title) + '</h2>' +
-      '<div class="p-meta">' +
-        metaItem("作者", ex.artist) +
-        metaItem("年代", ex.dynasty + (ex.era ? " · " + ex.era : "")) +
-        metaItem("形制", ex.medium) +
-        metaItem("馆藏", ex.collection) +
-      '</div>' +
-      '<p class="p-desc">' + esc(ex.intro) + '</p>' +
-      '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(ex.appreciation) + '</p></div>' +
-      renderSocial();
+      '<div class="p-body">' +
+        artCol +
+        '<div class="p-info">' +
+          '<div class="p-meta">' +
+            metaItem("作者", ex.artist) +
+            metaItem("年代", ex.dynasty + (ex.era ? " · " + ex.era : "")) +
+            metaItem("形制", ex.medium) +
+            metaItem("馆藏", ex.collection) +
+          '</div>' +
+          '<p class="p-desc">' + esc(ex.intro) + '</p>' +
+          '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(ex.appreciation) + '</p></div>' +
+          renderSocial() +
+        '</div>' +
+      '</div>';
 
     el.panel.classList.add("open");
     el.panel.setAttribute("aria-hidden", "false");
