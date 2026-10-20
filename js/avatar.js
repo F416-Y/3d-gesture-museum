@@ -36,7 +36,7 @@ window.MuseumAvatar = (function () {
       holder.add(model);
       holder.visible = enabled;
     }, undefined, function (err) {
-      console.warn("[云墨美术馆] eggman.glb 加载失败：", err);
+      console.warn("[云间入墨] eggman.glb 加载失败：", err);
     });
   }
 

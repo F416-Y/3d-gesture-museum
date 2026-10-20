@@ -11,7 +11,7 @@
 window.MuseumConfig = {
   /* ---------- 项目信息 ---------- */
   project: {
-    name: "云墨美术馆",
+    name: "云间入墨",
     nameEn: "CloudInk Art Museum",
     version: "v0.1.0 团队骨架版",
     subject: "美术鉴赏 × 软件工程 跨专业课程设计",

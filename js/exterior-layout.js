@@ -887,7 +887,7 @@ window.MuseumExteriorLayout = (function () {
     box(0.07, 3.5, 0.52, M.wood, -1.735, 1.2 + 1.75, 34.5, 0, g);
     box(0.07, 3.5, 0.52, M.wood,  1.735, 1.2 + 1.75, 34.5, 0, g);
     /* 匾挂在门额枋正面（抱厦屋顶之上、主顶檐口之下），不被任何构件遮挡 */
-    plaque('云墨美术馆', 4.6, 0, 1.2 + 4.95, 34.9, 0, g);
+    plaque('云间入墨', 4.6, 0, 1.2 + 4.95, 34.9, 0, g);
     /* 门内抱厦（北侧院内：贴墙北皮双柱卷棚小顶，构成重檐入口）；
        屋顶中心 z=33.15（南缘 34.35 仅嵌入墙皮 0.1，不穿墙），双柱 z=32.35 正对檐下，
        柱加高至 3.8m，额枋 5.05m 嵌入屋面底——柱、枋、顶三者相接无缝 */
@@ -1369,7 +1369,7 @@ window.MuseumExteriorLayout = (function () {
       });
       S.scene.add(ring);
     }, undefined, function (err) {
-      console.warn('[云墨美术馆] Rodin 环形连廊加载失败：', err);
+      console.warn('[云间入墨] Rodin 环形连廊加载失败：', err);
     });
   }
 
@@ -1511,7 +1511,7 @@ window.MuseumExteriorLayout = (function () {
       });
       S.scene.add(group);
     }, undefined, function (err) {
-      console.warn('[云墨美术馆] 桥 GLB 加载失败，回退程序桥：', err);
+      console.warn('[云间入墨] 桥 GLB 加载失败，回退程序桥：', err);
       buildCentralArchBridge();
     });
   }

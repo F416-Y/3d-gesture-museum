@@ -110,7 +110,7 @@ window.MuseumMain = (function () {
     // 完成加载，显示主界面
     setTimeout(function () {
       MuseumUI.hideLoading();
-      MuseumUI.toast("欢迎来到云墨美术馆 · 伸出手掌开始漫游");
+      MuseumUI.toast("欢迎来到云间入墨 · 伸出手掌开始漫游");
     }, 400);
 
     // 自动尝试开启手势（失败自动降级为键盘）
@@ -276,7 +276,7 @@ window.MuseumMain = (function () {
         cameraOn = false;
         MuseumUI.setCameraButton(false);
         MuseumUI.showCam(false);
-        console.warn("[云墨美术馆] 手势启动失败：", err && err.message ? err.message : err);
+        console.warn("[云间入墨] 手势启动失败：", err && err.message ? err.message : err);
       }).then(function () {
         setTimeout(function () { MuseumUI.hideLoading(); }, 500);
       });

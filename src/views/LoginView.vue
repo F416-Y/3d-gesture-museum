@@ -1,7 +1,7 @@
 <template>
   <div class="overlay-page">
     <div class="card">
-      <h2 class="card-title">云墨美术馆 · {{ mode === "login" ? "登录" : "注册" }}</h2>
+      <h2 class="card-title">云间入墨 · {{ mode === "login" ? "登录" : "注册" }}</h2>
       <div class="tabs">
         <button type="button" :class="{ active: mode === 'login' }" @click="mode = 'login'">登录</button>
         <button type="button" :class="{ active: mode === 'register' }" @click="mode = 'register'">注册</button>

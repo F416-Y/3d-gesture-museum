@@ -171,7 +171,7 @@ window.MuseumGesture = (function () {
       // 物理拨片关闭后，1 秒时为灰噪、2 秒后才稳定纯黑）；每种问题只报一次
       var track = s.getVideoTracks && s.getVideoTracks()[0];
       if (track) {
-        console.log("[云墨美术馆] 已选中的摄像头：", track.label || "(无设备名)");
+        console.log("[云间入墨] 已选中的摄像头：", track.label || "(无设备名)");
       }
       var probeWarned = { noFrame: false, black: false };
       function probeBlackFrame() {
@@ -181,7 +181,7 @@ window.MuseumGesture = (function () {
           if (probeWarned.noFrame) return;
           probeWarned.noFrame = true;
           console.warn(
-            "[云墨美术馆] 摄像头已授权但无画面：浏览器没拿到视频帧",
+            "[云间入墨] 摄像头已授权但无画面：浏览器没拿到视频帧",
             track && track.label ? "（设备：" + track.label + "）。" : "。",
             "常见于内置容器或虚拟摄像头；请在 Chrome / Edge 打开，或用系统相机验证设备",
           );
@@ -209,17 +209,17 @@ window.MuseumGesture = (function () {
           var mean = sum / n / 3;
           var std = Math.sqrt(Math.max(sumSq / n - (sum / n) * (sum / n), 0)) / 3;
           // 亮度数值始终留痕（无论是否越阈）：排查「看着黑但没报警」时需要知道实测值
-          console.log("[云墨美术馆] 启动画面亮度 " + mean.toFixed(1) + "/255 波动 " + std.toFixed(1) + "（黑帧判定：亮度<60 且波动<3）");
+          console.log("[云间入墨] 启动画面亮度 " + mean.toFixed(1) + "/255 波动 " + std.toFixed(1) + "（黑帧判定：亮度<60 且波动<3）");
           if (mean < 60 && std < 3 && !probeWarned.black) {
             probeWarned.black = true;
             console.warn(
-              "[云墨美术馆] 摄像头在出黑帧/纯色替代帧（亮度 " + mean.toFixed(1) + "/255，波动 " + std.toFixed(1) + "）：",
+              "[云间入墨] 摄像头在出黑帧/纯色替代帧（亮度 " + mean.toFixed(1) + "/255，波动 " + std.toFixed(1) + "）：",
               "最常见是笔记本物理遮挡片或 Lenovo Vantage 相机隐私模式；",
               "打开系统「相机」应用确认，再检查机身滑片 / 按 Fn+F8 / 在 Vantage 里解除隐私模式",
             );
           }
         } catch (probeErr) {
-          console.warn("[云墨美术馆] 黑帧检测失败：", probeErr && probeErr.message);
+          console.warn("[云间入墨] 黑帧检测失败：", probeErr && probeErr.message);
         }
       }
       setTimeout(probeBlackFrame, 1000);
@@ -229,7 +229,7 @@ window.MuseumGesture = (function () {
       var played = video.play();
       if (!played || !played.catch) return;
       return played.catch(function (playErr) {
-        console.warn("[云墨美术馆] 摄像头预览未能自动播放（识别继续）：", playErr && playErr.name);
+        console.warn("[云间入墨] 摄像头预览未能自动播放（识别继续）：", playErr && playErr.name);
       });
     }).catch(function (err) {
       if (err && err.stage) throw err;
@@ -281,7 +281,7 @@ window.MuseumGesture = (function () {
     }).then(function (vision) {
       // 优先 GPU，失败降级 CPU；两者都是同一份 options，只差 delegate
       return HandLandmarker.createFromOptions(vision, landmarkerOptions("GPU")).catch(function (gpuErr) {
-        console.warn("[云墨美术馆] GPU delegate 不可用，降级 CPU：", gpuErr && gpuErr.message);
+        console.warn("[云间入墨] GPU delegate 不可用，降级 CPU：", gpuErr && gpuErr.message);
         return HandLandmarker.createFromOptions(vision, landmarkerOptions("CPU"));
       });
     }).then(function (lm) {

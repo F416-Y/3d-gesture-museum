@@ -1,7 +1,7 @@
 <template>
   <div class="overlay-page map-page">
     <div class="map-card">
-      <h2 class="card-title">云墨美术馆 · 园区平面图</h2>
+      <h2 class="card-title">云间入墨 · 园区平面图</h2>
       <p class="map-hint">上 = 北（z 负方向）｜ 点击房屋区域进入对应内饰 ｜ 红点是当前位置</p>
       <svg class="map-svg" viewBox="40 124 840 672" xmlns="http://www.w3.org/2000/svg">
         <!-- 围墙围合的园区：世界坐标 x ±50、z ±40 -->
