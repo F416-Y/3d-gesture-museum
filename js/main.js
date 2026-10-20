@@ -214,7 +214,18 @@ window.MuseumMain = (function () {
     MuseumUI.showHallPrompt(nearest.tag, function () {
       hallDoorPrompt.door = null;
       hallDoorPrompt.dismissed = null;
-      location.href = "./interior.html#/hall/" + nearest.hallId;
+      var pages = {
+        hall1: "shanshui.html",
+        hall2: "huaniao.html",
+        hall3: "renwu.html",
+        hall4: "shuzhai.html",
+        hall5: "wenchuang.html"
+      };
+      if (nearest.hallId === "hall0") {
+        location.href = "./index.html#/hall/plaza";
+      } else {
+        location.href = "./" + (pages[nearest.hallId] || "index.html#/hall/plaza");
+      }
     }, function () {
       hallDoorPrompt.door = null;
       hallDoorPrompt.dismissed = nearest;

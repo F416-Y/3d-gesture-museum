@@ -1021,7 +1021,7 @@ window.MuseumScene = (function () {
      *
      * 进度：已建 hall2 花鸟画展区（样板厅，函数定义见本函数下方）
      *       待建 hall0 序厅 / hall1 山水展区 / hall3 人物展区 /
-     *            hall4 书斋茶室 / hall5 文创区 / 中央庭院 courtyard
+     *            hall4 书斋 / hall5 文创雅集馆 / 中央庭院 courtyard
      *            （含水池、太湖石、竹丛、东西曲廊、马头墙与漏窗）
      * ============================================================ */
 
@@ -2226,7 +2226,7 @@ window.MuseumScene = (function () {
     addPainting(g, { x: 0, y: 2.6, z: -halfD + 0.2, ry: 0, lamp: [0, 0.9] }, 4.0, 1.8, "xishanxinglvtu");
     buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0);
     buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0);
-    buildPartHallTitle(g, "书斋茶室", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
+    buildPartHallTitle(g, "书斋", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
 
     // 中央茶席长案 3.2m x 1m + 六方凳
     buildPartLongTable(g, 0, F, 0, 3.2, 1.0);
@@ -2277,7 +2277,7 @@ window.MuseumScene = (function () {
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
     // 北墙：匾额 + 五幅小画
-    buildPartHallTitle(g, "文创雅集", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
+    buildPartHallTitle(g, "文创雅集馆", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
     [-4, -2, 0, 2, 4].forEach(function (px, idx) {
       var ids = ["xieshengzhenqintu", "wuniutu", "fuchunshanjv", "xishanxinglvtu", "qianlijiangshan"];
       addPainting(g, { x: px, y: 2.05, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 0.9, 1.35, ids[idx]);
@@ -2625,12 +2625,12 @@ window.MuseumScene = (function () {
    * 中西对话 · 对话院（景观庭院，x 11.5~18 / z −15~−7）
    *   · 米洛的维纳斯（assets/models/venus.glb，CC0，SMK 扫描）
    *   · 蒙娜丽莎 / 星月夜（assets/images/*.jpg，PD-old，维基共享资源）
-   * 位置说明：原稿放在中心庭东侧（x≈9, z≈−13）会堵住东长廊西口，现改到景观庭院
-   *           东侧围栏内、与「清泉石上流」影壁同院 —— 展线为"看完中国画三厅 → 进对话院看西画对照"。
+   * 位置说明：不放在中心庭或拱桥视线内，移到园区南侧独立景观角，避开主轴动线；
+   *           展线为"看完中国画三厅 → 进入侧院看西画对照"。
    * 故事线：docs/展陈故事线-中西对话.md（人像 / 风景 / 形体 三组对照）
    * ============================================================ */
   function buildWesternCorner(scene) {
-    var wx = 17.3, wz = -11.5;      // 景观庭院东侧围栏内（画朝西，对着院内）
+    var wx = 21.5, wz = -23.0;      // 中心庭南侧独立景观角（远离湖面、拱桥与序厅中轴）
     var wall = new _g.Mesh(new _g.BoxGeometry(0.28, 3.6, 5.0), mat(0xefe9dc, { roughness: 0.9 }));
     wall.position.set(wx, 1.95, wz);
     wall.castShadow = true; wall.receiveShadow = true;
@@ -2666,7 +2666,7 @@ window.MuseumScene = (function () {
       ["luyupengchatu",     -43.84, 31.0],
     ];
     var sculptures = [
-      ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）
+      ["houmuwuding",   0,      27.0],   // 序厅（原型 slots.ding 落点）
       ["jiangjunyong",  36.75, -13.8],   // 人物厅正房
       ["matayafeiyan",  0,     -13],     // 中心庭广场点景
     ];
@@ -2738,13 +2738,11 @@ window.MuseumScene = (function () {
     /* 院落式：矩形取对接表的「院墙范围」，gate 取「洞口宽」 */
     if (!window.MuseumNoCorridors) [
       { x0: -11, x1: 11,    z0: -37.5,  z1: -21,    entry: 'S', gate: 5.4 },                        // 花鸟 hall2
-      { x0: 28,  x1: 45.5,  z0: -21,    z1: -10,    entry: 'S', gate: 5.4, sideDoor: { W: -16 } },  // 人物 hall3（西墙侧门接东长廊）
-      { x0: -46, x1: -28.5, z0: -20,    z1: -5,     entry: 'E', gate: 5.4, noBack: true },         // 山水 hall1（后门已取消：架排后墙封死）
-      { x0: 34,  x1: 42,    z0: 6,      z1: 19,     entry: 'W', gate: 3.8 },                        // 书斋 hall4
-      { x0: -45, x1: -34,   z0: 8,      z1: 21,     entry: 'E', gate: 3.8 },                        // 文创 hall5
+      { x0: 28,  x1: 49.5,  z0: -21,    z1: -10,    entry: 'S', gate: 5.4, sideDoor: { W: -16 } },  // 人物 hall3（西墙侧门接东长廊）
+      { x0: -50, x1: -28.5, z0: -20,    z1: -5,     entry: 'E', gate: 5.4, noBack: true },         // 山水 hall1（后门已取消：架排后墙封死）
+      { x0: 34,  x1: 46,    z0: 6,      z1: 33,     entry: 'W', gate: 2.4 },                        // 书斋（书斋/茶室合并） hall4
       { x0: 33,  x1: 45,    z0: -34.75, z1: -25.25, entry: 'S', gate: 3.8 },                        // 景韵（装饰）
-      { x0: 34,  x1: 42,    z0: 20,     z1: 33,     entry: 'W', gate: 3.8 },                        // 茶室（装饰）
-      { x0: -45, x1: -34,   z0: 22,     z1: 35,     entry: 'E', gate: 3.8 },                        // 临摹（装饰）
+      { x0: -49, x1: -34,   z0: 8,      z1: 35,     entry: 'E', gate: 2.4 },                        // 文创雅集馆（文创/临摹合并） hall5
     ].forEach(pushEnclosure);
 
     /* 各栋正房（厅本体）另由 registerProtoHallWalls() 读 slots.hall 登记 */
@@ -2775,7 +2773,7 @@ window.MuseumScene = (function () {
   function registerProtoHallDoors() {
     var doors = (window.MuseumExteriorLayout && window.MuseumExteriorLayout.hallDoors) || [];
     doors.forEach(function (d) {
-      var half = d.width / 2;
+      var half = (d.w || d.width || 2.6) / 2;
       if (Math.abs(d.nz) > 0.5) {
         obstacles.push({ type: 'rect', x0: d.x - half, z0: d.z - 0.18, x1: d.x + half, z1: d.z + 0.18 });
       } else {
@@ -2877,52 +2875,24 @@ window.MuseumScene = (function () {
       [-8.85, 9.5, -8.55, 20.4], [-5.45, 9.5, -5.15, 20.4],        // 中轴西廊（cw 3.8；坐槛在 ±1.7）
       [5.15, 9.5, 5.45, 20.4], [8.55, 9.5, 8.85, 20.4],            // 中轴东廊（同上）
       [-28.5, -13.55, -8.5, -13.25], [-28.5, -11.75, -8.5, -11.45],// 西长廊
-      [8.5, -17.8, 27.9, -17.6],                                   // 东长廊北侧画廊墙（galleryWallX z=-17.7）
-      [8.5, -14.75, 12.55, -14.45], [14.45, -14.75, 27.9, -14.45], // 东长廊南侧坐槛（cw 3.2）
+      [8.5, -17.8, 27.9, -17.6],                                   // 东长廊北侧画廊墙
+      [8.5, -14.75, 12.55, -14.45], [14.45, -14.75, 27.9, -14.45], // 东长廊南侧坐槛
       [11, 27.25, 34, 27.55], [11, 25.45, 34, 25.75],              // 南花园东廊
       [-34, 29.25, -11, 29.55], [-34, 27.45, -11, 27.75],          // 南花园西廊
       [-24.25, -34, -23.95, -24.2], [-26.05, -34, -25.75, -24.2],  // 枯山水曲廊（沿 z）
       [-25, -33.25, -13.5, -32.95], [-25, -35.05, -13.5, -34.75],  // 枯山水曲廊（沿 x）
       /* 画廊半壁墙（galleryWall：len 10.4 / zc 15.5 → z 10.3~20.7，8 幅画挂在这两道墙上（x=±8.9）） */
       [-8.975, 10.3, -8.825, 20.7], [8.825, 10.3, 8.975, 20.7],
+      [-17.85, 8.3, -17.55, 27.6],                                // 东长廊画墙
     ].forEach(function (r) { rectObs(r[0], r[1], r[2], r[3]); });
 
     /* 观澜亭四柱：**新原型里观澜亭已整个拆除**
        （tools/exterior-prototype.html 全文搜不到「观澜亭」，halfPavilion 只在
         水榭庭院 (6.0, 4.2) 出现一次），原四柱碰撞体是幽灵墙，删掉 */
 
-    /* 中轴影壁（z=20.2，原型 buildAxisCourt）：7.7m 宽须弥座 + 墨瓦压顶，
-       整面实心（原「台基北缘照壁」迁到此处），两侧各留 2.1m 通道入双廊 */
-    rectObs(-3.85, 19.675, 3.85, 20.725);
+    /* 序厅后方无门挡墙：宽 6.4m，位于两侧连廊内缘之间。 */
+    rectObs(-3.2, 18.275, 3.2, 19.325);
 
-    /* 中心庭（17×13 碎石广场）：5×5 内院围栏在新原型里**已撤**
-       （原件 buildZhongxinCourt 注释：「主树四周敞开，树石直接落在碎石广场上」），
-       故只登记树石家具本体，不再登记围栏 */
-    circleObs(0, -13.4, 0.32);          // 中心主树（冠幅约 6m，可走树下）
-    circleObs(-1.5, -14.4, 0.9);        // 太湖石
-    circleObs(1.4, -12.0, 0.4);
-    circleObs(5.8, -9.5, 1.05);         // 石桌
-    rectObs(-6.6, -9.73, -5.0, -9.28);  // 石凳
-    /* 筒车水院（原型 waterwheel(0, -9)）：石砌长方池内净 3.6×2.0 + 池壁 → x[-2.3,2.3] z[-10.5,-7.5]，
-       池中直径 3m 双辐条大立轮（圆心 (0,-9)、外缘 r≈1.5）。
-       原「中心庭叠水喷泉 (0,-8.3) r=1.9」已取消；高架木槽在头顶 y≈2.85 不登记 */
-    rectObs(-2.3, -10.5, 2.3, -7.5);
-    circleObs(0, -9, 1.6);
-    rectObs(3.32, -16.78, 3.88, -16.22);// 石灯
-    circleObs(-4.0, -16.3, 0.22);
-    circleObs(2.2, -16.2, 0.5);
-
-    /* 水榭庭院：围栏（南面正门、北面北门各留 2.4m）+ 平台柱 + 假山 + 半亭柱 */
-    rectObs(-7, -5.14, -1.2, -4.86);
-    rectObs(1.2, -5.14, 7, -4.86);
-    rectObs(-1.5, -5.3, -0.9, -4.7);    // 北门楼西柱
-    rectObs(0.9, -5.3, 1.5, -4.7);      // 北门楼东柱
-    rectObs(-7.14, -5, -6.86, 7);
-    rectObs(6.86, -5, 7.14, 7);
-    rectObs(-7, 6.86, -1.2, 7.14);
-    rectObs(1.2, 6.86, 7, 7.14);
-    rectObs(-1.5, 6.7, -0.9, 7.3);
-    rectObs(0.9, 6.7, 1.5, 7.3);
     [2.9, 5.5].forEach(function (x) {
       [-0.2, 1.4].forEach(function (z) { circleObs(x, z, 0.11); });
     });
@@ -2933,40 +2903,6 @@ window.MuseumScene = (function () {
     circleObs(5.3, 5.3, 0.19);
     circleObs(3.2, 5.3, 0.2);
     circleObs(3.6, -3.4, 1.05);
-
-    /* 山石庭院：围栏（南留 2.4m、东留 2m 门洞）+ 山石 */
-    rectObs(-26.5, -6.14, -13.5, -5.86);
-    rectObs(-26.5, 5.86, -21.2, 6.14);
-    rectObs(-18.8, 5.86, -13.5, 6.14);
-    rectObs(-26.64, -6, -26.36, 6);
-    rectObs(-13.64, -6, -13.36, -1);
-    rectObs(-13.64, 1, -13.36, 6);
-    circleObs(-21.2, -0.6, 1.3);
-    circleObs(-18.6, 1.2, 0.75);
-    circleObs(-22.4, 2.6, 0.55);
-    circleObs(-19.5, -3.2, 0.48);
-
-    /* 荷池庭院：围栏（南留 2.8m 门洞）；荷池水面本轮不登记 */
-    rectObs(15.5, 5.76, 26.5, 6.04);
-    rectObs(15.5, 16.86, 19.6, 17.14);
-    rectObs(22.4, 16.86, 26.5, 17.14);
-    rectObs(15.36, 5.9, 15.64, 17);
-    rectObs(26.36, 5.9, 26.64, 17);
-
-    /* 兰竹庭院：三面围栏，南侧开放 */
-    rectObs(30, -3.14, 36, -2.86);
-    rectObs(29.86, -3, 30.14, 1);
-    rectObs(35.86, -3, 36.14, 1);
-
-    /* 景观庭院（原型已扩为 x 11.5~18 × z -15~-7 约 6.5×8m，北门楼拆除）：
-       北口 x 12.8~14.2、南口 x 15.2~16.8（南口东移，避开题刻墙轴线） */
-    rectObs(11.5, -15.14, 12.8, -14.86);   // 北栅栏西段
-    rectObs(14.2, -15.14, 18, -14.86);     // 北栅栏东段
-    rectObs(11.5, -7.14, 15.2, -6.86);     // 南栅栏西段
-    rectObs(16.8, -7.14, 18, -6.86);       // 南栅栏东段
-    rectObs(11.36, -15, 11.64, -7);        // 西栅栏
-    rectObs(17.86, -15, 18.14, -7);        // 东栅栏（原型 fenceRun(18, -15, 18, -7)，原登记在 x=15.5）
-    rectObs(12.35, -7.95, 14.65, -7.45);   // 影壁题刻墙「清泉石上流」（z=-7.7，含墨瓦压顶）
 
     /* 干涸河床的立石（床面可站，只有石头挡人） */
     circleObs(-19.15, -29.48, 0.5);
@@ -3116,11 +3052,11 @@ window.MuseumScene = (function () {
           plaza:     { type: "rect",  x0: -26,  z0: 34,   x1: 26,   z1: 41 },     // 南入口前庭（六级大台阶）
           hall0:     { type: "rect",  x0: -11,  z0: 24.5, x1: 11,   z1: 34.5 },   // 序厅（高台基 22×10）
           courtyard: { type: "rect",  x0: -9,   z0: -20,  x1: 9,    z1: 24.5 },   // 中轴庭院带（轴线庭+水榭+中心庭）
-          hall1:     { type: "rect",  x0: -46,  z0: -20,  x1: -28.5, z1: -5 },    // 山水画展区（院落 17.5×15）
+          hall1:     { type: "rect",  x0: -50,  z0: -20,  x1: -28.5, z1: -5 },    // 山水画展区（外侧扩院）
           hall2:     { type: "rect",  x0: -11,  z0: -37.5, x1: 11,  z1: -21 },    // 花鸟画展区（院落 22×16.5）
-          hall3:     { type: "rect",  x0: 28,   z0: -21,  x1: 45.5, z1: -10 },    // 人物画展区（院落 17.5×11）
-          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 42,   z1: 35.5 },   // 书斋 + 茶室（两个院落，z 6~35.5）
-          hall5:     { type: "rect",  x0: -45,  z0: 8,    x1: -34,  z1: 35.5 },   // 文创 + 临摹（两个院落，z 8~35.5）
+          hall3:     { type: "rect",  x0: 28,   z0: -21,  x1: 49.5, z1: -10 },    // 人物画展区（外侧扩院）
+          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 46,   z1: 35.5 },   // 书斋（外侧扩院）
+          hall5:     { type: "rect",  x0: -49,  z0: 8,    x1: -34,  z1: 35.5 },   // 文创雅集馆（外侧扩院）
         });
       } else {
         Object.assign(hallRegions, {

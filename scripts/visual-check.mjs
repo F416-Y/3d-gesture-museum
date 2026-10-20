@@ -38,6 +38,7 @@ const SHOTS = [
   { name: '18-gate-front-night', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, night: true, note: '序厅正门 · 入夜灯火' },
   { name: '19-courtyard-night', x: 0, y: 2.2, z: 26, tx: 0, ty: 2.4, tz: 14, fov: 60, night: true, note: '中轴南院 → 影壁/双廊 · 入夜' },
   { name: '21-eastwest-courtyard', x: 13.2, y: 1.8, z: -11.5, tx: 17.3, ty: 2.2, tz: -11.5, fov: 65, note: '对话院（景观庭院）：蒙娜丽莎 + 星月夜 + 米洛的维纳斯' },
+  { name: '22-aerial-night', x: 0, y: 46, z: 62, tx: 0, ty: 0, tz: 4, fov: 40, night: true, scale: 1.5, note: '入夜鸟瞰：全园灯火（投稿静态画面用）' },
   { name: '17-gate-front', x: 0, y: 2.0, z: 39.6, tx: 0, ty: 3.1, tz: 34.5, fov: 55, note: '序厅正门正面（看敞开效果与匾额）' },
   { name: '11-hall4-shuzhai-wall', x: 37.6, y: 1.9, z: 12.5, tx: 40.84, ty: 1.55, tz: 12.5, fov: 78, note: '书斋背墙两幅立轴（近景）' },
   { name: '12-hall4-chashi-wall', x: 37.6, y: 1.9, z: 26.5, tx: 40.84, ty: 1.55, tz: 26.5, fov: 78, note: '茶室背墙两幅立轴（近景）' },
@@ -133,8 +134,11 @@ page.on('pageerror', e => pageErrors.push(String(e && e.message || e)));
 page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); });
 
 console.log('外观自检：打开页面…');
-await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'load', timeout: 240000 });
+await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'domcontentloaded', timeout: 240000 });
 await page.waitForFunction(() => window.MuseumPlayer && window.MuseumScene, null, { timeout: 240000 });
+/* 自动退出粒子序章，确保后续机位接管的是实际 3D 场景画布。 */
+await page.locator('#introEnter').click({ force: true }).catch(() => {});
+await page.waitForTimeout(950);
 /* 等 GLB 零件模型加载替换完成（models.js 是异步的；等它彻底静下来再拍，否则截图会卡在"等画面稳定"） */
 await page.waitForFunction(() => {
   const M = window.MuseumModels;
@@ -151,6 +155,42 @@ await page.waitForTimeout(2000);
 const hook = await page.evaluate(() => {
   const T = window.THREE;
   if (!T || !T.PerspectiveCamera) return 'no-three';
+  /* 主相机没有挂到 Scene 下，不能从 parent 回溯。直接拦截真实渲染调用，
+     每帧拿到 renderer.render(scene, camera) 的两个权威对象再覆写机位。 */
+  const RP = T.WebGLRenderer && T.WebGLRenderer.prototype;
+  if (RP && !RP.__vizRenderPatched) {
+    RP.__vizRenderPatched = true;
+    const render = RP.render;
+    RP.render = function (scene, camera) {
+      const s = window.__vizView;
+      if (s && camera) {
+        window.__vizCam = camera;
+        window.__vizScene = scene;
+        camera.position.set(s.x, s.y, s.z);
+        if (s.fov && camera.fov !== s.fov) { camera.fov = s.fov; camera.updateProjectionMatrix(); }
+        camera.lookAt(s.tx, s.ty, s.tz);
+      }
+      return render.call(this, scene, camera);
+    };
+  }
+  /* renderer 在本项目中被实例绑定；玩家模块每帧则公开接收主相机。
+     在玩家完成原本的漫游更新后覆写它，确保截图拿到实际主场景的相机。 */
+  const player = window.MuseumPlayer;
+  if (player && player.update && !player.__vizPlayerPatched) {
+    player.__vizPlayerPatched = true;
+    const update = player.update;
+    player.update = function (dt, input, camera) {
+      const result = update.apply(this, arguments);
+      const s = window.__vizView;
+      if (s && camera) {
+        window.__vizCam = camera;
+        camera.position.set(s.x, s.y, s.z);
+        if (s.fov && camera.fov !== s.fov) { camera.fov = s.fov; camera.updateProjectionMatrix(); }
+        camera.lookAt(s.tx, s.ty, s.tz);
+      }
+      return result;
+    };
+  }
   const PC = T.PerspectiveCamera;
   if (PC.__vizPatched) return 'already';
   PC.__vizPatched = true;
@@ -168,10 +208,14 @@ const hook = await page.evaluate(() => {
   return 'patched';
 });
 console.log('相机钩子：' + hook);
+/* 先设置一个俯视机位并等一帧，让相机钩子拿到主场景相机。 */
+await page.evaluate(() => { window.__vizView = { x: 0, y: 115, z: 0.05, tx: 0, ty: 0, tz: 0, fov: 45 }; });
+await page.waitForTimeout(350);
 /* 俯视图要提亮/关雾：three 的 render 是实例属性，原型打补丁无效；
    改为从相机沿 parent 往上找 Scene（渲染前 three 必定调用相机的 updateMatrixWorld，__vizCam 一定在） */
 await page.waitForTimeout(400);
 const sceneHook = await page.evaluate(() => {
+  if (window.__vizScene && window.__vizScene.isScene) return 'ok（从真实 renderer.render 获取）';
   const c = window.__vizCam;
   if (!c) return 'no-cam';
   let s = c, hops = 0;
@@ -180,10 +224,11 @@ const sceneHook = await page.evaluate(() => {
   return '未找到 scene（parent=' + (c.parent && c.parent.type) + '，上溯 ' + hops + ' 层）';
 });
 console.log('场景钩子：' + sceneHook);
-if (hook !== 'patched' && hook !== 'already') { console.log('无法接管相机，机位不会生效'); process.exitCode = 1; }/* 只留 3D 画布：Vue 外壳与 HUD 全部隐藏，出图就是场景本身 */
-await page.addStyleTag({ content: '*{visibility:hidden !important} canvas,canvas *{visibility:visible !important} html,body{background:#0b0a09 !important}' });
+if (hook !== 'patched' && hook !== 'already') { console.log('无法接管相机，机位不会生效'); process.exitCode = 1; }
+/* 截图随后按 #stage canvas 的边界裁切，不需改动页面可见性；无头 Edge
+   对 addStyleTag 在持续 WebGL 刷新时会偶发阻塞。 */
 const canvasInfo = await page.evaluate(() => {
-  const c = window.__vizCam || document.querySelector('canvas');
+  const c = document.querySelector('#stage canvas') || window.__vizCam || document.querySelector('canvas');
   const all = [...document.querySelectorAll('canvas')].map(el => { const r = el.getBoundingClientRect(); return { id: el.id, cls: el.className, w: Math.round(r.width), h: Math.round(r.height), disp: getComputedStyle(el).display }; });
   if (!c) return { found: false, all };
   const r = c.getBoundingClientRect();
@@ -191,7 +236,22 @@ const canvasInfo = await page.evaluate(() => {
     attr: [c.width, c.height], parent: c.parentElement ? (c.parentElement.id || c.parentElement.className) : null,
     display: getComputedStyle(c).display, opacity: getComputedStyle(c).opacity, all };
 });
-console.log('画布诊断：' + JSON.stringify(canvasInfo));console.log('画布数：' + await page.evaluate(() => document.querySelectorAll('canvas').length) + ' 个 canvas');
+console.log('画布诊断：' + JSON.stringify(canvasInfo));
+
+/* 园区的完整俯视图只需首帧已设置的机位。高面数场景在无头 Edge 中继续
+   进入 evaluate 队列会阻塞，故此处直接用 CDP 从真实 WebGL 画布抓取。 */
+if (ONLY === '15-plan-top') {
+  await page.waitForTimeout(1000);
+  const quickShot = await client.send('Page.captureScreenshot', {
+    format: 'png', captureBeyondViewport: true,
+    clip: { x: 0, y: 0, width: 1600, height: 900, scale: 1.5 },
+  });
+  await fsp.writeFile(path.join(OUT, '15-plan-top.png'), Buffer.from(quickShot.data, 'base64'));
+  console.log('[1/1] 15-plan-top · 真实画布直捕完成');
+  await browser.close();
+  server.close();
+  process.exit(0);
+}
 
 const results = [];
 const shots = ONLY ? SHOTS.filter(s => s.name.indexOf(ONLY) >= 0) : SHOTS;
@@ -208,11 +268,13 @@ for (const shot of shots) {
   if (shot.night) await page.waitForTimeout(800);
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
-  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+  /* 无头 Edge 在持续 WebGL 重绘时偶发不回调 rAF；短延时足以让主循环把
+     最新机位写入相机，随后直接从 CDP 抓 WebGL 画布。 */
+  await page.waitForTimeout(180);
   /* 页面一直在重绘（rAF 循环 + 帧率自检），page.screenshot 会卡在“等待稳定”并超时，
      所以走 CDP 的 Page.captureScreenshot 直接抓一帧 */
   const clip = await page.evaluate(() => {
-    const c = document.querySelector('canvas');
+    const c = document.querySelector('#stage canvas') || document.querySelector('canvas');
     const r = c.getBoundingClientRect();
     return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
   });

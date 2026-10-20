@@ -26,7 +26,7 @@ window.MuseumConfig = {
     { id: "hall2",     name: "花鸟" },
     { id: "hall3",     name: "人物" },
     { id: "hall4",     name: "书斋" },
-    { id: "hall5",     name: "文创" },
+    { id: "hall5",     name: "文创雅集馆" },
   ],
 
   /* ---------- 漫游参数（player.js 读取） ---------- */

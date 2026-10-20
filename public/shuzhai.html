@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云墨美术馆 · 展厅内饰</title>
+<meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
+<link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/intro.css">
+<!--
+  ============================================================
+  云墨美术馆 CloudInk Art Museum
+  前端 3D 手势交互博物馆 · 美术鉴赏 × 软件工程
+  ------------------------------------------------------------
+  脚本加载顺序（依赖顺序，不可调换）：
+  1. three.min.js      —— 3D 渲染核心（r147 UMD 全局 THREE）
+  2. vision_bundle.js  —— MediaPipe 手部关键点识别（全局 FilesetResolver / HandLandmarker）
+  3. js/config.js      —— 展品数据 + 全局配置（组员4 / 全体共用）
+  4. js/scene.js       —— 园区建筑与展厅场景（组长·外观 / 组员1·接缝）
+  5. js/player.js      —— 第一人称漫游与碰撞（组员2）
+  6. js/gesture.js     —— 手势识别与手势映射（组员3）
+  7. js/exhibit.js     —— 展品热点与鉴赏弹窗（组员4）
+  8. js/ui.js          —— 界面视觉与面板（组员5）
+  9. js/main.js        —— 启动与主循环（组员7 整合）
+  ============================================================
+-->
+</head>
+<body>
+<script>window.MuseumInteriorOnly=true; window.MuseumInteriorHall="hall4";</script>
+<!-- ===== 开场粒子序章覆盖层 ===== -->
+<div id="intro">
+  <canvas id="introCanvas"></canvas>
+  <div id="introTitle">
+    <h1>云墨美术馆</h1>
+  </div>
+  <div id="introPanel">
+    <label>基色 <input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
+    <label>密度 <input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
+  </div>
+  <div id="introCamWrap" aria-label="摄像头实时画面，可拖动右下角调整大小">
+    <video id="introVideo" autoplay muted playsinline></video>
+    <div id="introCamTag">摄像头 · 手势追踪（右下角拖拽调大小）</div>
+  </div>
+  <div id="introBR">
+    <button id="introFull" aria-label="全屏切换">全屏</button>
+    <button id="introEnter" aria-label="进入博物馆">进入博物馆 →</button>
+  </div>
+  <div id="introStatus">正在加载手势模型…</div>
+</div>
+
+  <!-- ===== 3D 画布容器 ===== -->
+  <div id="stage"></div>
+
+  <!-- ===== 顶部标题（朱砂印章式签名元素） ===== -->
+  <header id="topbar" class="topbar hidden">
+    <div class="brand">
+      <span class="brand-seal">云墨</span>
+      <div class="brand-text">
+        <h1>云墨美术馆</h1>
+        <p>CloudInk Art Museum · 手势交互数字博物馆</p>
+      </div>
+    </div>
+    <div id="hall-label" class="hall-label">前庭 · 园区</div>
+  </header>
+
+  <!-- ===== 左下：操作说明 ===== -->
+  <aside id="help" class="help hidden">
+    <h3>手势操作</h3>
+    <ul>
+      <li><b>张开手掌</b>　向前漫游</li>
+      <li><b>握拳</b>　　　向后退</li>
+      <li><b>食指左右</b>　转向</li>
+      <li><b>捏合两指 · 三指张开</b>　查看 / 关闭展品</li>
+    </ul>
+    <p class="help-key">键盘备选：W/S 前进后退 · A/D 转向 · E 查看 · Q 关闭 · R 重置视角 · V 全景 · T 第三人称</p>
+  </aside>
+
+  <!-- ===== 右下：工具栏 ===== -->
+  <div id="toolbar" class="toolbar hidden">
+    <button id="btn-camera" type="button" title="开启/关闭摄像头手势控制">摄像头：关</button>
+    <button id="btn-night" type="button" title="切换昼夜氛围（快捷键 N）">入夜 · 灯火</button>
+    <button id="btn-reset" type="button" title="重置视角">重置视角</button>
+    <button id="btn-help" type="button" title="显示/隐藏操作说明">操作说明</button>
+  </div>
+
+  <!-- ===== 摄像头预览小窗 ===== -->
+  <div id="camwrap" class="camwrap hidden">
+    <video id="cam" autoplay playsinline muted></video>
+    <p>手势识别中 · 请坐在屏幕前</p>
+  </div>
+
+  <!-- ===== 展品鉴赏弹窗 ===== -->
+  <div id="panel" class="panel" role="dialog" aria-modal="true" aria-hidden="true">
+    <button id="panel-close" type="button" class="panel-close" aria-label="关闭">×</button>
+    <div id="panel-body" class="panel-body"></div>
+  </div>
+
+  <!-- ===== 提示条 ===== -->
+  <div id="toast" class="toast"></div>
+
+    <!-- ===== Vue 应用挂载点（登录/收藏/展厅路由，src/ 下代码） ===== -->
+  <div id="app"></div>
+
+  <!-- 第三方依赖：Three.js r147（UMD，SRI 锁定） -->
+  <!-- three.js 本地化：原 jsdelivr CDN 在国内常不可达，断网/答辩会白屏 -->
+  <script src="./js/vendor/three.min.js"></script>
+  <script src="./js/vendor/GLTFLoader.js"></script>
+  <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（已本地化：js/vendor/mediapipe/，
+       WASM 与 hand_landmarker.task 由 gesture.js 从本地路径加载，断网可用） -->
+  <!-- 注意：vision_bundle.js 是「UMD 外层 + 末尾 ESM export」的混合产物，
+       用普通 <script src> 会直接报 "Uncaught SyntaxError: Unexpected token 'export'"，
+       所以必须用动态 import() 载入（@vite-ignore 防止 Vite 打包时改写路径）；
+       载入后把 FilesetResolver / HandLandmarker 暴露到全局，
+       并派发 mediapipe-ready 事件，供 gesture.js（普通脚本）等待使用。 -->
+  <script type="module">
+    window.MediaPipeReady = (async function () {
+      try {
+        var vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
+        window.FilesetResolver = vision.FilesetResolver;
+        window.HandLandmarker = vision.HandLandmarker;
+        window.MediaPipeVision = vision;
+        return true;
+      } catch (err) {
+        console.warn("[云墨美术馆] MediaPipe 加载失败，将降级为键盘操作：", err);
+        return false;
+      } finally {
+        window.dispatchEvent(new Event("mediapipe-ready"));
+      }
+    })();
+  </script>
+
+  <!-- 项目模块（依赖顺序不可调换） -->
+  <script src="./js/config.js"></script>
+  <script src="./js/models.js"></script>
+  <script src="./js/exterior.js"></script>
+  <script src="./js/gallery.js"></script>
+  <script src="./js/windows.js"></script>
+  <script src="./js/exterior-layout.js"></script>
+  <script src="./js/slots.js"></script>
+  <script src="./js/foliage.js"></script>
+  <script src="./js/lighting.js"></script>
+  <script src="./js/intro.js"></script>
+  <script src="./js/scene.js"></script>
+  <script src="./js/avatar.js"></script>
+  <script src="./js/player.js"></script>
+  <script src="./js/gesture.js"></script>
+  <script src="./js/exhibit.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/main.js"></script>
+  <!-- Vue 入口（Vite 模块，最后加载，不干扰上方引擎脚本） -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+
+
+
