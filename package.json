@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "description": "云墨美术馆 —— 3D 手势交互数字博物馆（Vue 3 壳 + 原生 Three.js/MediaPipe 引擎）",
+  "description": "云间入墨 —— 3D 手势交互数字博物馆（Vue 3 壳 + 原生 Three.js/MediaPipe 引擎）",
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/postbuild.mjs",

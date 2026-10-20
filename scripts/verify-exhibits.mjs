@@ -108,8 +108,6 @@ try {
   console.error("场景初始化失败：" + error.message);
   process.exit(1);
 }
-globalThis.document = savedDocument;
-
 const ids = snapshot.exhibits.map((ex) => ex.id);
 const anchorIds = anchors.map((a) => a.id);
 if (new Set(ids).size !== ids.length) problems.push("config.exhibits 存在重复 id");
@@ -235,5 +233,6 @@ if (problems.length) {
   problems.forEach((p) => console.error("  · " + p));
   process.exit(1);
 }
+globalThis.document = savedDocument;
 console.log("");
 console.log("OK 全部展品热点坐标一致、可接近，且捏合/E 路由到正确弹窗");

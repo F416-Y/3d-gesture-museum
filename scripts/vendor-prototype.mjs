@@ -101,8 +101,8 @@ else console.log("格扇窗挂钩：未找到 addWindow");
 /* 大门修正：只改匾额文案（门扇角度按新原型：正门面南半开，不再折大敞开） */
 let gateLog = [];
 if (body.indexOf("plaque('江南文人国画博物馆'") >= 0) {
-  body = body.replace("plaque('江南文人国画博物馆'", "plaque('云墨美术馆'");
-  gateLog.push("匾额改云墨美术馆");
+  body = body.replace("plaque('江南文人国画博物馆'", "plaque('云间入墨'");
+  gateLog.push("匾额改云间入墨");
 }
 console.log("大门修正：" + (gateLog.length ? gateLog.join(" / ") : "未匹配到"));
 

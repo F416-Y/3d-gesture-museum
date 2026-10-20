@@ -17,6 +17,8 @@ window.MuseumMain = (function () {
   var renderer, scene, camera;
   var clock = new THREE.Clock();
   var cameraOn = false;
+  var hallDoorPrompt = { door: null, dismissed: null };
+  var interiorExitPrompt = { armed: false, open: false, dismissed: false, hallId: null, x: 0, z: 0 };
 
   /* ---------- 全景俯瞰模式 ----------
    * player.js 每帧把相机锁在 1.6m 人眼高度、俯仰角为 0，所以只能第一人称。
@@ -59,15 +61,42 @@ window.MuseumMain = (function () {
 
     // 初始化各模块
     MuseumScene.init({ scene: scene, camera: camera });
+    if (window.MuseumAvatar) MuseumAvatar.init(scene);
     /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
     if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
     MuseumPlayer.init(camera);
+    if (!window.MuseumInteriorOnly) {
+      var returnHall = new URLSearchParams(location.search).get("returnHall");
+      if (returnHall) {
+        var returnDoor = (MuseumScene.hallDoors || []).filter(function (d) { return d.hallId === returnHall; })[0];
+        if (returnDoor) {
+          var returnGap = 3.2;
+          var returnYaw = Math.atan2(-returnDoor.nx, returnDoor.nz);
+          MuseumPlayer.teleport(returnDoor.x + returnDoor.nx * returnGap,
+            returnDoor.z + returnDoor.nz * returnGap, returnYaw);
+          hallDoorPrompt.dismissed = returnDoor;
+        }
+      }
+    }
+    if (window.MuseumInteriorOnly) {
+      var interiorSpawns = {
+        hall0: [0, 29, 0], hall1: [-25, -13, Math.PI / 2],
+        hall2: [0, -16, 0], hall3: [25, -13, 0],
+        hall4: [24, 13, -Math.PI / 2], hall5: [-24, 13, Math.PI / 2]
+      };
+      var interiorSpawn = interiorSpawns[window.MuseumInteriorHall] || interiorSpawns.hall4;
+      MuseumPlayer.teleport(interiorSpawn[0], interiorSpawn[1], interiorSpawn[2]);
+      interiorExitPrompt.hallId = window.MuseumInteriorHall || "hall4";
+      interiorExitPrompt.x = interiorSpawn[0];
+      interiorExitPrompt.z = interiorSpawn[1];
+    }
     MuseumExhibit.init();
 
     // 回调接线
     MuseumPlayer.setOnHallChange(function (hallId) {
       MuseumUI.setHall(hallId);
     });
+    if (window.MuseumInteriorOnly) MuseumUI.setHall(window.MuseumInteriorHall || "hall4");
     MuseumExhibit.setOnFocusChange(function (exhibitId) {
       if (exhibitId) {
          MuseumUI.toast("靠近展品 · 捏合两指（三指张开）或按 E 查看");
@@ -81,7 +110,7 @@ window.MuseumMain = (function () {
     // 完成加载，显示主界面
     setTimeout(function () {
       MuseumUI.hideLoading();
-      MuseumUI.toast("欢迎来到云墨美术馆 · 伸出手掌开始漫游");
+      MuseumUI.toast("欢迎来到云间入墨 · 伸出手掌开始漫游");
     }, 400);
 
     // 自动尝试开启手势（失败自动降级为键盘）
@@ -102,6 +131,13 @@ window.MuseumMain = (function () {
       }
       if (e.code === "KeyR") { resetView(); }
       if (e.code === "KeyV") { e.preventDefault(); setPanorama(!panorama.on); }
+      if (e.code === "KeyT") {
+        e.preventDefault();
+        if (window.MuseumAvatar) {
+          var third = MuseumAvatar.setEnabled(!MuseumAvatar.isEnabled());
+          MuseumUI.toast(third ? "已切换第三人称 · T 返回第一人称" : "已返回第一人称漫游");
+        }
+      }
       if (e.code === "KeyN") { e.preventDefault(); if (window.MuseumLighting) window.MuseumLighting.toggle(); }
       if (e.code === "KeyE" && panorama.on) { e.preventDefault(); return; }
     });
@@ -133,7 +169,91 @@ window.MuseumMain = (function () {
     MuseumUI.setHandlers({
       onCameraToggle: function () { toggleCamera(!cameraOn); },
       onReset: function () { resetView(); },
-      onClosePanel: function () { /* 可在此补充：恢复手势状态等 */ },
+      onClosePanel: function () {
+        /* 关闭确认窗等同于取消：离开门口后才允许再次触发。 */
+        if (hallDoorPrompt.door) hallDoorPrompt.dismissed = hallDoorPrompt.door;
+        hallDoorPrompt.door = null;
+        if (window.MuseumInteriorOnly && interiorExitPrompt.open) {
+          interiorExitPrompt.open = false;
+          interiorExitPrompt.dismissed = true;
+        }
+      },
+    });
+  }
+
+  /* ---------- 展厅闭门提示 ---------- */
+  function updateHallDoorPrompt() {
+    if (window.MuseumInteriorOnly) {
+      updateInteriorExitPrompt();
+      return;
+    }
+    if (panorama.on || MuseumUI.isPanelOpen()) return;
+    var doors = MuseumScene.hallDoors || [];
+    var p = MuseumPlayer.getPosition();
+    var nearest = null, best = 2.8;
+    for (var i = 0; i < doors.length; i++) {
+      var d = doors[i];
+      if (!d.hallId) continue;
+      var dx = p.x - d.x, dz = p.z - d.z;
+      /* 只在门外触发；厅内通过路由进入，不重复弹窗。 */
+      if (dx * d.nx + dz * d.nz <= 0) continue;
+      var dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < best) { best = dist; nearest = d; }
+    }
+    if (!nearest) {
+      if (hallDoorPrompt.dismissed) {
+        var dd = hallDoorPrompt.dismissed;
+        var dxd = p.x - dd.x, dzd = p.z - dd.z;
+        if (Math.sqrt(dxd * dxd + dzd * dzd) > 3.8) hallDoorPrompt.dismissed = null;
+      }
+      return;
+    }
+    if (hallDoorPrompt.dismissed === nearest) return;
+    if (hallDoorPrompt.door === nearest) return;
+    hallDoorPrompt.door = nearest;
+    MuseumUI.showHallPrompt(nearest.tag, function () {
+      hallDoorPrompt.door = null;
+      hallDoorPrompt.dismissed = null;
+      var pages = {
+        hall1: "shanshui.html",
+        hall2: "huaniao.html",
+        hall3: "renwu.html",
+        hall4: "shuzhai.html",
+        hall5: "wenchuang.html"
+      };
+      if (nearest.hallId === "hall0") {
+        location.href = "./index.html#/hall/plaza";
+      } else {
+        location.href = "./" + (pages[nearest.hallId] || "index.html#/hall/plaza");
+      }
+    }, function () {
+      hallDoorPrompt.door = null;
+      hallDoorPrompt.dismissed = nearest;
+    });
+  }
+
+  /* 内饰出口：先离开起始点再返回，避免刚进入就弹窗。 */
+  function updateInteriorExitPrompt() {
+    if (panorama.on || MuseumUI.isPanelOpen()) return;
+    var p = MuseumPlayer.getPosition();
+    var dx = p.x - interiorExitPrompt.x, dz = p.z - interiorExitPrompt.z;
+    var dist = Math.sqrt(dx * dx + dz * dz);
+    if (!interiorExitPrompt.armed) {
+      if (dist > 4.0) interiorExitPrompt.armed = true;
+      return;
+    }
+    if (dist > 4.2) {
+      interiorExitPrompt.dismissed = false;
+      return;
+    }
+    if (interiorExitPrompt.dismissed || interiorExitPrompt.open) return;
+    interiorExitPrompt.open = true;
+    MuseumUI.showHallPrompt("返回园区", function () {
+      interiorExitPrompt.open = false;
+      location.href = "./index.html?returnHall=" + encodeURIComponent(interiorExitPrompt.hallId) + "#/hall/plaza";
+    }, function () {
+      interiorExitPrompt.open = false;
+      interiorExitPrompt.dismissed = true;
     });
   }
 
@@ -156,7 +276,7 @@ window.MuseumMain = (function () {
         cameraOn = false;
         MuseumUI.setCameraButton(false);
         MuseumUI.showCam(false);
-        console.warn("[云墨美术馆] 手势启动失败：", err && err.message ? err.message : err);
+        console.warn("[云间入墨] 手势启动失败：", err && err.message ? err.message : err);
       }).then(function () {
         setTimeout(function () { MuseumUI.hideLoading(); }, 500);
       });
@@ -206,7 +326,20 @@ window.MuseumMain = (function () {
       panorama.dist = 78;
       return;
     }
-    MuseumPlayer.reset();
+    if (window.MuseumInteriorOnly) {
+      var interiorSpawns = {
+        hall0: [0, 29, 0], hall1: [-25, -13, Math.PI / 2],
+        hall2: [0, -16, 0], hall3: [25, -13, 0],
+        hall4: [24, 13, -Math.PI / 2], hall5: [-24, 13, Math.PI / 2]
+      };
+      var s = interiorSpawns[window.MuseumInteriorHall] || interiorSpawns.hall4;
+      MuseumPlayer.teleport(s[0], s[1], s[2]);
+      interiorExitPrompt.armed = false;
+      interiorExitPrompt.open = false;
+      interiorExitPrompt.dismissed = false;
+    } else {
+      MuseumPlayer.reset();
+    }
     // 重置后相机姿态由下一帧 update 应用
     var p = MuseumPlayer.getPosition();
     camera.position.copy(p);
@@ -261,7 +394,9 @@ window.MuseumMain = (function () {
       updatePanorama(dt, input);
     } else {
       MuseumPlayer.update(dt, input, camera);
+      if (window.MuseumAvatar) MuseumAvatar.update(camera, dt);
     }
+    updateHallDoorPrompt();
     MuseumExhibit.update();
     MuseumScene.update();
     if (window.MuseumLighting) window.MuseumLighting.update(dt);   /* 昼夜平滑过渡 */

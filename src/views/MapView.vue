@@ -1,8 +1,8 @@
 <template>
   <div class="overlay-page map-page">
     <div class="map-card">
-      <h2 class="card-title">云墨美术馆 · 园区平面图</h2>
-      <p class="map-hint">上 = 北（z 负方向）｜ 园区 100 × 80 m ｜ 红点是当前位置 ｜ 底图：本场景真实俯视渲染</p>
+      <h2 class="card-title">云间入墨 · 园区平面图</h2>
+      <p class="map-hint">上 = 北（z 负方向）｜ 点击房屋区域进入对应内饰 ｜ 红点是当前位置</p>
       <svg class="map-svg" viewBox="40 124 840 672" xmlns="http://www.w3.org/2000/svg">
         <!-- 围墙围合的园区：世界坐标 x ±50、z ±40 -->
         <!-- 真实俯视平面图：相机在 115m 正上方、fov 45、16:9 → 视野 169.37 × 95.27 m
@@ -23,7 +23,12 @@
         </g>
 
         <!-- 八个展厅 / 区域（坐标与新布局 hallRegions 一致） -->
-        <g v-for="h in halls" :key="h.id">
+        <g v-for="h in halls" :key="h.id"
+           :class="{ 'map-house': h.interior }"
+           :role="h.interior ? 'button' : undefined"
+           :tabindex="h.interior ? 0 : undefined"
+           @click="h.interior && openInterior(h.id)"
+           @keydown.enter="h.interior && openInterior(h.id)">
           <rect :x="toSvg(h.x0)" :y="toSvg(h.z0)" :width="(h.x1 - h.x0) * SCALE"
                 :height="(h.z1 - h.z0) * SCALE" :fill="h.color" fill-opacity="0.16" stroke="#5a4a3a" stroke-width="1.5" rx="2" />
           <text :x="toSvg((h.x0 + h.x1) / 2)" :y="toSvg((h.z0 + h.z1) / 2) + 5"
@@ -54,11 +59,11 @@ function toSvg(v) { return 460 + v * SCALE; }
 
 /* 八个展厅 / 区域：与 js/scene.js 里 useProtoLayout 分支的 hallRegions 一致 */
 const halls = [
-  { id: "hall1", name: "山水", x0: -46, z0: -20, x1: -28.5, z1: -5, color: "#eaddc5" },
-  { id: "hall2", name: "花鸟", x0: -11, z0: -37.5, x1: 11, z1: -21, color: "#eaddc5" },
-  { id: "hall3", name: "人物", x0: 28, z0: -21, x1: 45.5, z1: -10, color: "#eaddc5" },
-  { id: "hall5", name: "文创", x0: -45, z0: 8, x1: -34, z1: 21, color: "#ded3bd" },
-  { id: "hall4", name: "书斋", x0: 34, z0: 6, x1: 42, z1: 19, color: "#ded3bd" },
+  { id: "hall1", name: "山水", x0: -50, z0: -20, x1: -28.5, z1: -5, color: "#eaddc5", interior: true },
+  { id: "hall2", name: "花鸟", x0: -11, z0: -37.5, x1: 11, z1: -21, color: "#eaddc5", interior: true },
+  { id: "hall3", name: "人物", x0: 28, z0: -21, x1: 49.5, z1: -10, color: "#eaddc5", interior: true },
+  { id: "hall5", name: "文创", x0: -49, z0: 8, x1: -34, z1: 35, color: "#ded3bd", interior: true },
+  { id: "hall4", name: "书斋", x0: 34, z0: 6, x1: 46, z1: 33, color: "#ded3bd", interior: true },
   { id: "hall0", name: "序厅", x0: -11, z0: 24.5, x1: 11, z1: 34.5, color: "#e8dcc4" },
   { id: "courtyard", name: "庭院", x0: -9, z0: -20, x1: 9, z1: 24.5, color: "#cfd8c4" },
   { id: "plaza", name: "前庭", x0: -26, z0: 34, x1: 26, z1: 40, color: "#d6cfb8" },
@@ -76,6 +81,21 @@ const courts = [
 
 const playerSvg = ref({ x: toSvg(0), y: toSvg(37) });
 let timer = null;
+
+function openInterior(hallId) {
+  if (hallId === "hall0") {
+    window.location.href = "./index.html#/hall/plaza";
+    return;
+  }
+  const pages = {
+    hall1: "shanshui.html",
+    hall2: "huaniao.html",
+    hall3: "renwu.html",
+    hall4: "shuzhai.html",
+    hall5: "wenchuang.html"
+  };
+  window.location.href = `./${pages[hallId] || "index.html#/hall/plaza"}`;
+}
 
 onMounted(() => {
   timer = setInterval(() => {
@@ -96,4 +116,7 @@ onUnmounted(() => {
 .map-hint { color: #8a7a68; font-size: 13px; margin: -10px 0 14px; }
 .map-svg { width: 100%; height: auto; display: block; border-radius: 8px; }
 .hall-label { font-size: 12px; fill: #3a2c22; pointer-events: none; }
+.map-house { cursor: pointer; }
+.map-house rect { transition: fill-opacity .15s, stroke-width .15s; }
+.map-house:hover rect, .map-house:focus rect { fill-opacity: .34; stroke-width: 3; outline: none; }
 </style>
