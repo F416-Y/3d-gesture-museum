@@ -148,7 +148,7 @@
       "replaces": "buildPartDoorSteps",
       "sizeM": 2,
       "faceCount": 30000,
-      "prompt": "三级中式条石台阶踏跺，浅灰青石，每级为整条石，边缘微磨圆；",
+      "prompt": "Single standalone Jiangnan garden entrance steps, exactly three broad shallow stone risers plus one small landing, maximum overall size 2.0 m, flat grounded bottom, centered origin, Z-up, front direction clear, pale warm-gray stone, no building, no gate, no floor, no background, no camera, no lights, no people.",
       "aiPredictSize": true
     },
     {
@@ -166,7 +166,7 @@
       "replaces": "buildPartGate",
       "sizeM": 11.4,
       "faceCount": 150000,
-      "prompt": "一座江南中式门楼牌坊，两柱一梁一小坡黑瓦顶，朱红立柱，中间空白匾额无字；",
+      "prompt": "Single freestanding Jiangnan Chinese garden gate tower, maximum overall width 11.4 m, two red-brown timber columns on stone bases, one lintel, one shallow charcoal tiled roof, blank central plaque, symmetrical opening, grounded base, centered origin, Z-up, no wall, no courtyard, no lanterns, no trees, no other buildings, no floor, no camera, no lights, no text.",
       "aiPredictSize": true
     },
     {
@@ -204,7 +204,7 @@
       "sizeM": 5,
       "faceCount": 150000,
       "plant": true,
-      "prompt": "一棵江南庭院香樟老树，树干粗壮分叉，树冠蓬松分三层，深绿叶片成簇，枝干可见；",
+      "prompt": "Single mature Jiangnan courtyard camphor tree, maximum height 5.0 m, thick slightly twisting trunk, visible branching connected continuously into a broad three-layer irregular canopy, grounded roots, centered origin, Z-up, rough dark-brown bark, clustered deep-green leaves, no pot, no soil mound, no rocks, no building, no other plants, no camera, no lights, no people.",
       "aiPredictSize": true
     },
     {
@@ -224,7 +224,7 @@
       "sizeM": 0.8,
       "faceCount": 60000,
       "plant": true,
-      "prompt": "一丛修剪过的江南庭园杜鹃灌木球，枝叶致密不呈几何球状，深浅两层绿叶，边缘有细碎出枝；",
+      "prompt": "Single compact Jiangnan courtyard evergreen shrub, maximum width 0.8 m, irregular low rounded dense leaf cluster, visible thin brown stems, layered dark and medium green leaves with lighter shoots, grounded bottom, centered origin, Z-up, no flowers, no pot, no soil, no rocks, no building, no other plants, no camera, no lights, no people.",
       "aiPredictSize": true
     },
     {
