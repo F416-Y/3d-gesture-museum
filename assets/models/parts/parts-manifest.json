@@ -232,10 +232,12 @@
       "name": "芭蕉",
       "replaces": "造景补件",
       "sizeM": 2.2,
-      "faceCount": 90000,
+      "faceCount": 1020,
       "plant": true,
       "prompt": "一株江南庭园芭蕉，五六片宽大长椭形叶片，叶脉清晰，叶缘有自然撕裂，翠绿色；",
-      "aiPredictSize": true
+      "aiPredictSize": true,
+      "generatedBy": "Blender 4.5 程序化生成（组员6）",
+      "note": "本地程序化建模，非 Hyper3D 生成；面数按实时 WebGL 预算控制"
     },
     {
       "id": "door-column",
@@ -308,9 +310,11 @@
       "name": "低面数草丛",
       "replaces": "草坪植被铺装",
       "sizeM": 0.3,
-      "faceCount": 5000,
+      "faceCount": 584,
       "plant": true,
-      "prompt": "一小丛江南庭园沿阶草，细长深绿草叶放射散开，叶片自然弯折，低面数；"
+      "prompt": "一小丛江南庭园沿阶草，细长深绿草叶放射散开，叶片自然弯折，低面数；",
+      "generatedBy": "Blender 4.5 程序化生成（组员6）",
+      "note": "本地程序化建模，非 Hyper3D 生成；面数按实时 WebGL 预算控制"
     },
     {
       "id": "rock-boulder",

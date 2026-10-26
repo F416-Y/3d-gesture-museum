@@ -10,7 +10,7 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 共享上下文 ---------- */
   /* slots：给 glb 真模型接线用的登记表（代码件先建，模型加载成功后替换隐藏） */
-  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], lion: [], ding: [], hall: [] }, anims: [] };
+  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], banana: [], grassTuft: [], deadTrunk: [], lion: [], ding: [], hall: [] }, anims: [] };
   var M = {};
   var WATERS = [];
 
@@ -401,6 +401,77 @@ window.MuseumExteriorLayout = (function () {
       l1.castShadow = l2.castShadow = false;
     }
     S.slots.bamboo.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一株芭蕉（宽叶放射，s≈1 时约 2.2m） ---------- */
+  function bananaPlant(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    /* 假茎 */
+    cyl(0.16 * k, 0.2 * k, 1.05 * k, 10, M.wood, x, 0.52 * k, z, g);
+    /* 叶片：8 片宽叶绕茎顶放射，四层错落，用压扁的球体近似叶团 */
+    for (var j = 0; j < 8; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = (Math.PI * 2 / 8) * j + 0.3;
+      var tier = j % 4;
+      var h = (0.95 + tier * 0.13) * k;
+      var len = (1.5 - tier * 0.15) * k;
+      var w = (0.75 - tier * 0.06) * k;
+      var leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), M.leaf);
+      leaf.scale.set(len * 0.55, 0.10 * k, w * 0.5);
+      leaf.position.set(x + Math.cos(ang) * len * 0.55, h, z + Math.sin(ang) * len * 0.55);
+      leaf.rotation.y = -ang;
+      leaf.rotation.z = -0.34;
+      leaf.castShadow = true;
+      g.add(leaf);
+    }
+    S.slots.banana.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一丛沿阶草（低面数，供撒点用） ---------- */
+  function grassTuft(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    for (var j = 0; j < 9; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = ((s % 1000) / 1000) * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var lean = (0.12 + (s % 1000) / 1000 * 0.24) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var h = (0.22 + (s % 1000) / 1000 * 0.16) * k;
+      var blade = box(0.028 * k, h, 0.012 * k, M.lawn || M.leaf, x, h / 2, z, 0, g);
+      blade.position.x += Math.cos(ang) * 0.05 * k;
+      blade.position.z += Math.sin(ang) * 0.05 * k;
+      blade.rotation.z = Math.cos(ang) * lean;
+      blade.rotation.x = -Math.sin(ang) * lean;
+      blade.castShadow = false;
+    }
+    S.slots.grassTuft.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一段枯木（庭院角落与林下） ---------- */
+  function deadTrunk(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    var main = cyl(0.16 * k, 0.26 * k, 3.0 * k, 9, M.wood, x, 1.5 * k, z, g);
+    s = (s * 1664525 + 1013904223) >>> 0;
+    main.rotation.z = ((s % 1000) / 1000 - 0.5) * 0.12;
+    /* 三段断枝，方向错开 */
+    for (var j = 0; j < 3; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = ((s % 1000) / 1000) * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var bh = (1.1 + (s % 1000) / 1000 * 0.9) * k;
+      var br = cyl(0.04 * k, 0.09 * k, bh, 6, M.wood, x, (1.8 + j * 0.4) * k, z, g);
+      br.rotation.z = Math.cos(ang) * 0.9;
+      br.rotation.x = Math.sin(ang) * 0.9;
+      br.position.x += Math.cos(ang) * bh * 0.35;
+      br.position.z += Math.sin(ang) * bh * 0.35;
+    }
+    S.slots.deadTrunk.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
 
   /* ---------- 水面与莲叶 ---------- */
@@ -1827,6 +1898,86 @@ window.MuseumExteriorLayout = (function () {
       mountainRing.userData.isDistantMountain = true;
       S.scene.add(mountainRing);
     }
+    buildTreeline();
+  }
+
+  /* ---------- 远景树线：两道不同高度的林冠剪影 ----------
+   * 远山与园林之间缺一层过渡，视线会从墙头直接跳到山脚。
+   * 这里在山前加两道树冠带：近的一道高而疏，远的一道矮而密，
+   * 底边压到 y=0 以下，与地面相接，转身时不露白边。 */
+  function treelineTexture(seed, tall) {
+    var cv = document.createElement('canvas');
+    cv.width = 1024; cv.height = 256;
+    var ctx = cv.getContext('2d');
+    var s = seed >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+
+    var baseY = tall ? 150 : 176;        /* 林冠基准高度 */
+    var crownH = tall ? 62 : 40;         /* 树冠起伏幅度 */
+    var step = tall ? 26 : 15;           /* 树的间距，近疏远密 */
+
+    /* 底色：从树冠色向下渐变到地面色，保证底边与草坪衔接 */
+    var body = ctx.createLinearGradient(0, baseY - crownH, 0, 256);
+    if (tall) {
+      body.addColorStop(0, 'rgba(58,78,58,0.94)');
+      body.addColorStop(0.55, 'rgba(44,62,46,0.96)');
+      body.addColorStop(1, 'rgba(36,50,38,1)');
+    } else {
+      body.addColorStop(0, 'rgba(94,116,96,0.90)');
+      body.addColorStop(0.55, 'rgba(76,98,80,0.94)');
+      body.addColorStop(1, 'rgba(62,84,66,1)');
+    }
+
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(0, 256);
+    ctx.lineTo(0, baseY);
+    for (var x = 0; x <= cv.width; x += step) {
+      /* 每株一个半圆冠，半径带抖动，形成参差林冠线 */
+      var r = (0.45 + rnd() * 0.55) * crownH * 0.5;
+      var cx = x + (rnd() - 0.5) * step * 0.6;
+      var top = baseY - r - rnd() * crownH * 0.35;
+      ctx.lineTo(cx - r * 0.9, baseY);
+      ctx.quadraticCurveTo(cx - r, top, cx, top - r * 0.25);
+      ctx.quadraticCurveTo(cx + r, top, cx + r * 0.9, baseY);
+    }
+    ctx.lineTo(cv.width, baseY);
+    ctx.lineTo(cv.width, 256);
+    ctx.closePath();
+    ctx.fill();
+
+    /* 树冠上缘再压一层更浅的雾色，做出空气透视 */
+    var haze = ctx.createLinearGradient(0, baseY - crownH, 0, baseY);
+    haze.addColorStop(0, 'rgba(198,210,205,0.30)');
+    haze.addColorStop(1, 'rgba(198,210,205,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, baseY - crownH, cv.width, crownH);
+
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function buildTreeline() {
+    /* 两道树线：半径略小于最内层远山，保证山在树后 */
+    var specs = [
+      { radius: 82, height: 15, y: 7.5, seed: 77, tall: true, opacity: 0.95 },
+      { radius: 88, height: 11, y: 5.5, seed: 91, tall: false, opacity: 0.88 }
+    ];
+    specs.forEach(function (sp) {
+      var tex = treelineTexture(sp.seed, sp.tall);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(3, 1);            /* 横向重复三次，转身时纹理不拉长 */
+      tex.needsUpdate = true;
+      var mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, opacity: sp.opacity,
+        depthWrite: false, side: THREE.BackSide, fog: false
+      });
+      var ring = new THREE.Mesh(
+        new THREE.CylinderGeometry(sp.radius, sp.radius, sp.height, 96, 1, true), mat
+      );
+      ring.position.y = sp.y;
+      ring.userData.isTreeline = true;
+      S.scene.add(ring);
+    });
   }
 
   /* ---------- 草坪与沿墙树阵 ---------- */
@@ -1866,6 +2017,34 @@ window.MuseumExteriorLayout = (function () {
     plantTree(9.8, 4.5, 1.25, 991);
     plantTree(24.5, 19.6, 1.15, 992);
     plantTree(-14.5, -8.6, 1.1, 993);
+    /* 芭蕉：东侧草坪背风处，与墙体形成半围合的角隅 */
+    bananaPlant(20.5, 8.0, 231, S.scene, 1.05);
+    bananaPlant(22.2, 10.6, 232, S.scene, 0.85);
+    /* 枯木：北侧林缘，作为低矮的水平向构件打破乔木的竖向节奏 */
+    deadTrunk(-22.0, -28.0, 241, S.scene, 0.9);
+    deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
+    /* 沿阶草：只铺在未墁地的草坪带上，避开广场、廊道与水面。
+       确定性抖动，刷新后位置不变。 */
+    (function scatterTufts() {
+      var sd2 = 76231;
+      function r2() { sd2 = (sd2 * 1664525 + 1013904223) >>> 0; return sd2 / 4294967296; }
+      var spots = [
+        /* [x0, x1, z0, z1, 数量] */
+        [-40.0, -18.0, 30.5, 36.0, 20],   /* 南花园西侧草带 */
+        [18.0, 40.0, 30.5, 36.0, 20],     /* 南花园东侧草带 */
+        [-40.0, -18.0, -34.0, -24.0, 16], /* 北侧西段林下 */
+        [18.0, 40.0, -34.0, -24.0, 16],   /* 北侧东段林下 */
+        [16.0, 26.0, 2.0, 16.0, 14]       /* 东侧草坪（芭蕉旁） */
+      ];
+      spots.forEach(function (a, ai) {
+        for (var i = 0; i < a[4]; i++) {
+          var px = a[0] + r2() * (a[1] - a[0]);
+          var pz = a[2] + r2() * (a[3] - a[2]);
+          var sc2 = 0.75 + r2() * 0.7;
+          grassTuft(px, pz, 300 + ai * 50 + i, S.scene, sc2);
+        }
+      });
+    })();
   }
 
   /* =====================================================================

@@ -48,7 +48,6 @@ window.MuseumExteriorSlots = {
         var ks = Object.keys(done);
         if (ks.length) console.info('[真模型接线] 已替换：' + ks.map(function (k) { return k + '×' + done[k]; }).join('，'));
       }
-  
       /* 景石：大主石用太湖石，配石用圆浑巨石；底端按代码版的埋深落地 */
       Promise.all([load('taihu-rock'), load('rock-boulder')]).then(function (rs) {
         var taihu = rs[0], boulder = rs[1];
@@ -66,7 +65,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 石狮：序厅高台大门两侧一对（落在须弥座上，通高近 2m） */
       load('stone-lion').then(function (tpl) {
         if (!tpl) return;
@@ -76,7 +74,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 序厅铜鼎：换成青铜方鼎，落在原石座上 */
       load('bronze-ding').then(function (tpl) {
         if (!tpl) return;
@@ -86,7 +83,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 树：沿墙一排用冷杉，水边用垂柳，庭院里用杂树 */
       Promise.all([load('tree'), load('willow'), load('fir-tree')]).then(function (ts) {
         var tree = ts[0], willow = ts[1], fir = ts[2];
@@ -103,7 +99,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 竹丛 */
       load('bamboo').then(function (tpl) {
         if (!tpl) return;
@@ -113,7 +108,33 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
+      /* 芭蕉：宽叶放射，按清单 2.2m 归一 */
+      load('banana').then(function (tpl) {
+        if (!tpl) return;
+        slots.banana.forEach(function (b) {
+          var g = instantiate(tpl, { mode: 'h', size: 2.2 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
+          if (g) { b.group.visible = false; mark('芭蕉'); }
+        });
+        report();
+      });
+      /* 沿阶草：低面数草丛，逐点撒放，不合并，保留每丛自己的朝向 */
+      load('grass-tuft').then(function (tpl) {
+        if (!tpl) return;
+        slots.grassTuft.forEach(function (t) {
+          var g = instantiate(tpl, { mode: 'h', size: 0.3 * t.k, x: t.x, y: 0, z: t.z, ry: t.seed * 1.1 });
+          if (g) { t.group.visible = false; mark('沿阶草'); }
+        });
+        report();
+      });
+      /* 枯木：林下水平构件 */
+      load('dead-trunk').then(function (tpl) {
+        if (!tpl) return;
+        slots.deadTrunk.forEach(function (d) {
+          var g = instantiate(tpl, { mode: 'h', size: 3.0 * d.k, x: d.x, y: 0, z: d.z, ry: d.seed * 0.9 });
+          if (g) { d.group.visible = false; mark('枯木'); }
+        });
+        report();
+      });
       /* ---------- 案头小品与架侧摆件（代码建模，随布展落位） ---------- */
       var MT = {
         celadon: new THREE.MeshStandardMaterial({ color: 0x9db8a6, roughness: 0.3 }),
@@ -315,7 +336,6 @@ window.MuseumExteriorSlots = {
         v.position.y = 0.99; g.add(v);
         g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
       }
-  
       /* 架格小件：册页叠 / 瓷碟木托 / 小瓶；书架用线装书摞 / 立放书 */
       function miniItem(kind, seed) {
         var g = new THREE.Group(), i, m;
@@ -378,7 +398,6 @@ window.MuseumExteriorSlots = {
           placed++;
         }
       }
-  
       /* 室内陈设布展：按厅定式，不再千厅一面——
          山水=立轴画廊（后墙三联轴 + 侧墙对轴 + 中央长案手卷 + 卷轴缸）
          花鸟=中岛展台（四墩瓷瓶 + 后墙架排 + 门口盆景 + 侧墙立轴）
@@ -409,7 +428,6 @@ window.MuseumExteriorSlots = {
         var seedBase = (Math.floor(Math.abs(h.cx) * 31 + Math.abs(h.cz) * 17) >>> 0);
         var shelfTpl = isBook ? (L.shelf || L.display) : (L.display || L.shelf);
         var i, p;
-  
         /* ---- 共用构件 ---- */
         function shelfRow(maxN, bOff) {
           if (!shelfTpl) return;
@@ -483,7 +501,6 @@ window.MuseumExteriorSlots = {
           galleryFill.position.set(h.cx, 2.7, h.cz); scene.add(galleryFill);
           return;
         }
-  
         /* ---- 按厅定式 ---- */
         if (tag === '山水') {
           backScroll(-2.2, seedBase + 1, dep / 2 - 0.75); backScroll(0, seedBase + 2, dep / 2 - 0.75); backScroll(2.2, seedBase + 3, dep / 2 - 0.75);

@@ -1,4 +1,11 @@
 <!doctype html>
+<!--
+  注意：本文件是 scripts/vendor-prototype.mjs 的输入副本，但不是唯一来源。
+  js/exterior-layout.js 里另有直接维护的代码（远景树线 buildTreeline、
+  芭蕉 bananaPlant / 沿阶草 grassTuft / 枯木 deadTrunk 三个零件函数），
+  重跑 vendor-prototype.mjs 会用本文件覆盖 js/exterior-layout.js，
+  把这些改动抹掉。改动前请先与 js/exterior-layout.js 比对。
+-->
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
@@ -167,7 +174,7 @@ window.MuseumScene = (function () {
 
   /* ---------- 共享上下文 ---------- */
   /* slots：给 glb 真模型接线用的登记表（代码件先建，模型加载成功后替换隐藏） */
-  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], lion: [], ding: [], hall: [] }, anims: [] };
+  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], banana: [], grassTuft: [], deadTrunk: [], lion: [], ding: [], hall: [] }, anims: [] };
   var M = {};
   var WATERS = [];
 
@@ -554,6 +561,77 @@ window.MuseumScene = (function () {
       l1.castShadow = l2.castShadow = false;
     }
     S.slots.bamboo.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一株芭蕉（宽叶放射，s≈1 时约 2.2m） ---------- */
+  function bananaPlant(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    /* 假茎 */
+    cyl(0.16 * k, 0.2 * k, 1.05 * k, 10, M.wood, x, 0.52 * k, z, g);
+    /* 叶片：8 片宽叶绕茎顶放射，按层次错落，用压扁的球体近似叶团 */
+    for (var j = 0; j < 8; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = (Math.PI * 2 / 8) * j + 0.3;
+      var tier = j % 4;
+      var h = (0.95 + tier * 0.13) * k;
+      var len = (1.5 - tier * 0.15) * k;
+      var w = (0.75 - tier * 0.06) * k;
+      var leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), M.leaf);
+      leaf.scale.set(len * 0.55, 0.10 * k, w * 0.5);
+      leaf.position.set(x + Math.cos(ang) * len * 0.55, h, z + Math.sin(ang) * len * 0.55);
+      leaf.rotation.y = -ang;
+      leaf.rotation.z = -0.34;
+      leaf.castShadow = true;
+      g.add(leaf);
+    }
+    S.slots.banana.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一丛沿阶草（低面数，供撒点用） ---------- */
+  function grassTuft(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    for (var j = 0; j < 9; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = ((s % 1000) / 1000) * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var lean = (0.12 + (s % 1000) / 1000 * 0.24) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var h = (0.22 + (s % 1000) / 1000 * 0.16) * k;
+      var blade = box(0.028 * k, h, 0.012 * k, M.lawn || M.leaf, x, h / 2, z, 0, g);
+      blade.position.x += Math.cos(ang) * 0.05 * k;
+      blade.position.z += Math.sin(ang) * 0.05 * k;
+      blade.rotation.z = Math.cos(ang) * lean;
+      blade.rotation.x = -Math.sin(ang) * lean;
+      blade.castShadow = false;
+    }
+    S.slots.grassTuft.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一段枯木（庭院角落与林下） ---------- */
+  function deadTrunk(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    var main = cyl(0.16 * k, 0.26 * k, 3.0 * k, 9, M.wood, x, 1.5 * k, z, g);
+    s = (s * 1664525 + 1013904223) >>> 0;
+    main.rotation.z = ((s % 1000) / 1000 - 0.5) * 0.12;
+    /* 两三段断枝 */
+    for (var j = 0; j < 3; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = ((s % 1000) / 1000) * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var bh = (1.1 + (s % 1000) / 1000 * 0.9) * k;
+      var br = cyl(0.04 * k, 0.09 * k, bh, 6, M.wood, x, (1.8 + j * 0.4) * k, z, g);
+      br.rotation.z = Math.cos(ang) * 0.9;
+      br.rotation.x = Math.sin(ang) * 0.9;
+      br.position.x += Math.cos(ang) * bh * 0.35;
+      br.position.z += Math.sin(ang) * bh * 0.35;
+    }
+    S.slots.deadTrunk.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
 
   /* ---------- 水面与莲叶 ---------- */
@@ -1527,6 +1605,33 @@ window.MuseumScene = (function () {
     rock(-5.6, 0.12, -1.2, 0.5, 0.4, 0.9, 84);
     plantTree(3.2, 5.3, 1.0, 83);
     bambooClump(-5.8, -3.8, 213, S.scene, 0.8);
+    /* 芭蕉：水榭西北角背阴处，与竹丛、假山形成高低层次 */
+    bananaPlant(-7.4, -2.0, 231, S.scene, 1.05);
+    bananaPlant(-8.9, 0.6, 232, S.scene, 0.85);
+    /* 枯木：林下与墙根，作为低矮的水平向构件打破竖向节奏 */
+    deadTrunk(-15.2, -6.4, 241, S.scene, 0.9);
+    deadTrunk(6.8, -12.5, 242, S.scene, 0.75);
+    /* 沿阶草：庭院草坪边缘与石缝撒点，确定性抖动，避免每次刷新位置变化。
+       只铺在有土的地方，不进水榭平台和曲桥范围。 */
+    (function scatterTufts() {
+      var sd2 = 76231;
+      function r2() { sd2 = (sd2 * 1664525 + 1013904223) >>> 0; return sd2 / 4294967296; }
+      var spots = [
+        /* [x0, x1, z0, z1, 数量] */
+        [-9.5, -3.0, -6.0, -1.0, 14],
+        [-2.0, 4.5, 6.0, 8.5, 12],
+        [7.5, 13.0, -8.0, -2.0, 10],
+        [-18.0, -11.0, -9.0, -3.0, 8]
+      ];
+      spots.forEach(function (a, ai) {
+        for (var i = 0; i < a[4]; i++) {
+          var px = a[0] + r2() * (a[1] - a[0]);
+          var pz = a[2] + r2() * (a[3] - a[2]);
+          var sc2 = 0.75 + r2() * 0.7;
+          grassTuft(px, pz, 300 + ai * 50 + i, S.scene, sc2);
+        }
+      });
+    })();
     stoneTableSet(3.6, -3.4);
     lantern(1.6, 5.6);
     lantern(-6.0, 6.0);
@@ -2308,6 +2413,36 @@ window.MuseumScene = (function () {
       slots.bamboo.forEach(function (b) {
         var g = instantiate(tpl, { mode: 'h', size: 3.5 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.7 });
         if (g) { b.group.visible = false; mark('竹丛'); }
+      });
+      report();
+    });
+
+    /* 芭蕉：宽叶放射，按清单 2.2m 归一 */
+    load('banana').then(function (tpl) {
+      if (!tpl) return;
+      slots.banana.forEach(function (b) {
+        var g = instantiate(tpl, { mode: 'h', size: 2.2 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
+        if (g) { b.group.visible = false; mark('芭蕉'); }
+      });
+      report();
+    });
+
+    /* 沿阶草：低面数草丛，逐点撒放，不合并，保留每丛自己的朝向 */
+    load('grass-tuft').then(function (tpl) {
+      if (!tpl) return;
+      slots.grassTuft.forEach(function (t) {
+        var g = instantiate(tpl, { mode: 'h', size: 0.3 * t.k, x: t.x, y: 0, z: t.z, ry: t.seed * 1.1 });
+        if (g) { t.group.visible = false; mark('沿阶草'); }
+      });
+      report();
+    });
+
+    /* 枯木：林下水平构件 */
+    load('dead-trunk').then(function (tpl) {
+      if (!tpl) return;
+      slots.deadTrunk.forEach(function (d) {
+        var g = instantiate(tpl, { mode: 'h', size: 3.0 * d.k, x: d.x, y: 0, z: d.z, ry: d.seed * 0.9 });
+        if (g) { d.group.visible = false; mark('枯木'); }
       });
       report();
     });
