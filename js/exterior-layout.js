@@ -668,18 +668,18 @@ window.MuseumExteriorLayout = (function () {
           fenceRun(r[0], r[1], r[0], cz - 0.9 - 0.35);
           fenceRun(r[0], cz + 0.9 + 0.35, r[0], r[3]);
         }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, 1.8, null);
+        /* 后门只保留围栏开口，不再生成额外小门楼。 */
       } else if (opts.sideDoors && opts.sideDoors[k] !== undefined) {
         /* 侧门（对齐游廊端头）：围栏留 1.8m 门洞 + 小门楼（无匾），做法同后门 */
         var at = opts.sideDoors[k];
         if (k === 'N' || k === 'S') {
           fenceRun(r[0], r[1], at - 1.25, r[1]);
           fenceRun(at + 1.25, r[1], r[2], r[1]);
-          gateHouse(k, at, cz, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         } else {
           fenceRun(r[0], r[1], r[0], at - 1.25);
           fenceRun(r[0], at + 1.25, r[0], r[3]);
-          gateHouse(k, cx, at, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         }
       } else {
         fenceRun(r[0], r[1], r[2], r[3]);
