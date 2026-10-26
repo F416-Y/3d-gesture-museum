@@ -1,5 +1,5 @@
 /* ============================================================
-   云墨美术馆 · 界面样式
+   云间入墨 · 界面样式
    视觉方向：新中式艺术馆 —— 宣纸白 / 墨黑 / 朱砂红 / 青瓦灰 / 原木
    签名元素：朱砂印章「云墨」+ 水墨加载
    ============================================================ */
@@ -365,6 +365,12 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 13px; color: var(--text-on-light-faint);
 }
 .panel-card .p-cmt-login a { color: var(--cinnabar); }
+
+.panel-card .p-hall-actions { display: flex; gap: 12px; margin-top: 22px; }
+.panel-card .p-hall-actions button { flex: 1; border: 1px solid var(--cinnabar); border-radius: 3px; padding: 10px 14px; font: inherit; cursor: pointer; }
+.panel-card .p-hall-enter { background: var(--cinnabar); color: var(--paper); }
+.panel-card .p-hall-cancel { background: transparent; color: var(--cinnabar); }
+.panel-card .p-hall-actions button:hover { filter: brightness(1.08); }
 
 /* ===== 提示条 ===== */
 .toast {

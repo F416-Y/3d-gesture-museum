@@ -393,9 +393,9 @@ window.MuseumExteriorSlots = {
         var horiz = (h.entry === 'S' || h.entry === 'N');
         var len = horiz ? h.w : h.d, dep = horiz ? h.d : h.w;
         if (len < 4.5 || dep < 4) return;   /* 过小的门厅不摆 */
-        /* 室内暖光一盏（悬挂高度，照亮陈设） */
-        var pl = new THREE.PointLight(0xffe9cf, 1.1, Math.max(len, dep) * 1.5, 1);
-        pl.position.set(h.cx, 2.7, h.cz); scene.add(pl);
+        /* 室内暖光一盏（挂高 3.1m 兼洗屋面暗部，照亮陈设；白天 1.45 不再死黑） */
+        var pl = new THREE.PointLight(0xffe9cf, 1.45, Math.max(len, dep) * 1.5, 1);
+        pl.position.set(h.cx, 3.1, h.cz); scene.add(pl);
         /* b = 由大门指向后墙的单位向量；u = 沿后墙方向的单位向量 */
         var bx = 0, bz = 0;
         if (h.entry === 'S') bz = -1; else if (h.entry === 'N') bz = 1;
@@ -416,7 +416,9 @@ window.MuseumExteriorSlots = {
           var n = Math.max(1, Math.min(maxN, Math.floor((len - 2.2) / 1.35)));
           var u0 = -(n - 1) * 1.35 / 2;
           for (i = 0; i < n; i++) {
-            p = at(u0 + i * 1.35, bOff);
+            var uu = u0 + i * 1.35;
+            /* 后门已全部撤除，架排中轴不再断开——贴后墙连成整排（与山水厅「架排后墙封死」同规） */
+            p = at(uu, bOff);
             var sg = instantiate(shelfTpl, { mode: 'h', size: isBook ? 2.0 : 1.8, x: p[0], y: floor, z: p[1], ry: faceRy });
             if (sg) { mark(isBook ? '书架' : '展示架'); shelfFill(sg, isBook, seedBase + i * 11); }
           }
@@ -515,7 +517,8 @@ window.MuseumExteriorSlots = {
             ped.castShadow = ped.receiveShadow = true; scene.add(ped);
             if (instantiate(L.horse, { mode: 'h', size: 1.1, x: p[0], y: floor + 0.75, z: p[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
           }
-          p = at(0, dep / 2 - 0.6); screenMesh(p[0], p[1], floor, faceRy);
+          p = at(0, dep / 2 - 0.6); /* 后墙挂对轴（后门已撤，厅心马踏飞燕可绕行） */
+          backScroll(-1.9, seedBase + 10); backScroll(1.9, seedBase + 11);
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
@@ -536,7 +539,7 @@ window.MuseumExteriorSlots = {
           }
           stoolAt(-0.95, 0, faceRy + Math.PI / 2); stoolAt(0.95, 0, faceRy - Math.PI / 2);
           stoolAt(0, -0.85, faceRy); stoolAt(0, 0.85, faceRy + Math.PI);
-          shelfRow(2, dep / 2 - 0.55);
+          shelfRow(4, dep / 2 - 0.55);   /* 贴后墙整排架（后门已撤，不再断口让位） */
           potAt(-len / 2 + 0.9, -dep / 2 + 1.0, seedBase + 3);
           lampPair(1.5, 0);
         } else {

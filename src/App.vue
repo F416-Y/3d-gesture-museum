@@ -2,15 +2,13 @@
   <!-- 顶部右侧导航：展厅直达 + 用户入口（叠在 3D 场景之上，不影响原有顶栏） -->
   <nav class="vue-nav">
     <div class="nav-halls">
-      <RouterLink to="/map">平面图</RouterLink>
-      <RouterLink to="/hall/plaza">前庭</RouterLink>
-      <RouterLink to="/hall/hall0">序厅</RouterLink>
-      <RouterLink to="/hall/courtyard">庭院</RouterLink>
-      <RouterLink to="/hall/hall1">山水</RouterLink>
-      <RouterLink to="/hall/hall2">花鸟</RouterLink>
-      <RouterLink to="/hall/hall3">人物</RouterLink>
-      <RouterLink to="/hall/hall4">书斋</RouterLink>
-      <RouterLink to="/hall/hall5">文创</RouterLink>
+          <a :href="exteriorHref('map')">平面图</a>
+          <a :href="exteriorHref('hall/courtyard')">庭院</a>
+          <a href="./shanshui.html">山水</a>
+          <a href="./huaniao.html">花鸟</a>
+          <a href="./renwu.html">人物</a>
+          <a href="./shuzhai.html">书斋</a>
+          <a href="./wenchuang.html">文创</a>
     </div>
     <div class="nav-user">
       <template v-if="user.isLoggedIn">
@@ -18,7 +16,7 @@
         <span class="nav-name">{{ user.username }}</span>
         <button type="button" class="nav-btn" @click="onLogout">退出</button>
       </template>
-      <RouterLink v-else to="/login" class="nav-btn">登录 / 注册</RouterLink>
+          <a v-else :href="exteriorHref('login')" class="nav-btn">登录 / 注册</a>
     </div>
   </nav>
   <RouterView />
@@ -33,6 +31,10 @@ const user = useUserStore();
 const router = useRouter();
 
 onMounted(() => user.restoreSession());
+
+function exteriorHref(route) {
+  return `./index.html#/${route}`;
+}
 
 function onLogout() {
   user.logout();
