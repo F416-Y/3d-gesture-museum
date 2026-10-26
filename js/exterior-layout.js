@@ -738,18 +738,18 @@ window.MuseumExteriorLayout = (function () {
           fenceRun(r[0], r[1], r[0], cz - 0.9 - 0.35);
           fenceRun(r[0], cz + 0.9 + 0.35, r[0], r[3]);
         }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, 1.8, null);
+        /* 后门只保留围栏开口，不再生成额外小门楼。 */
       } else if (opts.sideDoors && opts.sideDoors[k] !== undefined) {
         /* 侧门（对齐游廊端头）：围栏留 1.8m 门洞 + 小门楼（无匾），做法同后门 */
         var at = opts.sideDoors[k];
         if (k === 'N' || k === 'S') {
           fenceRun(r[0], r[1], at - 1.25, r[1]);
           fenceRun(at + 1.25, r[1], r[2], r[1]);
-          gateHouse(k, at, cz, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         } else {
           fenceRun(r[0], r[1], r[0], at - 1.25);
           fenceRun(r[0], at + 1.25, r[0], r[3]);
-          gateHouse(k, cx, at, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         }
       } else {
         fenceRun(r[0], r[1], r[2], r[3]);
@@ -1487,7 +1487,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 中轴真实拱桥：使用 Rodin 导出的单桥 GLB，跨中心湖连接序厅与山水方向 ---------- */
   function loadCentralArchBridge() {
     if (!THREE.GLTFLoader) { buildCentralArchBridge(); return; }
-    new THREE.GLTFLoader().load('assets/models/rodin_bridge_single.glb', function (gltf) {
+    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/rodin_bridge_single.glb', function (gltf) {
       var bridge = gltf.scene;
       bridge.name = 'rodin-central-arch-bridge';
       bridge.updateMatrixWorld(true);
@@ -1495,10 +1495,15 @@ window.MuseumExteriorLayout = (function () {
       var rawSize = raw.getSize(new THREE.Vector3());
       var longAxis = Math.max(rawSize.x, rawSize.z);
       if (!longAxis) { buildCentralArchBridge(); return; }
-      /* 湖面约 16×8m：桥沿湖的短轴南北跨越，桥头分别落在南北两岸的湖边。 */
-      /* 只把桥的长度拉到两岸距离；高度、宽度保持原模型比例，避免等比放大后变成巨型悬桥。 */
-      bridge.scale.set(15.0 / rawSize.x, 2.6 / rawSize.y, 2.2 / rawSize.z);
-      if (rawSize.x >= rawSize.z) bridge.rotation.y = Math.PI / 2;
+      /* DEMO：桥沿当前视角前后方向跨湖，桥头分别落在近岸与对岸。 */
+      /* 当前中心湖南北约16m；竖向桥按16m适配，避免越过湖岸撞到建筑。 */
+      if (rawSize.x >= rawSize.z) {
+        bridge.scale.set(16.0 / rawSize.x, 2.6 / rawSize.y, 2.2 / rawSize.z);
+        bridge.rotation.y = Math.PI / 2;
+      } else {
+        bridge.scale.set(2.2 / rawSize.x, 2.6 / rawSize.y, 16.0 / rawSize.z);
+        bridge.rotation.y = 0;
+      }
       bridge.updateMatrixWorld(true);
       var fitted = new THREE.Box3().setFromObject(bridge);
       var center = fitted.getCenter(new THREE.Vector3());
