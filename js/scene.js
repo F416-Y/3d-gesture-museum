@@ -2878,9 +2878,8 @@ window.MuseumScene = (function () {
        （tools/exterior-prototype.html 全文搜不到「观澜亭」，halfPavilion 只在
         水榭庭院 (6.0, 4.2) 出现一次），原四柱碰撞体是幽灵墙，删掉 */
 
-    /* 中轴影壁（z=20.2，原型 buildAxisCourt）：7.7m 宽须弥座 + 墨瓦压顶，
-       整面实心（原「台基北缘照壁」迁到此处），两侧各留 2.1m 通道入双廊 */
-    rectObs(-3.85, 19.675, 3.85, 20.725);
+    /* 中轴影壁（z=18.8，原型 buildAxisCourt）：收窄至 5.8m 并后移，避开序厅踏跺 */
+    rectObs(-2.9, 18.275, 2.9, 19.325);
 
     /* 中心庭（17×13 碎石广场）：5×5 内院围栏在新原型里**已撤**
        （原件 buildZhongxinCourt 注释：「主树四周敞开，树石直接落在碎石广场上」），

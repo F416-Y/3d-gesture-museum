@@ -927,24 +927,9 @@ window.MuseumExteriorLayout = (function () {
     box(0.14, 0.5, 0.3, M.ink, -0.6, dingY + 2.0, 29.5, 0, dingG);
     box(0.14, 0.5, 0.3, M.ink, 0.6, dingY + 2.0, 29.5, 0, dingG);
     S.slots.ding.push({ group: dingG, x: 0, y: dingY, z: 29.5 });
-    /* 导览序厅陈设：铜鼎四周木柱红绳护栏（南面留观瞻口）+ 展签 + 门内两侧导览立牌 + 暖光 */
+    /* 导览序厅陈设：展签 + 门内两侧导览立牌 + 暖光；铜鼎不设围栏 */
     (function () {
       var py = 1.2;   /* 台基面 */
-      var posts = [[-2.3, -2.3], [0, -2.3], [2.3, -2.3], [2.3, 0], [2.3, 2.3], [-2.3, 2.3], [-2.3, 0]], pi;
-      for (pi = 0; pi < posts.length; pi++) {
-        cyl(0.045, 0.055, 0.85, 8, M.wood, posts[pi][0], py + 0.425, 29.5 + posts[pi][1], g);
-        var pb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), M.ink);
-        pb.position.set(posts[pi][0], py + 0.9, 29.5 + posts[pi][1]); pb.castShadow = true; g.add(pb);
-      }
-      var yUp = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3();
-      for (pi = 0; pi < posts.length; pi++) {
-        var q0 = posts[pi], q1 = posts[(pi + 1) % posts.length];
-        if (q0[1] === 2.3 && q1[1] === 2.3) continue;   /* 南面留观瞻口 */
-        var rl = Math.sqrt((q1[0] - q0[0]) * (q1[0] - q0[0]) + (q1[1] - q0[1]) * (q1[1] - q0[1]));
-        var rope = cyl(0.02, 0.02, rl, 6, M.lampRed, (q0[0] + q1[0]) / 2, py + 0.68, 29.5 + (q0[1] + q1[1]) / 2, g);
-        dir.set(q1[0] - q0[0], 0, q1[1] - q0[1]).normalize();
-        rope.quaternion.setFromUnitVectors(yUp, dir);
-      }
       /* 展签：斜面小牌，立在观瞻口东侧 */
       var lbC = document.createElement('canvas'); lbC.width = 256; lbC.height = 128;
       var lc = lbC.getContext('2d');
@@ -982,8 +967,7 @@ window.MuseumExteriorLayout = (function () {
         var bp = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.24), new THREE.MeshBasicMaterial({ map: bt }));
         bp.position.set(0, 1.06, 0.032); gb.add(bp);
       }
-      guideBoard(-3.2, 32.4, 0.3, '全园导览', ['序厅 · 青铜方鼎', '中轴 · 影壁水榭', '中心庭 · 筒车水院', '山水 花鸟 人物三馆', '书斋 茶室 文创 临摹']);
-      guideBoard(3.2, 32.4, -0.3, '观展动线', ['正门入园 → 序厅', '月洞门 → 侧院游廊', '西长廊 → 山水馆', '北行 → 花鸟馆', '东长廊 → 人物馆', '南园 → 书斋文创']);
+      /* 序厅展品旁不设置导览牌，保持入口视线开敞 */
       /* 序厅暖光一盏（夜间与其他厅同步增强） */
       var xpl = new THREE.PointLight(0xffe9cf, 1.1, 14, 1);
       xpl.position.set(0, 3.6, 29.8); S.scene.add(xpl);
@@ -1336,40 +1320,9 @@ window.MuseumExteriorLayout = (function () {
     galleryWallX(-17.7, 8.3, 27.6);
   }
 
-  /* ---------- 中心庭（17×13 碎石广场 + 内院 5×5m：中心树 + 太湖石 + 石桌凳 + 条凳 + 石灯 + 陶罐） ---------- */
+  /* ---------- 中心庭：只保留一块与周边留出约 2m 间距的大水池 ---------- */
   function buildZhongxinCourt() {
-    /* 周边碎石广场 */
-    var g = new THREE.Mesh(new THREE.PlaneGeometry(17, 13), M.gravel);
-    g.rotation.x = -Math.PI / 2; g.position.set(0, 0.04, -13); g.receiveShadow = true;
-    S.scene.add(g);
-    /* 青石收边：碎石广场与草坪之间的深色过渡带 */
-    box(18, 0.08, 0.5, M.stoneDark, 0, 0.06, -19.5);
-    box(18, 0.08, 0.5, M.stoneDark, 0, 0.06, -6.5);
-    box(0.5, 0.08, 13.5, M.stoneDark, -8.5, 0.06, -13);
-    box(0.5, 0.08, 13.5, M.stoneDark, 8.5, 0.06, -13);
-    /* 收边外侧绿篱环：北至花鸟馆甬道、西至西长廊、东至东长廊三处留口，南贴水榭不设 */
-    box(6.5, 0.4, 0.35, M.leaf, -5.25, 0.2, -20.15);
-    box(6.5, 0.4, 0.35, M.leaf, 5.25, 0.2, -20.15);
-    box(0.35, 0.4, 5.6, M.leaf, -9.15, 0.2, -16.7);
-    box(0.35, 0.4, 5.0, M.leaf, -9.15, 0.2, -9.0);
-    box(0.35, 0.4, 2.2, M.leaf, 9.15, 0.2, -18.4);
-    box(0.35, 0.4, 8.1, M.leaf, 9.15, 0.2, -10.55);
-    /* 5×5 内院：围栏已撤（主树四周敞开，树石直接落在碎石广场上） */
-    /* 中心主景树（冠幅大树，约 6m） */
-    plantTree(0, -13.4, 1.6, 55);
-    /* 太湖石主景（约 2m 高，与 6m 主树相称）+ 次景石 */
-    rock(-1.5, 0.3, -14.4, 0.9, 0.5, 1.2, 71);
-    rock(1.4, 0.08, -12.0, 0.4, 0.4, 0.9, 72);
-    /* 石桌凳 / 条石坐凳 / 石灯 / 陶罐 */
-    stoneTableSet(5.8, -9.5);
-    stoneBench(-5.8, -9.5, 0);
-    lantern(3.6, -16.5);
-    potteryJar(-4.0, -16.3);
-    /* 南带筒车水院：中轴对景，北衬内院主树、南迎水榭北门（王祯《农书》筒车形制，大轮缓转提水） */
-    waterwheel(0, -9.0);
-    var m = new THREE.Mesh(blobGeo(0.5, 0.2, 0.7, 77), M.leaf);
-    m.position.set(2.2, 0.3, -16.2); m.castShadow = m.receiveShadow = true;
-    S.scene.add(m);
+    pond(0, -13, 6.0, 4.3, 55);
   }
 
   /* ---------- 水榭庭院（14×12m 围墙院落：5.5×4.5 水池 + 曲桥 + 水榭 + 假山 + 主树） ---------- */
@@ -1457,17 +1410,17 @@ window.MuseumExteriorLayout = (function () {
     var g = new THREE.Mesh(new THREE.PlaneGeometry(14, 16.5), M.plaza);
     g.rotation.x = -Math.PI / 2; g.position.set(0, 0.03, 16.25); g.receiveShadow = true;
     S.scene.add(g);
-    /* 中轴影壁（z=20.2，地面层，四合院影壁正统位：独立于庭院入口，人绕两侧）：
+    /* 中轴影壁（z=18.8，收窄并后移，避开序厅大踏跺）：
        南面墨边框壁心迎序厅大踏跺，北面素壁心对水榭庭院南门；须弥座 + 墨瓦压顶 */
-    box(7.7, 0.5, 1.05, M.stoneDark, 0, 0.25, 20.2);
-    box(7.3, 0.26, 0.82, M.stone, 0, 0.63, 20.2);
-    box(7.0, 3.4, 0.5, M.paper, 0, 2.46, 20.2);
-    box(7.3, 0.16, 0.66, M.ink, 0, 4.24, 20.2);
-    box(7.7, 0.2, 1.05, M.tile, 0, 4.42, 20.2);
-    box(4.6, 2.3, 0.14, M.ink, 0, 2.46, 20.2 + 0.32);   /* 南面壁心（朝踏跺） */
-    box(4.2, 1.9, 0.16, M.plaza, 0, 2.46, 20.2 + 0.34);
-    box(4.6, 2.3, 0.14, M.ink, 0, 2.46, 20.2 - 0.32);   /* 北面壁心（朝水榭庭院） */
-    box(4.2, 1.9, 0.16, M.plaza, 0, 2.46, 20.2 - 0.34);
+    box(6.4, 0.5, 1.05, M.stoneDark, 0, 0.25, 18.8);
+    box(6.0, 0.26, 0.82, M.stone, 0, 0.63, 18.8);
+    box(5.8, 3.4, 0.5, M.paper, 0, 2.46, 18.8);
+    box(6.0, 0.16, 0.66, M.ink, 0, 4.24, 18.8);
+    box(6.4, 0.2, 1.05, M.tile, 0, 4.42, 18.8);
+    box(3.6, 2.3, 0.14, M.ink, 0, 2.46, 18.8 + 0.32);   /* 南面壁心（朝踏跺） */
+    box(3.2, 1.9, 0.16, M.plaza, 0, 2.46, 18.8 + 0.34);
+    box(3.6, 2.3, 0.14, M.ink, 0, 2.46, 18.8 - 0.32);   /* 北面壁心（朝水榭庭院） */
+    box(3.2, 1.9, 0.16, M.plaza, 0, 2.46, 18.8 - 0.34);
     /* 中轴甬道两侧：陶罐与灌木球交替成列（让开影壁与大踏跺轴线） */
     var zzs = [10.5, 13.7, 16.9], zzi;
     for (zzi = 0; zzi < zzs.length; zzi++) {
@@ -1806,6 +1759,76 @@ window.MuseumExteriorLayout = (function () {
     plantTree(44.6, 24.5, 1.05, 624);
   }
 
+  /* ---------- 360° 远景山脉层 ----------
+   * 参考快景外景的做法：远山不是一张正面背景图，而是围绕园区的多段
+   * 半透明山脊卡片。每层高度、色值和雾带不同，转身时仍能保持连续的
+   * 远近关系；卡片只承担远景，不参与碰撞，也不会遮住园区建筑。
+   */
+  function mountainBackdropTexture(seed, tone) {
+    var cv = document.createElement('canvas'); cv.width = 768; cv.height = 320;
+    var ctx = cv.getContext('2d');
+    var palettes = [
+      ['rgba(170,191,196,0.82)', 'rgba(115,145,153,0.76)', 'rgba(78,111,119,0.68)'],
+      ['rgba(127,156,161,0.88)', 'rgba(76,110,117,0.84)', 'rgba(45,77,83,0.78)'],
+      ['rgba(99,128,117,0.92)', 'rgba(54,87,72,0.88)', 'rgba(28,56,45,0.84)']
+    ];
+    var colors = palettes[tone % palettes.length];
+    var phase = seed * 0.73;
+    function ridge(y, amp, step, color, alpha, detail) {
+      var peaks = [0.08, 0.23, 0.41, 0.61, 0.82];
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.moveTo(0, 256); ctx.lineTo(0, y);
+      for (var x = 0; x <= 768; x += step) {
+        var t = (x / 768 + phase * 0.003) % 1, h = 0, pi, d, ph;
+        for (pi = 0; pi < peaks.length; pi++) {
+          ph = (peaks[pi] + (pi % 2 ? 0.025 : -0.018) * tone + 1) % 1;
+          d = Math.abs(t - ph); d = Math.min(d, 1 - d);
+          h += Math.exp(-Math.pow(d / (0.075 + (pi % 3) * 0.014), 2))
+            * (0.52 + 0.32 * Math.sin(seed * 0.17 + pi * 2.4));
+        }
+        var yy = y - h * amp
+          - (Math.sin(x * 0.051 + phase * 1.7) * 0.5 + 0.5) * amp * detail * 0.22;
+        ctx.lineTo(x, yy);
+      }
+      ctx.lineTo(768, 256); ctx.lineTo(768, 320); ctx.lineTo(0, 320); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ridge(112 + tone * 12, 78 - tone * 7, 8, colors[0], 0.78, 0.42);
+    ridge(150 + tone * 12, 58 - tone * 5, 7, colors[1], 0.86, 0.50);
+    ridge(187 + tone * 10, 42 - tone * 3, 6, colors[2], 0.90, 0.58);
+
+    /* 山腰云雾：上下都透明，避免把每张远景卡片刷成矩形色块 */
+    var mist = ctx.createLinearGradient(0, 148, 0, 264);
+    mist.addColorStop(0, 'rgba(226,234,231,0)');
+    mist.addColorStop(0.48, 'rgba(226,234,231,0.26)');
+    mist.addColorStop(0.72, 'rgba(226,234,231,0.12)');
+    mist.addColorStop(1, 'rgba(226,234,231,0)');
+    ctx.fillStyle = mist; ctx.fillRect(0, 140, 768, 130);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function buildDistantMountains() {
+    var ringRadius = 106;
+    for (var layer = 0; layer < 3; layer++) {
+      var tex = mountainBackdropTexture(20 + layer * 13, layer);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(1, 1);
+      tex.needsUpdate = true;
+      var mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, opacity: 0.96 - layer * 0.06,
+        depthWrite: false, side: THREE.BackSide, fog: false
+      });
+      var radius = ringRadius - layer * 8;
+      var mountainRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, 60 + layer * 5, 96, 1, true), mat
+      );
+      mountainRing.position.y = 22 + layer * 2.5;
+      mountainRing.userData.isDistantMountain = true;
+      S.scene.add(mountainRing);
+    }
+  }
+
   /* ---------- 草坪与沿墙树阵 ---------- */
   function buildGreenery() {
     var ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), M.lawn);
@@ -1982,6 +2005,7 @@ window.MuseumExteriorLayout = (function () {
   function build(scene) {
     S.scene = scene;
     initMaterials();
+    buildDistantMountains();
     buildGreenery();
     buildBoundary();
     buildSouthEntry();
@@ -1995,12 +2019,7 @@ window.MuseumExteriorLayout = (function () {
     buildWenchuang();         // 文创 / 临摹（各 10×13，正房 10×5 + 前院）
     buildShuzhaiChashi();     // 书斋 / 茶室（各 8×13，小筑 8×4 + 前院）
     buildZhongxinCourt();     // 中心庭（17×13 广场 + 5×5 内院）
-    buildShuixieCourt();      // 水榭庭院（14×12）
-    buildAxisCourt();
-    buildShanshiCourt();      // 山石庭院（13×12 场 + 内院 5×4）
-    buildHechiCourt();        // 荷池庭院（加深至 z 5.5~17）
-    buildLanzhuCourt();       // 兰竹庭院（6×4 + 门厅）
-    buildJingguanCourt();     // 景观庭院（4×6）
+    /* 中央庭院圈出的水榭、轴线附属庭院、山石/荷池/兰竹/景观小院全部移除 */
     buildCorridors();         // 游廊系统（中轴双廊 + 东西横廊 + 南花园两廊）
     buildPocketGardens();
     buildLandscapeFill();     // 空旷草地：曲池、曲廊、山石组

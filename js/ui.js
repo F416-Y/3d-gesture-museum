@@ -15,6 +15,7 @@ window.MuseumUI = (function () {
 
   var el = {};
   var social = { favorited: false, favLoading: false, comments: [] };
+  var currentExhibit = null;
   var handlers = {
     onCameraToggle: null,
     onReset: null,
@@ -70,6 +71,11 @@ window.MuseumUI = (function () {
         }
       });
     }
+    document.addEventListener("keydown", function (e) {
+      if (!isPanelOpen() || !currentExhibit || currentExhibit.type !== "painting") return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); movePainting(-1); }
+      if (e.key === "ArrowRight") { e.preventDefault(); movePainting(1); }
+    });
   }
 
   /* ---------- 加载层 ---------- */
@@ -124,27 +130,31 @@ window.MuseumUI = (function () {
   /* ---------- 鉴赏弹窗（含收藏 + 评论区） ---------- */
   function showExhibit(ex) {
     if (!el.panel || !el.panelBody) return;
+    currentExhibit = ex;
     social.favorited = false;
     social.favLoading = false;
     social.comments = [];
 
-    var artCol = ex.image
-      ? '<div class="p-art"><img class="p-art-img" src="' + ex.image + '" alt="' + esc(ex.title) + ' 画作" /></div>'
-      : '<div class="p-art"><div class="p-art-ph"><span>' + esc(ex.title) + '</span></div></div>';
+    var artVisual = ex.image
+      ? '<img class="p-art-img" src="' + ex.image + '" alt="' + esc(ex.title) + ' 画作" />'
+      : '<div class="p-art-ph"><span>' + esc(ex.title) + '</span></div>';
+    var artCol = '<div class="p-art">' + artVisual + paintingNav(ex) + '</div>';
     el.panelBody.innerHTML =
-      '<h2>' + esc(ex.title) + '</h2>' +
-      '<div class="p-body">' +
-        artCol +
-        '<div class="p-info">' +
-          '<div class="p-meta">' +
-            metaItem("作者", ex.artist) +
-            metaItem("年代", ex.dynasty + (ex.era ? " · " + ex.era : "")) +
-            metaItem("形制", ex.medium) +
-            metaItem("馆藏", ex.collection) +
+      '<div class="panel-card">' +
+        '<h2>' + esc(ex.title) + '</h2>' +
+        '<div class="p-body">' +
+          artCol +
+          '<div class="p-info">' +
+            '<div class="p-meta">' +
+              metaItem("作者", ex.artist) +
+              metaItem("年代", ex.dynasty + (ex.era ? " · " + ex.era : "")) +
+              metaItem("形制", ex.medium) +
+              metaItem("馆藏", ex.collection) +
+            '</div>' +
+            '<p class="p-desc">' + esc(ex.intro) + '</p>' +
+            '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(ex.appreciation) + '</p></div>' +
+            renderSocial() +
           '</div>' +
-          '<p class="p-desc">' + esc(ex.intro) + '</p>' +
-          '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(ex.appreciation) + '</p></div>' +
-          renderSocial() +
         '</div>' +
       '</div>';
 
@@ -160,7 +170,65 @@ window.MuseumUI = (function () {
       if (e.key === "Enter" && cmtInput.value.trim()) sendComment(ex, cmtInput);
     });
 
+    bindPaintingNavigation(ex);
+
     refreshSocial(ex);
+  }
+
+  function paintingNeighbors(ex) {
+    var list = (window.MuseumConfig && window.MuseumConfig.exhibits) || [];
+    var paintings = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].type === "painting" && list[i].hall === ex.hall) paintings.push(list[i]);
+    }
+    return paintings;
+  }
+
+  function paintingNav(ex) {
+    var paintings = paintingNeighbors(ex);
+    if (paintings.length < 2) return "";
+    var index = 0;
+    for (var i = 0; i < paintings.length; i++) {
+      if (paintings[i].id === ex.id) { index = i; break; }
+    }
+    return '<div class="p-art-nav" aria-label="画作左右切换">' +
+      '<button type="button" class="p-art-prev" aria-label="上一幅画">‹</button>' +
+      '<span class="p-art-count">' + (index + 1) + ' / ' + paintings.length + '</span>' +
+      '<button type="button" class="p-art-next" aria-label="下一幅画">›</button>' +
+      '</div>';
+  }
+
+  function bindPaintingNavigation(ex) {
+    if (ex.type !== "painting") return;
+    var prev = document.querySelector(".p-art-prev");
+    var next = document.querySelector(".p-art-next");
+    if (prev) prev.addEventListener("click", function () { movePainting(-1); });
+    if (next) next.addEventListener("click", function () { movePainting(1); });
+
+    var art = document.querySelector(".p-art");
+    if (!art) return;
+    var startX = null;
+    art.addEventListener("touchstart", function (e) {
+      startX = e.changedTouches[0].clientX;
+    }, { passive: true });
+    art.addEventListener("touchend", function (e) {
+      if (startX == null) return;
+      var delta = e.changedTouches[0].clientX - startX;
+      startX = null;
+      if (Math.abs(delta) > 42) movePainting(delta < 0 ? 1 : -1);
+    }, { passive: true });
+  }
+
+  function movePainting(direction) {
+    if (!currentExhibit || currentExhibit.type !== "painting") return;
+    var paintings = paintingNeighbors(currentExhibit);
+    if (paintings.length < 2) return;
+    var index = 0;
+    for (var i = 0; i < paintings.length; i++) {
+      if (paintings[i].id === currentExhibit.id) { index = i; break; }
+    }
+    var nextIndex = (index + direction + paintings.length) % paintings.length;
+    showExhibit(paintings[nextIndex]);
   }
 
   /* 收藏 + 评论区模板（区分登录 / 未登录） */
@@ -280,6 +348,7 @@ window.MuseumUI = (function () {
     if (!el.panel) return;
     el.panel.classList.remove("open");
     el.panel.setAttribute("aria-hidden", "true");
+    currentExhibit = null;
   }
 
   function isPanelOpen() {

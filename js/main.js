@@ -28,6 +28,9 @@ window.MuseumMain = (function () {
 
   var keys = {};
   var lastPinchPick = 0;   // 上次捏合拾取的时间戳（冷却防抖）
+  // 对齐 Kimi 原型：未锁定指针时，也支持按住左键拖动转向。
+  var dragLook = { active: false, x: 0, y: 0, moved: false };
+  var suppressClickAfterDrag = false;
 
   /* ---------- 初始化 ---------- */
   function init() {
@@ -112,6 +115,10 @@ window.MuseumMain = (function () {
      // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
       if (panorama.on) return;                      // 全景模式下与键盘/E 键一致，不做拾取
+      if (suppressClickAfterDrag) {
+        suppressClickAfterDrag = false;
+        return;
+      }
       if (document.pointerLockElement === renderer.domElement) {
         MuseumExhibit.pick();
         return;
@@ -128,7 +135,35 @@ window.MuseumMain = (function () {
       if (document.pointerLockElement === renderer.domElement) {
         MuseumPlayer.look(e.movementX || 0, e.movementY || 0);
       }
+      if (dragLook.active && document.pointerLockElement !== renderer.domElement && !panorama.on) {
+        var dx = (e.clientX || 0) - dragLook.x;
+        var dy = (e.clientY || 0) - dragLook.y;
+        if (dx || dy) dragLook.moved = true;
+        MuseumPlayer.look(dx, dy);
+        dragLook.x = e.clientX || 0;
+        dragLook.y = e.clientY || 0;
+      }
     });
+
+    // Kimi 原型的左键拖动视角：不抢指针锁定，适合先观察模型和核对桥湖方向。
+    renderer.domElement.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || panorama.on || document.pointerLockElement === renderer.domElement) return;
+      dragLook.active = true;
+      dragLook.x = e.clientX;
+      dragLook.y = e.clientY;
+      dragLook.moved = false;
+      if (renderer.domElement.setPointerCapture) renderer.domElement.setPointerCapture(e.pointerId);
+    });
+    function endDragLook(e) {
+      if (!dragLook.active) return;
+      if (dragLook.moved) suppressClickAfterDrag = true;
+      dragLook.active = false;
+      if (e && renderer.domElement.releasePointerCapture && renderer.domElement.hasPointerCapture && renderer.domElement.hasPointerCapture(e.pointerId)) {
+        renderer.domElement.releasePointerCapture(e.pointerId);
+      }
+    }
+    renderer.domElement.addEventListener("pointerup", endDragLook);
+    renderer.domElement.addEventListener("pointercancel", endDragLook);
 
     MuseumUI.setHandlers({
       onCameraToggle: function () { toggleCamera(!cameraOn); },

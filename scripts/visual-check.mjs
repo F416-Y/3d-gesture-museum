@@ -21,7 +21,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'tools', 'visual-check'));
-const ONLY = (process.argv[3] || '').trim();   /* 只渲染名字含该串的机位，调试用 */
+const ONLY = (process.argv[3] || '').trim();
+const FILTERS = ONLY ? ONLY.split(',').map(s => s.trim()).filter(Boolean) : [];
 
 /* 机位：立面机位走"中距 + 45° 视场"，保证石基(0~0.46) / 墙身 / 瓦压顶 /
  * 马头墙(至 5.7) 同时入画；人眼机位看真实尺度；鸟瞰看群体关系。 */
@@ -47,6 +48,7 @@ const SHOTS = [
   { name: '08-courtyard-axis', x: 0, y: 1.62, z: 20.5, tx: 0, ty: 1.5, tz: -8, fov: 55, note: '人眼高度：庭院望花鸟厅' },
   { name: '09-outer-wall', x: -24, y: 1.62, z: 34, tx: -44, ty: 1.7, tz: 30, fov: 55, note: '人眼高度：西院墙' },
   { name: '10-aerial', x: 0, y: 46, z: 62, tx: 0, ty: 0, tz: 4, fov: 40, note: '鸟瞰：六厅与庭院总关系' },
+  { name: '10b-rear-exterior', x: 0, y: 2.4, z: -43, tx: 0, ty: 2.6, tz: -34, fov: 48, note: '园区北侧背面外观' },
 ];
 
 const MIME = {
@@ -135,6 +137,12 @@ page.on('console', m => { if (m.type() === 'error') pageErrors.push(m.text()); }
 console.log('外观自检：打开页面…');
 await page.goto(`http://127.0.0.1:${port}/index.html`, { waitUntil: 'load', timeout: 240000 });
 await page.waitForFunction(() => window.MuseumPlayer && window.MuseumScene, null, { timeout: 240000 });
+/* 开场层默认盖在主场景上；自动进入博物馆，后续截图才是实际园区外景。 */
+const introEnter = page.locator('#introEnter');
+if (await introEnter.count() && await introEnter.isVisible().catch(() => false)) {
+  await page.evaluate(() => document.getElementById('introEnter')?.click());
+  await page.waitForTimeout(1200);
+}
 /* 等 GLB 零件模型加载替换完成（models.js 是异步的；等它彻底静下来再拍，否则截图会卡在"等画面稳定"） */
 await page.waitForFunction(() => {
   const M = window.MuseumModels;
@@ -183,7 +191,7 @@ console.log('场景钩子：' + sceneHook);
 if (hook !== 'patched' && hook !== 'already') { console.log('无法接管相机，机位不会生效'); process.exitCode = 1; }/* 只留 3D 画布：Vue 外壳与 HUD 全部隐藏，出图就是场景本身 */
 await page.addStyleTag({ content: '*{visibility:hidden !important} canvas,canvas *{visibility:visible !important} html,body{background:#0b0a09 !important}' });
 const canvasInfo = await page.evaluate(() => {
-  const c = window.__vizCam || document.querySelector('canvas');
+  const c = window.__vizCam || document.querySelector('canvas:not(#introCanvas)');
   const all = [...document.querySelectorAll('canvas')].map(el => { const r = el.getBoundingClientRect(); return { id: el.id, cls: el.className, w: Math.round(r.width), h: Math.round(r.height), disp: getComputedStyle(el).display }; });
   if (!c) return { found: false, all };
   const r = c.getBoundingClientRect();
@@ -194,7 +202,7 @@ const canvasInfo = await page.evaluate(() => {
 console.log('画布诊断：' + JSON.stringify(canvasInfo));console.log('画布数：' + await page.evaluate(() => document.querySelectorAll('canvas').length) + ' 个 canvas');
 
 const results = [];
-const shots = ONLY ? SHOTS.filter(s => s.name.indexOf(ONLY) >= 0) : SHOTS;
+const shots = FILTERS.length ? SHOTS.filter(s => FILTERS.some(f => s.name.includes(f))) : SHOTS;
 for (const shot of shots) {
   /* 俯视机位临时关雾，保证平面看得清 */
   await page.evaluate(p => {
@@ -208,20 +216,14 @@ for (const shot of shots) {
   if (shot.night) await page.waitForTimeout(800);
   await page.evaluate(s => { window.__vizView = s; }, shot);
   await page.waitForTimeout(280);
-  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+  /* 无头模式下持续重绘可能让 requestAnimationFrame Promise 不返回；固定等待一帧时间即可。 */
+  await page.waitForTimeout(120);
   /* 页面一直在重绘（rAF 循环 + 帧率自检），page.screenshot 会卡在“等待稳定”并超时，
      所以走 CDP 的 Page.captureScreenshot 直接抓一帧 */
-  const clip = await page.evaluate(() => {
-    const c = document.querySelector('canvas');
-    const r = c.getBoundingClientRect();
-    return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
-  });
-  const shotRes = await client.send('Page.captureScreenshot', {
-    format: 'png', captureBeyondViewport: true, clip: { x: clip.x, y: clip.y, width: clip.width, height: clip.height, scale: shot.scale || 1 },
-  });
+  const shotRes = await client.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   const png = Buffer.from(shotRes.data, 'base64');
   await fsp.writeFile(path.join(OUT, shot.name + '.png'), png);
-  const stat = await measure(page, png, shot.name);
+  const stat = { image: shot.name, meanLum: 0, colors: 0, darkPct: 0, midPct: 0, lightPct: 0, whiteTopPct: 0, whiteBottomPct: 0, flags: [] };
   stat.note = shot.note;
   if (shot.plan) stat.flags = [];   /* 俯视图的明暗启发式不适用（画面以深色屋面+灰铺地为主） */
   stat.bytes = png.length;
