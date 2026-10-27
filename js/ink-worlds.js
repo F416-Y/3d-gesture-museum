@@ -26,35 +26,42 @@ window.MuseumInkWorlds = (function () {
   var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4";
   var INK_FALLBACK_MS = 2600;     // 墨雾占位转场的时长
   var VIDEO_STALL_MS = 12000;     // 穿画视频卡住超过这个时间直接放行
+  var INK_WORLD_HANDSHAKE_MS = 12000; // 组长画境接口握手超时（见 enterLeaderPainting）
 
   /* 四幅画：key 同时是组长 openPaintingVideo() 的参数
    *   status = "auto"        → 尝试播放画境视频，失败再显示占位
    *   status = "placeholder" → 第一阶段不开放，只显示「画境准备中」
+   *   apiKeyConfirmed        → 该 key 是否已经组长书面确认（见任务卡 §12.2）
+   *
+   * ⚠️ 《富春山居图》→ "shuzhai" 是推测：§12.2 的四个 key 是按展厅命名的
+   *    （qianli / huaniao / renwu / shuzhai），而任务卡第四节把《富春山居图》
+   *    归到 hall1 山水厅，与 "shuzhai"（书斋）对不上。组长确认前保持
+   *    apiKeyConfirmed:false + status:"placeholder"，绝不把玩家送进错误的画境。
    * 组长交付视频后，把对应项的 status 改成 "auto" 即可。 */
   var PAINTINGS = [
     {
       key: "qianli", title: "千里江山图", artist: "北宋 · 王希孟",
       hall: "hall1", img: "./assets/images/qianlijiangshan.jpg",
       video: "./videos/paintings/qianli-jiangshan.mp4",
-      status: "auto",
+      status: "auto", apiKeyConfirmed: true,
     },
     {
       key: "shuzhai", title: "富春山居图", artist: "元 · 黄公望",
       hall: "hall1", img: "./assets/images/fuchunshanjv.jpg",
       video: "./videos/paintings/shuzhai.mp4",
-      status: "placeholder",
+      status: "placeholder", apiKeyConfirmed: false,
     },
     {
       key: "renwu", title: "韩熙载夜宴图", artist: "五代 · 顾闳中",
       hall: "hall3", img: "./assets/images/hanxizai.jpg",
       video: "./videos/paintings/renwu.mp4",
-      status: "placeholder",
+      status: "placeholder", apiKeyConfirmed: true,
     },
     {
       key: "huaniao", title: "墨兰图", artist: "宋末元初 · 郑思肖",
       hall: "hall2", img: "./assets/images/molantu.jpg",
       video: "./videos/paintings/huaniao.mp4",
-      status: "placeholder",
+      status: "placeholder", apiKeyConfirmed: true,
     },
   ];
 
@@ -66,6 +73,8 @@ window.MuseumInkWorlds = (function () {
     pickerIndex: 0,
     transitionDone: false,
     worldKey: null,
+    worldReadyKey: null,      // 组长画境回执：已确认打开的 key
+    worldHandshakeTimer: 0,   // 组长画境握手看门狗
     raf: 0,
     stallTimer: 0,
     fallbackTimer: 0,
@@ -377,27 +386,136 @@ window.MuseumInkWorlds = (function () {
     // ① 优先交给组长的画境接口（§12.2）
     var leader = window.MuseumPaintingWorlds || window.MuseumInkWorldApi;
     if (leader && typeof leader.openPaintingVideo === "function") {
-      try {
-        leader.openPaintingVideo(p.key);
-        // 组长自己会接管画面；这里只保持「阻塞漫游」状态，
-        // 等他的返回按钮回调 returnToPaintingChooser / returnToHall0 再解锁。
-        state.layer = "world";
-        state.worldKey = p.key;
-        updateGate();
+      if (p.apiKeyConfirmed === false) {
+        console.warn("[云间入墨] 《" + p.title + "》的接口 key「" + p.key + "」尚未经组长确认，先走本地播放器");
+        openLocalWorld(p);
         return;
-      } catch (err) {
-        console.warn("[云间入墨] 组长画境接口调用失败，改用本地播放器：", err && err.message ? err.message : err);
       }
+      enterLeaderPainting(p, leader);
+      return;
     }
 
     // ② 兜底：本地播放器
     openLocalWorld(p);
   }
 
-  /* ---------- 3. 画境视频（本地兜底播放器） ---------- */
-  function openLocalWorld(p) {
+  /* ---------- 组长画境接口握手 ----------
+   * 旧实现只要 openPaintingVideo 存在就直接进 world 状态并冻结漫游，接口是个空壳
+   * 时玩家会被永久困住。现在用三重信号兜底：
+   *
+   * 成功（任一即可）：
+   *   · 返回值 true / 返回 Promise 且 resolve
+   *   · 组长播放器主动调 MuseumInkWorlds.paintingWorldReady(key)
+   *   · 超时探测到画面里出现了新的可见 <video>/<canvas>（组长已把画境挂上）
+   * 失败（任一即可）：
+   *   · 返回值 false / 抛异常 / 返回 Promise 且 reject
+   *   · 组长播放器主动调 MuseumInkWorlds.paintingWorldFailed(key, reason)
+   *   · 超时且没有任何新画面 → 显示「画境入口未响应」占位与返回按钮，不会把人锁死
+   *
+   * 组长侧最小接法：openPaintingVideo(key) 返回 true/false，或返回一个
+   * 「画境挂载完成」时才 resolve 的 Promise 即可。 */
+  function enterLeaderPainting(p, leader) {
+    var before = snapshotWorldNodes();
+    var result, threw = false;
+    try {
+      result = leader.openPaintingVideo(p.key);
+    } catch (err) {
+      threw = true;
+      console.warn("[云间入墨] 组长画境接口抛错，改用本地播放器：", err && err.message ? err.message : err);
+    }
+    if (threw) { openLocalWorld(p); return; }
+    if (result === false) {
+      console.warn("[云间入墨] 组长画境接口返回 false，改用本地播放器");
+      openLocalWorld(p);
+      return;
+    }
+
+    enterLeaderWorld(p, before);
+
+    if (result && typeof result.then === "function") {
+      result.then(function (ok) {
+        if (ok === false) paintingWorldFailed(p.key, "画境接口返回失败，可返回四画选择重试。");
+        else paintingWorldReady(p.key);
+      }, function (err) {
+        console.warn("[云间入墨] 组长画境接口 Promise 失败，改用本地播放器：", err && err.message ? err.message : err);
+        paintingWorldFailed(p.key, "画境接口调用失败，已改用本地播放器。", true);
+      });
+    }
+  }
+
+  /* 进入组长画境的等待态，并启动握手看门狗 */
+  function enterLeaderWorld(p, before) {
     state.layer = "world";
     state.worldKey = p.key;
+    state.worldReadyKey = null;
+    clearTimeout(state.worldHandshakeTimer);
+    state.worldHandshakeTimer = setTimeout(function () {
+      if (state.layer !== "world" || state.worldKey !== p.key || state.worldReadyKey === p.key) return;
+      // 接口没回执，但画面里已经多了组长的可见 video/canvas → 视为打开成功
+      if (worldMountAppeared(before)) {
+        paintingWorldReady(p.key);
+        return;
+      }
+      console.warn("[云间入墨] 组长画境接口 " + INK_WORLD_HANDSHAKE_MS + "ms 内没有回应");
+      if (window.MuseumUI) MuseumUI.toast("画境未打开 · 可返回四画选择");
+      showWorldStub(p, "画境入口未响应",
+        "已调用画境接口，但 " + Math.round(INK_WORLD_HANDSHAKE_MS / 1000) + " 秒内没有画面出现。可返回四画选择重试；若持续如此，请联系画境负责人核对接口。");
+    }, INK_WORLD_HANDSHAKE_MS);
+    updateGate();
+  }
+
+  /* 记录调用组长接口前的画面节点，超时用来判断他是否真的挂上了画境 */
+  function snapshotWorldNodes() {
+    var set = new Set();
+    var nodes = document.querySelectorAll("video, canvas");
+    for (var i = 0; i < nodes.length; i++) set.add(nodes[i]);
+    return set;
+  }
+  function isVisibleNode(node) {
+    if (!node || !node.isConnected) return false;
+    var r = node.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return false;
+    var cs = window.getComputedStyle ? window.getComputedStyle(node) : null;
+    return !cs || (cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0");
+  }
+  function worldMountAppeared(before) {
+    var nodes = document.querySelectorAll("video, canvas");
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (before.has(n)) continue;              // 调用前就有的（主场景 canvas 等）
+      if (el.world && el.world.contains(n)) continue; // 本站兜底播放器
+      if (isVisibleNode(n)) return true;
+    }
+    return false;
+  }
+
+  function paintingWorldReady(key) {
+    if (state.layer !== "world") return false;
+    if (key && state.worldKey && key !== state.worldKey) return false;
+    state.worldReadyKey = state.worldKey;
+    clearTimeout(state.worldHandshakeTimer);
+    return true;
+  }
+
+  /* useLocal = true 时不再显示占位，直接切到本站兜底播放器 */
+  function paintingWorldFailed(key, reason, useLocal) {
+    var p = findPainting(key || state.worldKey);
+    if (!p || state.layer !== "world") return false;
+    clearTimeout(state.worldHandshakeTimer);
+    if (useLocal) {
+      openLocalWorld(p);
+      return true;
+    }
+    showWorldStub(p, "画境打开失败", reason || "画境接口返回失败，可返回四画选择重试。");
+    return true;
+  }
+
+  /* ---------- 3. 画境视频（本地兜底播放器） ---------- */
+  function openLocalWorld(p) {
+    clearTimeout(state.worldHandshakeTimer);   // 放弃等待组长接口
+    state.layer = "world";
+    state.worldKey = p.key;
+    state.worldReadyKey = p.key;
     show(el.world);
     el.world.setAttribute("aria-hidden", "false");
     el.worldStub.classList.add("is-hidden");
@@ -432,6 +550,7 @@ window.MuseumInkWorlds = (function () {
   }
 
   function showWorldStub(p, title, text) {
+    clearTimeout(state.worldHandshakeTimer);
     state.layer = "world";
     state.worldKey = p.key;
     show(el.world);
@@ -449,6 +568,8 @@ window.MuseumInkWorlds = (function () {
   /* ---------- 4. 返回 ---------- */
   function returnToPaintingChooser() {
     if (state.layer !== "world") return;
+    clearTimeout(state.worldHandshakeTimer);
+    state.worldReadyKey = null;
     try { el.worldVideo.pause(); } catch (err) { /* noop */ }
     hide(el.world);
     el.world.setAttribute("aria-hidden", "true");
@@ -461,6 +582,8 @@ window.MuseumInkWorlds = (function () {
     try { el.worldVideo.pause(); } catch (err) { /* noop */ }
     clearTimeout(state.stallTimer);
     clearTimeout(state.fallbackTimer);
+    clearTimeout(state.worldHandshakeTimer);
+    state.worldReadyKey = null;
     hide(el.videoLayer);
     hide(el.world);
     hidePicker();
@@ -543,6 +666,13 @@ window.MuseumInkWorlds = (function () {
     },
     returnToPaintingChooser: returnToPaintingChooser,
     returnToHall0: returnToHall0,
+    /* 组长画境播放器回执（可选，但强烈建议接上）：
+       · paintingWorldReady(key)           画境已挂上，撤掉握手看门狗
+       · paintingWorldFailed(key, reason)  画境打不开 → 显示占位并允许返回
+       即使两者都不接，只要 openPaintingVideo 返回 true/false/Promise，
+       或超时前画面里出现新的可见 video/canvas，流程也不会把玩家锁死。 */
+    paintingWorldReady: paintingWorldReady,
+    paintingWorldFailed: paintingWorldFailed,
     getState: function () { return state; },
     getPaintings: function () { return PAINTINGS.slice(); },
   };

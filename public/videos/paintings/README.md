@@ -4,10 +4,16 @@
 
 ```text
 public/videos/paintings/qianli-jiangshan.mp4   → openPaintingVideo('qianli')   《千里江山图》
-public/videos/paintings/shuzhai.mp4            → openPaintingVideo('shuzhai')  《富春山居图》
+public/videos/paintings/shuzhai.mp4            → openPaintingVideo('shuzhai')  《富春山居图》  ⚠️ key 待确认
 public/videos/paintings/renwu.mp4              → openPaintingVideo('renwu')    《韩熙载夜宴图》
 public/videos/paintings/huaniao.mp4            → openPaintingVideo('huaniao')  《墨兰图》
 ```
+
+> ⚠️ **`shuzhai` → 《富春山居图》是推测，需组长书面确认。** 任务卡 §12.2 的四个 key
+> 按展厅命名，但任务卡第四节把《富春山居图》归到 `hall1` 山水厅，与 `shuzhai`（书斋）对不上。
+> 代码里该项标了 `apiKeyConfirmed: false`，在组长确认前即使把 `status` 改成 `auto`
+> 也不会调用组长接口，只走本地播放器。确认后把 `js/ink-worlds.js` 里的 key 和
+> `apiKeyConfirmed` 一起改掉。
 
 组员1 的 `js/ink-worlds.js` 会先探测组长的画境接口
 （`window.MuseumPaintingWorlds.openPaintingVideo` / `window.MuseumInkWorldApi.openPaintingVideo`），
