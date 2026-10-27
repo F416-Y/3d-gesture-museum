@@ -216,15 +216,62 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 2px;
 }
 .panel-close {
-  position: absolute; top: 14px; right: 16px;
+  position: fixed; top: 24px; right: 24px; z-index: 2;
   width: 34px; height: 34px;
   font-size: 20px; line-height: 1;
-  color: var(--cinnabar);
-  background: transparent;
-  border: 1px solid rgba(176, 52, 42, 0.4);
+  color: var(--paper);
+  background: rgba(28, 26, 23, 0.72);
+  border: 1px solid rgba(245, 241, 232, 0.48);
   border-radius: 50%;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
-.panel-close:hover { background: var(--cinnabar); color: var(--paper); }
+.panel-close:hover { background: var(--cinnabar); color: var(--paper); transform: rotate(90deg); }
+
+/* ===== 展厅闭门确认：宣纸卡片 + 朱砂入口按钮 ===== */
+.hall-prompt-card {
+  width: min(460px, calc(100vw - 36px));
+  max-height: none;
+  padding: 30px 32px 28px;
+  border: 1px solid rgba(168, 135, 90, 0.75);
+  border-top: 4px solid var(--cinnabar);
+  background:
+    linear-gradient(90deg, rgba(168, 135, 90, 0.08) 1px, transparent 1px) 0 0 / 22px 22px,
+    var(--paper);
+  box-shadow: 0 26px 70px rgba(12, 10, 8, 0.48), 0 0 0 7px rgba(245, 241, 232, 0.1);
+}
+.hall-prompt-kicker {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 22px;
+  color: var(--cinnabar);
+  font-size: 11px; letter-spacing: 0.18em;
+}
+.hall-prompt-kicker span:last-child { color: var(--text-on-light-faint); letter-spacing: 0.12em; }
+.hall-prompt-card h2 { margin: 0; font-size: 27px; letter-spacing: 0.1em; }
+.hall-prompt-rule {
+  width: 46px; height: 3px; margin: 16px 0 14px;
+  background: var(--cinnabar);
+  box-shadow: 10px 0 0 rgba(176, 52, 42, 0.18), 20px 0 0 rgba(176, 52, 42, 0.08);
+}
+.hall-prompt-card .p-desc {
+  margin: 0; color: var(--text-on-light-soft);
+  font-size: 14px; line-height: 1.9;
+}
+.hall-prompt-card .p-hall-actions { margin-top: 26px; gap: 10px; }
+.hall-prompt-card .p-hall-actions button {
+  min-height: 44px; border-radius: 3px; letter-spacing: 0.08em;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.hall-prompt-card .p-hall-enter {
+  display: inline-flex; align-items: center; justify-content: center; gap: 16px;
+  border-color: var(--cinnabar); box-shadow: 0 8px 18px rgba(176, 52, 42, 0.18);
+}
+.hall-prompt-card .p-hall-enter b { font-size: 18px; font-weight: 400; transition: transform var(--dur-fast) var(--ease); }
+.hall-prompt-card .p-hall-enter:hover { box-shadow: 0 10px 22px rgba(176, 52, 42, 0.28); transform: translateY(-1px); }
+.hall-prompt-card .p-hall-enter:hover b { transform: translateX(4px); }
+.hall-prompt-card .p-hall-cancel { color: var(--text-on-light-soft); border-color: rgba(74, 69, 64, 0.32); }
+.hall-prompt-card .p-hall-cancel:hover { color: var(--ink); background: rgba(74, 69, 64, 0.08); }
 
 /* ===== 弹窗内 · 收藏 + 评论区（组员5） ===== */
 .panel-card .p-social {
@@ -349,6 +396,8 @@ button { font-family: inherit; cursor: pointer; }
   .camwrap { width: 120px; right: 14px; top: 84px; }
   .camwrap video { height: 80px; }
   .panel-card { padding: 26px 22px 24px; }
+  .hall-prompt-card { padding: 26px 22px 24px; }
+  .hall-prompt-card .p-hall-actions { flex-direction: column; }
   /* 鉴赏弹窗内收藏 / 评论区窄屏适配（组员5）：输入+发送堆叠、收藏按钮收宽、留言换行 */
   .panel-card .p-cmt-form { flex-wrap: wrap; }
   .panel-card .p-cmt-input { flex: 1 1 100%; }
