@@ -2653,7 +2653,8 @@ window.MuseumScene = (function () {
     ];
     var sculptures = [
       ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）
-      ["jiangjunyong",  36.75, -13.8],   // 人物厅正房
+      ["venus",         34.55, -18.2],   // 人物厅中心对照：左侧西方
+      ["jiangjunyong",  38.95, -18.2],   // 人物厅中心对照：右侧中方
       ["matayafeiyan",  0,     -13],     // 中心庭广场点景
     ];
     paintings.forEach(function (p) {
