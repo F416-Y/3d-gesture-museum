@@ -22,6 +22,11 @@ window.MuseumExteriorSlots = {
         }
         return cache[id];
       }
+      function loadExternal(path) {
+        return new Promise(function (resolve) {
+          loader.load(path, function (g) { resolve(g.scene); }, undefined, function () { resolve(null); });
+        });
+      }
       /* 克隆模板：按 mode('h' 对高度 / 'max' 对最大边) 缩放到 size，
          包围盒底面中心落到 (x,y,z)，可再绕 y 转 ry */
       function instantiate(tpl, o) {
@@ -476,7 +481,7 @@ window.MuseumExteriorSlots = {
           sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
           lampPair(2.2, -0.45);
         } else if (tag === '人物') {
-          /* 面向正门时左侧为西方，右侧为中国，形成同题材对照。 */
+          /* 面向正门时左墙为西方绘画、右墙为中国画；中央再分为西方雕塑 / 中国人物雕塑。 */
           sideArtwork(-1, 1.8, 'monalisa');
           sideArtwork(-1, -0.8, 'starrynight');
           var chineseWall = [
@@ -488,21 +493,11 @@ window.MuseumExteriorSlots = {
           for (i = 0; i < chineseWall.length; i++) {
             sideArtwork(1, chineseWall[i][1], chineseWall[i][0]);
           }
-          if (L.warrior) {
-            var wpos = [[-len / 4, dep / 2 - 3.3], [len / 4, dep / 2 - 3.3], [-len / 4, dep / 2 - 4.5], [len / 4, dep / 2 - 4.5]];
-            for (i = 0; i < 4; i++) {
-              p = at(wpos[i][0], wpos[i][1]);
-              if (instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('将军俑');
-            }
-          }
-          if (L.horse) {
-            p = at(0, dep / 2 - 1.9);
-            var ped = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.8), MT.stoneG);
-            ped.position.set(p[0], floor + 0.375, p[1]);
-            ped.rotation.y = faceRy;
-            ped.castShadow = ped.receiveShadow = true; scene.add(ped);
-            if (instantiate(L.horse, { mode: 'h', size: 1.1, x: p[0], y: floor + 0.75, z: p[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
-          }
+          var compareB = dep / 2 - 2.1;
+          p = at(-1.45, compareB);
+          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.9, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('西方雕塑');
+          p = at(1.45, compareB);
+          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('中国人物雕塑');
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
@@ -543,8 +538,8 @@ window.MuseumExteriorSlots = {
           }
         }
       }
-      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse')]).then(function (fs) {
-        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6] };
+      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse'), loadExternal('assets/models/venus.glb')]).then(function (fs) {
+        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6], venus: fs[7] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
       });

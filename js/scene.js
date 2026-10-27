@@ -2171,11 +2171,10 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 人物厅内部对比展线：左侧西方，右侧中方；长廊后续可整体删除
-    // 西方侧：蒙娜丽莎、星月夜与米洛的维纳斯
+    // 人物厅内部对比展线：左墙西方绘画、右墙中国画；中央左维纳斯、中央右中国人物雕塑
     addPainting(g, { x: -8.6, y: 2.55, z: -5.2, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.4, 1.6, "monalisa");
     addPainting(g, { x: -8.6, y: 2.55, z: 0.0,  ry: Math.PI / 2, lamp: [0.9, 0] }, 2.4, 1.6, "starrynight");
-    addVenusSculpture(g, -4.5, 0.8, 0.0);
+    addVenusSculpture(g, -2.4, 0.8, 0.0);
 
     // 中方侧：韩熙载、洛神赋、步辇图
     addPainting(g, { x: 8.6, y: 2.55, z: -5.2, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.2, 1.5, "hanxizai");
@@ -2184,7 +2183,7 @@ window.MuseumScene = (function () {
     buildPartHallTitle(g, "人物对照", "西方之体 · 中方之神", 0, 4.0, -8.5, 0);
 
     // 中央将军俑
-    addPedestalLocal(g, 0, F, 0, "jiangjunyong", "将军俑 · 秦");
+    addPedestalLocal(g, 2.4, F, 0, "jiangjunyong", "中国人物雕塑 · 秦");
 
     // 侧墙立轴书法
     buildPartVerticalScroll(g, -8.4, 2.4, -3.0, Math.PI / 2);
@@ -2674,7 +2673,8 @@ window.MuseumScene = (function () {
     ];
     var sculptures = [
       ["houmuwuding",   0,      27.0],   // 序厅（原型 slots.ding 落点）
-      ["jiangjunyong",  36.75, -13.8],   // 人物厅正房
+      ["venus",          35.30, -18.90],  // 人物厅中央左侧
+      ["jiangjunyong",  38.20, -18.90],  // 人物厅中央右侧
       ["matayafeiyan",  0,     -13],     // 中心庭广场点景
     ];
     paintings.forEach(function (p) {
