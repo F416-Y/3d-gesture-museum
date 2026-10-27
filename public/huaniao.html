@@ -1,156 +1,1078 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>云间入墨 · 展厅内饰</title>
-<meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
-<link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="./css/intro.css">
-<!--
-  ============================================================
-  云间入墨 CloudInk Art Museum
-  前端 3D 手势交互博物馆 · 美术鉴赏 × 软件工程
-  ------------------------------------------------------------
-  脚本加载顺序（依赖顺序，不可调换）：
-  1. three.min.js      —— 3D 渲染核心（r147 UMD 全局 THREE）
-  2. vision_bundle.js  —— MediaPipe 手部关键点识别（全局 FilesetResolver / HandLandmarker）
-  3. js/config.js      —— 展品数据 + 全局配置（组员4 / 全体共用）
-  4. js/scene.js       —— 园区建筑与展厅场景（组长·外观 / 组员1·接缝）
-  5. js/player.js      —— 第一人称漫游与碰撞（组员2）
-  6. js/gesture.js     —— 手势识别与手势映射（组员3）
-  7. js/exhibit.js     —— 展品热点与鉴赏弹窗（组员4）
-  8. js/ui.js          —— 界面视觉与面板（组员5）
-  9. js/main.js        —— 启动与主循环（组员7 整合）
-  ============================================================
--->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#171711">
+  <title>花鸟清趣 · 云间入墨</title>
+  <meta name="description" content="云间入墨数字博物馆花鸟厅：写生珍禽图、五牛图、墨兰图与江南花鸟陈设。">
+  <style>
+    :root {
+      --paper: #eee6d5;
+      --paper-deep: #d8ccb6;
+      --ink: #241f1a;
+      --ink-soft: #665d50;
+      --seal: #8e382c;
+      --jade: #53675c;
+      --line: rgba(73, 61, 47, .22);
+      --panel: rgba(242, 235, 220, .92);
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      color: var(--ink);
+      background: #d8d0c1;
+      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+    }
+    button, a { font: inherit; }
+    button { color: inherit; }
+    #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 12%, transparent 35%, rgba(41, 33, 24, .16) 100%),
+        repeating-linear-gradient(90deg, rgba(76, 60, 40, .022) 0 1px, transparent 1px 5px);
+      mix-blend-mode: multiply;
+    }
+    .hud {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+    }
+    .hud > * { pointer-events: auto; }
+    .topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 86px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 16px 28px;
+      color: #f4eddf;
+      background: linear-gradient(180deg, rgba(23, 23, 17, .86), rgba(23, 23, 17, .26) 70%, transparent);
+    }
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #f4eddf;
+      text-decoration: none;
+      padding: 9px 13px;
+      border: 1px solid rgba(245, 236, 218, .35);
+      border-radius: 999px;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      transition: background .2s ease, border-color .2s ease;
+    }
+    .back:hover { background: rgba(255, 250, 239, .12); border-color: rgba(255, 250, 239, .68); }
+    .brand { min-width: 0; display: flex; align-items: center; gap: 12px; }
+    .seal {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: grid;
+      place-items: center;
+      border: 2px solid #b75442;
+      color: #f1dfca;
+      background: var(--seal);
+      font-size: 15px;
+      line-height: 1.08;
+      text-align: center;
+      letter-spacing: .06em;
+      box-shadow: 0 0 0 3px rgba(142, 56, 44, .18);
+    }
+    .brand-copy h1 { margin: 0; font-size: 25px; letter-spacing: .17em; font-weight: 500; }
+    .brand-copy p { margin: 4px 0 0; font: 11px/1.4 Georgia, serif; letter-spacing: .16em; color: rgba(244, 237, 223, .68); }
+    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .action {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid rgba(245, 236, 218, .35);
+      border-radius: 999px;
+      color: #f4eddf;
+      background: rgba(20, 20, 16, .24);
+      cursor: pointer;
+    }
+    .action:hover { background: rgba(255, 250, 239, .14); }
+    .side-copy {
+      display: none;
+    }
+    .eyebrow { margin: 0 0 10px; font: 11px/1.4 Georgia, serif; letter-spacing: .25em; color: rgba(244, 237, 223, .68); }
+    .side-copy h2 { margin: 0 0 12px; font-size: clamp(28px, 4vw, 48px); font-weight: 400; letter-spacing: .13em; }
+    .side-copy p { margin: 0; max-width: 260px; font-size: 13px; line-height: 1.9; color: rgba(244, 237, 223, .82); }
+    .status-line { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 12px; color: rgba(244, 237, 223, .75); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ae8f55; box-shadow: 0 0 12px currentColor; }
+    body[data-ready="true"] .status-dot { color: #9dc6a4; background: #9dc6a4; }
+    .works {
+      position: absolute;
+      left: 50%;
+      right: auto;
+      top: auto;
+      bottom: 18px;
+      width: min(720px, calc(100vw - 52px));
+      transform: translateX(-50%);
+      padding: 8px 10px;
+      border: 1px solid rgba(239, 226, 204, .22);
+      color: #f3ead9;
+      background: rgba(28, 25, 20, .68);
+      box-shadow: 0 15px 45px rgba(22, 18, 14, .24);
+      backdrop-filter: blur(12px);
+    }
+    .works-head { display: none; }
+    .works-head h3 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: .15em; }
+    .works-head span { font: 10px/1 Georgia, serif; letter-spacing: .15em; color: var(--ink-soft); }
+    .work-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .work {
+      position: relative;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 7px;
+      width: 100%;
+      padding: 8px 10px;
+      text-align: left;
+      color: #f3ead9;
+      border: 1px solid rgba(239, 226, 204, .16);
+      background: rgba(255, 252, 245, .06);
+      cursor: pointer;
+      transition: border-color .2s ease, background .2s ease, transform .2s ease;
+    }
+    .work:hover, .work:focus-visible { transform: translateY(-2px); border-color: rgba(226, 197, 143, .55); }
+    .work[aria-current="true"] { border-color: rgba(204, 144, 108, .72); background: rgba(255, 243, 222, .13); }
+    .work-index { font: 12px/1.4 Georgia, serif; color: #d4b174; }
+    .work-title { display: block; font-size: 13px; letter-spacing: .08em; white-space: nowrap; }
+    .work-note { display: block; margin-top: 3px; font-size: 9px; color: rgba(243, 234, 217, .62); }
+    .room-note {
+      display: none;
+    }
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: 82px;
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      color: rgba(244, 237, 223, .82);
+      background: rgba(22, 22, 17, .5);
+      border: 1px solid rgba(244, 237, 223, .18);
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: .06em;
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+    .detail {
+      position: absolute;
+      left: 26px;
+      bottom: 24px;
+      width: min(520px, calc(100vw - 52px));
+      max-height: min(520px, calc(100vh - 128px));
+      overflow: auto;
+      padding: 24px;
+      border: 1px solid var(--line);
+      background: rgba(244, 238, 226, .97);
+      box-shadow: 0 28px 80px rgba(29, 24, 18, .28);
+      transform: translateY(18px);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .24s ease, transform .24s ease, visibility .24s;
+    }
+    .detail.open { opacity: 1; visibility: visible; transform: translateY(0); }
+    .detail-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      border: 0;
+      background: transparent;
+      color: var(--ink-soft);
+      cursor: pointer;
+      font-size: 24px;
+      line-height: 1;
+    }
+    .detail h3 { margin: 0 0 4px; font-size: 28px; font-weight: 500; letter-spacing: .1em; }
+    .detail-meta { margin: 0 0 14px; font-size: 12px; color: var(--seal); letter-spacing: .04em; }
+    .detail p { margin: 0 0 11px; font-size: 13px; line-height: 1.85; color: #4b443a; }
+    .detail p:last-child { margin-bottom: 0; }
+    .detail-nav { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+    .detail-nav button {
+      border: 1px solid var(--line);
+      background: rgba(255, 252, 245, .68);
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    .camwrap {
+      position: absolute;
+      left: 26px;
+      bottom: 26px;
+      width: 224px;
+      overflow: hidden;
+      border: 1px solid rgba(244, 237, 223, .32);
+      background: rgba(20, 20, 16, .64);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, .24);
+    }
+    .camwrap[hidden] { display: none; }
+    #cam { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; transform: scaleX(-1); background: #111; }
+    .cam-note { margin: 0; padding: 8px 10px; color: rgba(244, 237, 223, .76); font-size: 10px; line-height: 1.5; }
+    .toast {
+      position: absolute;
+      left: 50%;
+      top: 104px;
+      transform: translate(-50%, -8px);
+      max-width: min(520px, calc(100vw - 48px));
+      padding: 10px 16px;
+      color: #f5ecde;
+      background: rgba(30, 27, 22, .84);
+      border: 1px solid rgba(245, 236, 222, .22);
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .loading {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      background: #e9e1d1;
+      color: var(--ink);
+      transition: opacity .65s ease, visibility .65s;
+    }
+    .loading.done { opacity: 0; visibility: hidden; }
+    .loading-card { width: min(420px, calc(100vw - 56px)); text-align: center; }
+    .loading-mark {
+      width: 66px;
+      height: 66px;
+      margin: 0 auto 24px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--seal);
+      color: var(--seal);
+      font-size: 22px;
+      letter-spacing: .08em;
+      transform: rotate(-3deg);
+    }
+    .loading h2 { margin: 0; font-size: 30px; font-weight: 400; letter-spacing: .2em; }
+    .loading p { margin: 12px 0 18px; font-size: 12px; letter-spacing: .1em; color: var(--ink-soft); }
+    .bar { height: 2px; overflow: hidden; background: rgba(59, 48, 37, .14); }
+    .bar i { display: block; width: 0; height: 100%; background: var(--seal); transition: width .25s ease; }
+    .loading-count { margin-top: 9px; font: 10px/1 Georgia, serif; letter-spacing: .14em; color: var(--ink-soft); }
+    @media (max-width: 850px) {
+      .topbar { height: 72px; padding: 12px 16px; }
+      .brand-copy h1 { font-size: 19px; }
+      .brand-copy p { display: none; }
+      .top-actions .action:not(#camera-btn) { display: none; }
+      .side-copy { display: none; }
+      .works { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; padding: 6px; transform: none; }
+      .works-head, .room-note { display: none; }
+      .work-list { grid-template-columns: repeat(3, 1fr); }
+      .work { grid-template-columns: 1fr; padding: 7px; }
+      .work-index { margin-bottom: 5px; }
+      .work-note { display: none; }
+      .hint { display: none; }
+      .detail { left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 53vh; padding: 20px; }
+      .camwrap { width: 150px; left: 12px; top: 116px; bottom: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; }
+    }
+  </style>
 </head>
-<body>
-<script>window.MuseumInteriorOnly=true; window.MuseumInteriorHall="hall2";</script>
-<!-- ===== 开场粒子序章覆盖层 ===== -->
-<div id="intro">
-  <canvas id="introCanvas"></canvas>
-  <div id="introTitle">
-    <h1>云间入墨</h1>
-  </div>
-  <div id="introPanel">
-    <label>基色 <input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
-    <label>密度 <input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
-  </div>
-  <div id="introCamWrap" aria-label="摄像头实时画面，可拖动右下角调整大小">
-    <video id="introVideo" autoplay muted playsinline></video>
-    <div id="introCamTag">摄像头 · 手势追踪（右下角拖拽调大小）</div>
-  </div>
-  <div id="introBR">
-    <button id="introFull" aria-label="全屏切换">全屏</button>
-    <button id="introEnter" aria-label="进入博物馆">进入博物馆 →</button>
-  </div>
-  <div id="introStatus">正在加载手势模型…</div>
-</div>
+<body data-ready="false">
+  <canvas id="scene" tabindex="0" aria-label="花鸟厅三维展陈，可拖拽环视"></canvas>
 
-  <!-- ===== 3D 画布容器 ===== -->
-  <div id="stage"></div>
-
-  <!-- ===== 顶部标题（朱砂印章式签名元素） ===== -->
-  <header id="topbar" class="topbar hidden">
-    <div class="brand">
-      <span class="brand-seal">云墨</span>
-      <div class="brand-text">
-        <h1>云间入墨</h1>
-        <p>CloudInk Art Museum · 手势交互数字博物馆</p>
-      </div>
+  <div class="loading" id="loading" aria-live="polite">
+    <div class="loading-card">
+      <div class="loading-mark">花鸟</div>
+      <h2>花鸟清趣</h2>
+      <p>正在布置写生珍禽、五牛与墨兰</p>
+      <div class="bar"><i id="loading-bar"></i></div>
+      <div class="loading-count" id="loading-count">构件 0 / 7</div>
     </div>
-    <div id="hall-label" class="hall-label">前庭 · 园区</div>
-  </header>
-
-  <!-- ===== 左下：操作说明 ===== -->
-  <aside id="help" class="help hidden">
-    <h3>手势操作</h3>
-    <ul>
-      <li><b>张开手掌</b>　向前漫游</li>
-      <li><b>握拳</b>　　　向后退</li>
-      <li><b>食指左右</b>　转向</li>
-      <li><b>捏合两指 · 三指张开</b>　查看 / 关闭展品</li>
-    </ul>
-    <p class="help-key">键盘备选：W/S 前进后退 · A/D 转向 · E 查看 · Q 关闭 · R 重置视角 · V 全景 · T 第三人称</p>
-  </aside>
-
-  <!-- ===== 右下：工具栏 ===== -->
-  <div id="toolbar" class="toolbar hidden">
-    <button id="btn-camera" type="button" title="开启/关闭摄像头手势控制">摄像头：关</button>
-    <button id="btn-night" type="button" title="切换昼夜氛围（快捷键 N）">入夜 · 灯火</button>
-    <button id="btn-reset" type="button" title="重置视角">重置视角</button>
-    <button id="btn-help" type="button" title="显示/隐藏操作说明">操作说明</button>
   </div>
 
-  <!-- ===== 摄像头预览小窗 ===== -->
-  <div id="camwrap" class="camwrap hidden">
-    <video id="cam" autoplay playsinline muted></video>
-    <p>手势识别中 · 请坐在屏幕前</p>
-  </div>
+  <main class="hud">
+    <header class="topbar">
+      <a class="back" href="./index.html#/hall/plaza" aria-label="返回云间入墨园区">← 返回园区</a>
+      <div class="brand">
+        <span class="seal">花鸟<br>清趣</span>
+        <div class="brand-copy">
+          <h1>花鸟厅</h1>
+          <p>MUSEUM OF BIRDS · FLOWERS · INK</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="action" id="reset-btn" type="button">重置视角</button>
+        <button class="action" id="camera-btn" type="button">启用手势</button>
+      </div>
+    </header>
 
-  <!-- ===== 展品鉴赏弹窗 ===== -->
-  <div id="panel" class="panel" role="dialog" aria-modal="true" aria-hidden="true">
-    <button id="panel-close" type="button" class="panel-close" aria-label="关闭">×</button>
-    <div id="panel-body" class="panel-body"></div>
-  </div>
+    <section class="side-copy" aria-labelledby="hall-heading">
+      <p class="eyebrow">HALL II · 翎毛写生</p>
+      <h2 id="hall-heading">一庭花鸟，<br>三卷生机。</h2>
+      <p>以原作观看为核心，沿中轴看《五牛图》，两侧对读《写生珍禽图》与《墨兰图》。</p>
+      <div class="status-line"><i class="status-dot"></i><span id="asset-status">正在加载七件厅堂构件</span></div>
+    </section>
 
-  <!-- ===== 提示条 ===== -->
-  <div id="toast" class="toast"></div>
+    <aside class="works" aria-label="花鸟厅展品导览">
+      <div class="works-head"><h3>花鸟三品</h3><span>SELECT A WORK</span></div>
+      <div class="work-list" id="work-list"></div>
+      <div class="room-note"><span>七件厅堂构件</span><span id="door-state">双扇门 · 闭合</span></div>
+    </aside>
 
-    <!-- ===== Vue 应用挂载点（登录/收藏/展厅路由，src/ 下代码） ===== -->
-  <div id="app"></div>
+    <section class="detail" id="detail" aria-live="polite" aria-hidden="true">
+      <button class="detail-close" id="detail-close" type="button" aria-label="关闭作品说明">×</button>
+      <h3 id="detail-title"></h3>
+      <p class="detail-meta" id="detail-meta"></p>
+      <p id="detail-intro"></p>
+      <p id="detail-appreciation"></p>
+      <div class="detail-nav">
+        <button type="button" id="detail-prev">上一幅</button>
+        <button type="button" id="detail-next">下一幅</button>
+        <span id="detail-index" style="margin-left:auto;color:var(--ink-soft);font-size:11px"></span>
+      </div>
+    </section>
 
-  <!-- 第三方依赖：Three.js r147（UMD，SRI 锁定） -->
-  <!-- three.js 本地化：原 jsdelivr CDN 在国内常不可达，断网/答辩会白屏 -->
+    <div class="camwrap" id="camwrap" hidden>
+      <video id="cam" autoplay muted playsinline></video>
+      <p class="cam-note" id="cam-note">手掌前后、食指转向、捏合查看展品</p>
+    </div>
+
+    <div class="hint">拖拽环视 · 滚轮靠近 · 点击画作阅读 · 键盘方向键 / E / R</div>
+    <div class="toast" id="toast" role="status"></div>
+  </main>
+
+  <noscript>本页需要启用 JavaScript 才能展示三维花鸟厅。</noscript>
+
   <script src="./js/vendor/three.min.js"></script>
   <script src="./js/vendor/GLTFLoader.js"></script>
-  <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（已本地化：js/vendor/mediapipe/，
-       WASM 与 hand_landmarker.task 由 gesture.js 从本地路径加载，断网可用） -->
-  <!-- 注意：vision_bundle.js 是「UMD 外层 + 末尾 ESM export」的混合产物，
-       用普通 <script src> 会直接报 "Uncaught SyntaxError: Unexpected token 'export'"，
-       所以必须用动态 import() 载入（@vite-ignore 防止 Vite 打包时改写路径）；
-       载入后把 FilesetResolver / HandLandmarker 暴露到全局，
-       并派发 mediapipe-ready 事件，供 gesture.js（普通脚本）等待使用。 -->
-  <script type="module">
-    window.MediaPipeReady = (async function () {
-      try {
-        var vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
-        window.FilesetResolver = vision.FilesetResolver;
-        window.HandLandmarker = vision.HandLandmarker;
-        window.MediaPipeVision = vision;
-        return true;
-      } catch (err) {
-        console.warn("[云间入墨] MediaPipe 加载失败，将降级为键盘操作：", err);
-        return false;
-      } finally {
-        window.dispatchEvent(new Event("mediapipe-ready"));
-      }
-    })();
-  </script>
-
-  <!-- 项目模块（依赖顺序不可调换） -->
   <script src="./js/config.js"></script>
-  <script src="./js/models.js"></script>
-  <script src="./js/exterior.js"></script>
-  <script src="./js/gallery.js"></script>
-  <script src="./js/windows.js"></script>
-  <script src="./js/exterior-layout.js"></script>
-  <script src="./js/slots.js"></script>
-  <script src="./js/foliage.js"></script>
-  <script src="./js/lighting.js"></script>
-  <script src="./js/intro.js"></script>
-  <script src="./js/scene.js"></script>
-  <script src="./js/avatar.js"></script>
-  <script src="./js/player.js"></script>
   <script src="./js/gesture.js"></script>
-  <script src="./js/exhibit.js"></script>
-  <script src="./js/ui.js"></script>
-  <script src="./js/main.js"></script>
-  <!-- Vue 入口（Vite 模块，最后加载，不干扰上方引擎脚本） -->
-  <script type="module" src="/src/main.js"></script>
+  <script type="module">
+    const THREE = window.THREE;
+    const canvas = document.getElementById("scene");
+    const loading = document.getElementById("loading");
+    const loadingBar = document.getElementById("loading-bar");
+    const loadingCount = document.getElementById("loading-count");
+    const assetStatus = document.getElementById("asset-status");
+    const workList = document.getElementById("work-list");
+    const detail = document.getElementById("detail");
+    const detailTitle = document.getElementById("detail-title");
+    const detailMeta = document.getElementById("detail-meta");
+    const detailIntro = document.getElementById("detail-intro");
+    const detailAppreciation = document.getElementById("detail-appreciation");
+    const detailIndex = document.getElementById("detail-index");
+    const toastEl = document.getElementById("toast");
+    const camwrap = document.getElementById("camwrap");
+    const cameraButton = document.getElementById("camera-btn");
+    const camNote = document.getElementById("cam-note");
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x2c2922);
+    scene.fog = new THREE.Fog(0x2c2922, 18, 42);
+
+    const camera = new THREE.PerspectiveCamera(47, window.innerWidth / window.innerHeight, 0.1, 80);
+    const view = { target: new THREE.Vector3(0, 2.0, -7.55), yaw: 0, pitch: -0.015, distance: 13.8 };
+    const desired = { target: view.target.clone(), yaw: 0, pitch: -0.015, distance: 13.8 };
+
+    const exhibits = (window.MuseumConfig?.exhibits || []).filter((item) => item.hall === "hall2");
+    const paintingObjects = [];
+    const partObjects = {};
+    const partErrors = [];
+    let ready = false;
+    let activeExhibit = exhibits[1]?.id || exhibits[0]?.id || null;
+    let detailOpen = false;
+    let cameraStarting = false;
+    let gestureRunning = false;
+    let toastTimer = 0;
+
+    const PART_SPECS = {
+      "door-column": { size: [1.0, 4.5, 0.8] },
+      "door-leaf": { size: [2.0, 3.0, 0.18] },
+      "door-canopy": { size: [6.2, 1.7, 1.6] },
+      "wall-pillar": { size: [0.72, 2.6, 0.72] },
+      "back-wall": { size: [14.0, 3.6, 0.55] },
+      "long-table": { size: [2.4, 1.0, 0.75] },
+      "bookshelf": { size: [1.55, 2.0, 0.55] }
+    };
+    const PARTS = Object.keys(PART_SPECS);
+
+    function setLoading(count, message) {
+      const ratio = count / PARTS.length;
+      loadingBar.style.width = `${Math.round(ratio * 100)}%`;
+      loadingCount.textContent = `构件 ${count} / ${PARTS.length}`;
+      if (message) assetStatus.textContent = message;
+    }
+
+    function toast(message) {
+      clearTimeout(toastTimer);
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);
+    }
+
+    function makeCanvasTexture(draw, width = 512, height = 256) {
+      const c = document.createElement("canvas");
+      c.width = width;
+      c.height = height;
+      draw(c.getContext("2d"), width, height);
+      const texture = new THREE.CanvasTexture(c);
+      texture.encoding = THREE.sRGBEncoding;
+      return texture;
+    }
+
+    function standardMaterial(color, roughness = 0.82, metalness = 0) {
+      return new THREE.MeshStandardMaterial({ color, roughness, metalness });
+    }
+
+    function box(parent, width, height, depth, x, y, z, material) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    }
+
+    function buildRoom() {
+      const room = new THREE.Group();
+      room.name = "huaniao-room";
+      scene.add(room);
+
+      const plaster = standardMaterial(0xe8e0d1, 0.96);
+      const wood = standardMaterial(0x5d4634, 0.72);
+      const stone = standardMaterial(0xb9b0a0, 0.9);
+      const dark = standardMaterial(0x3f3931, 0.9);
+
+      const floorTexture = makeCanvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#8d7055";
+        ctx.fillRect(0, 0, w, h);
+        for (let y = 0; y < h; y += 28) {
+          ctx.strokeStyle = "rgba(48,34,22,.36)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+        for (let i = 0; i < 110; i++) {
+          const y = (i * 47) % h;
+          ctx.strokeStyle = `rgba(43,30,20,${0.035 + (i % 5) * 0.015})`;
+          ctx.beginPath();
+          ctx.moveTo((i * 83) % w, y);
+          ctx.bezierCurveTo(w * 0.36, y + 7, w * 0.64, y - 5, w, y + 2);
+          ctx.stroke();
+        }
+      }, 1024, 512);
+      floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+      floorTexture.repeat.set(2.5, 1.75);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(23.8, 15.8),
+        new THREE.MeshStandardMaterial({ map: floorTexture, color: 0xc4aa8a, roughness: 0.82 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(0, 0.008, 0);
+      floor.receiveShadow = true;
+      room.add(floor);
+
+      box(room, 23.8, 0.24, 15.8, 0, -0.12, 0, stone);
+      box(room, 0.3, 4.5, 15.7, -11.85, 2.25, 0, plaster);
+      box(room, 0.3, 4.5, 15.7, 11.85, 2.25, 0, plaster);
+      box(room, 4.85, 4.5, 0.3, -9.525, 2.25, -7.98, plaster);
+      box(room, 4.85, 4.5, 0.3, 9.525, 2.25, -7.98, plaster);
+      box(room, 10.825, 4.5, 0.3, -6.4375, 2.25, 8.0, plaster);
+      box(room, 10.825, 4.5, 0.3, 6.4375, 2.25, 8.0, plaster);
+      box(room, 2.05, 1.35, 0.3, 0, 3.825, 8.0, plaster);
+      box(room, 23.8, 0.34, 0.34, 0, 4.38, -7.95, dark);
+      box(room, 23.8, 0.34, 0.34, 0, 4.38, 8.0, dark);
+      box(room, 23.7, 0.1, 15.7, 0, 4.36, 0, plaster);
+
+      const exhibitionWallTexture = makeCanvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#eee7d8";
+        ctx.fillRect(0, 0, w, h);
+        for (let x = 0; x < w; x += 18) {
+          ctx.fillStyle = `rgba(123,108,87,${0.018 + (x % 5) * 0.004})`;
+          ctx.fillRect(x, 0, 2, h);
+        }
+        for (let i = 0; i < 70; i++) {
+          const x = (i * 79) % w;
+          const y = (i * 137) % h;
+          ctx.fillStyle = `rgba(120,104,81,${0.025 + (i % 3) * 0.012})`;
+          ctx.fillRect(x, y, 12 + (i % 5) * 4, 2);
+        }
+      }, 1024, 512);
+      exhibitionWallTexture.wrapS = exhibitionWallTexture.wrapT = THREE.RepeatWrapping;
+      exhibitionWallTexture.repeat.set(2.4, 1);
+      const exhibitionWallMat = new THREE.MeshStandardMaterial({
+        map: exhibitionWallTexture,
+        color: 0xf1eadb,
+        roughness: 0.98
+      });
+      box(room, 14.2, 3.5, 0.07, 0, 1.82, -8.06, exhibitionWallMat);
+      box(room, 23.7, 0.16, 0.14, 0, 0.08, -7.94, wood);
+
+      for (const z of [-6.8, -3.8, -0.8, 2.2, 5.2]) {
+        box(room, 23.2, 0.22, 0.26, 0, 4.18, z, dark);
+      }
+
+      const lattice = makeCanvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#e8e0d0";
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "#473b2e";
+        ctx.lineWidth = 13;
+        for (let x = 0; x <= w; x += w / 4) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y <= h; y += h / 6) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+        ctx.lineWidth = 5;
+        for (let x = 0; x < w; x += w / 4) {
+          for (let y = 0; y < h; y += h / 6) {
+            ctx.beginPath();
+            ctx.moveTo(x, y + h / 12);
+            ctx.lineTo(x + w / 8, y);
+            ctx.lineTo(x + w / 4, y + h / 12);
+            ctx.lineTo(x + w / 8, y + h / 6);
+            ctx.closePath();
+            ctx.stroke();
+          }
+        }
+      });
+      const latticeMat = new THREE.MeshStandardMaterial({ map: lattice, roughness: 0.84 });
+      for (const side of [-1, 1]) {
+        const panel = new THREE.Mesh(new THREE.PlaneGeometry(3.25, 2.3), latticeMat);
+        panel.position.set(side * 11.67, 2.15, 5.35);
+        panel.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+        room.add(panel);
+      }
+
+      const plaqueTexture = makeCanvasTexture((ctx, w, h) => {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = "#3f352b";
+        ctx.textAlign = "center";
+        ctx.font = "64px Songti SC, STSong, Noto Serif CJK SC, serif";
+        ctx.fillText("花  鸟  清  趣", w / 2, 84);
+        ctx.fillStyle = "#8e382c";
+        ctx.font = "24px Songti SC, STSong, Noto Serif CJK SC, serif";
+        ctx.fillText("万物有灵 · 诗意栖居", w / 2, 126);
+      }, 768, 160);
+      const plaque = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.5, 0.73),
+        new THREE.MeshBasicMaterial({ map: plaqueTexture, transparent: true, depthWrite: false })
+      );
+      plaque.position.set(0, 3.38, -7.99);
+      room.add(plaque);
+
+      const skylight = new THREE.Mesh(
+        new THREE.PlaneGeometry(6.4, 4.2),
+        new THREE.MeshBasicMaterial({ color: 0xf6f1e7 })
+      );
+      skylight.rotation.x = Math.PI / 2;
+      skylight.position.set(0, 4.33, 1.6);
+      room.add(skylight);
+      for (const x of [-3.2, -1.6, 0, 1.6, 3.2]) {
+        box(room, x === 0 ? 0.12 : 0.08, 0.1, 4.2, x, 4.28, 1.6, dark);
+      }
+      for (const z of [-0.5, 0.7, 1.9, 3.1]) {
+        box(room, 6.4, 0.1, 0.08, 0, 4.28, z, dark);
+      }
+
+      const ambient = new THREE.HemisphereLight(0xfff5e8, 0x2a241d, 1.32);
+      scene.add(ambient);
+      const sun = new THREE.DirectionalLight(0xffead0, 1.55);
+      sun.position.set(-3, 9, 4);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.left = -13;
+      sun.shadow.camera.right = 13;
+      sun.shadow.camera.top = 10;
+      sun.shadow.camera.bottom = -10;
+      scene.add(sun);
+      box(room, 11.8, 0.07, 0.1, 0, 3.78, -5.9, dark);
+      for (const x of [-4.8, -2.4, 0, 2.4, 4.8]) {
+        const fixture = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.055, 0.075, 0.2, 10),
+          dark
+        );
+        fixture.position.set(x, 3.64, -5.86);
+        fixture.rotation.x = 0.62;
+        room.add(fixture);
+        const light = new THREE.SpotLight(0xffe7c8, 1.05, 11, Math.PI / 8.2, 0.62, 1.2);
+        light.position.set(x, 3.55, -5.72);
+        light.target.position.set(x * 0.82, 2.22, -7.96);
+        scene.add(light, light.target);
+      }
+      const roomFill = new THREE.PointLight(0xffdbad, 0.72, 18, 2);
+      roomFill.position.set(0, 3.35, 2.1);
+      scene.add(roomFill);
+    }
+
+    function normalizeModel(root, targetSize) {
+      root.traverse((object) => {
+        if (!object.isMesh) return;
+        object.castShadow = true;
+        object.receiveShadow = true;
+        const mats = Array.isArray(object.material) ? object.material : [object.material];
+        for (const material of mats) {
+          if (!material) continue;
+          if (material.map) material.map.encoding = THREE.sRGBEncoding;
+        }
+      });
+      root.updateMatrixWorld(true);
+      let bounds = new THREE.Box3().setFromObject(root);
+      const current = bounds.getSize(new THREE.Vector3());
+      root.scale.multiply(new THREE.Vector3(
+        targetSize[0] / Math.max(current.x, 0.0001),
+        targetSize[1] / Math.max(current.y, 0.0001),
+        targetSize[2] / Math.max(current.z, 0.0001)
+      ));
+      root.updateMatrixWorld(true);
+      bounds = new THREE.Box3().setFromObject(root);
+      const center = bounds.getCenter(new THREE.Vector3());
+      root.position.x -= center.x;
+      root.position.z -= center.z;
+      root.position.y -= bounds.min.y;
+      return root;
+    }
+
+    async function loadPart(id) {
+      const loader = new THREE.GLTFLoader();
+      try {
+        const gltf = await loader.loadAsync(`./assets/models/parts/opt/${id}.glb`);
+        const template = normalizeModel(gltf.scene, PART_SPECS[id].size);
+        template.name = `asset:${id}`;
+        return template;
+      } catch (error) {
+        partErrors.push({ id, message: String(error?.message || error) });
+        return null;
+      }
+    }
+
+    function addFallback(id, spec) {
+      const colors = {
+        "door-column": 0x6b4a35,
+        "door-leaf": 0x50372a,
+        "door-canopy": 0x34312c,
+        "wall-pillar": 0xaaa49a,
+        "back-wall": 0xe5ddce,
+        "long-table": 0x5a3b27,
+        "bookshelf": 0x493126
+      };
+      const fallback = new THREE.Group();
+      const material = standardMaterial(colors[id] || 0x66584a, 0.88);
+      box(fallback, spec[0], spec[1], spec[2], 0, spec[1] / 2, 0, material);
+      fallback.userData.fallback = true;
+      return fallback;
+    }
+
+    function placePart(templates, id, position, rotationY = 0) {
+      const source = templates[id] || addFallback(id, PART_SPECS[id].size);
+      const group = source.clone(true);
+      group.position.set(position[0], position[1], position[2]);
+      group.rotation.y = rotationY;
+      group.userData.partId = id;
+      scene.add(group);
+      partObjects[id] = partObjects[id] || [];
+      partObjects[id].push(group);
+      return group;
+    }
+
+    function placeArchitecture(templates) {
+      placePart(templates, "back-wall", [0, 0, -8.3], 0);
+      placePart(templates, "wall-pillar", [-11.12, 0, -6.25], Math.PI / 2);
+      placePart(templates, "wall-pillar", [11.12, 0, -6.25], -Math.PI / 2);
+      placePart(templates, "door-column", [-3.0, 0, 8.14], Math.PI);
+      placePart(templates, "door-column", [3.0, 0, 8.14], Math.PI);
+      placePart(templates, "door-leaf", [0, 0, 8.04], Math.PI);
+      placePart(templates, "door-canopy", [0, 3.0, 8.22], Math.PI);
+      placePart(templates, "long-table", [8.75, 0, 6.55], Math.PI / 2);
+      placePart(templates, "bookshelf", [-9.35, 0, 6.45], Math.PI / 2);
+      placePart(templates, "bookshelf", [9.35, 0, 6.45], -Math.PI / 2);
+    }
+
+    function buildPlant(x, z) {
+      const plant = new THREE.Group();
+      const pot = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.34, 0.42, 0.55, 16),
+        standardMaterial(0x6c5745, 0.9)
+      );
+      pot.position.y = 0.275;
+      pot.castShadow = true;
+      plant.add(pot);
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const leaf = new THREE.Mesh(
+          new THREE.SphereGeometry(0.34, 8, 5),
+          new THREE.MeshStandardMaterial({ color: i % 2 ? 0x526a4e : 0x65835b, roughness: 1 })
+        );
+        leaf.scale.set(0.72, 0.18, 1.7);
+        leaf.rotation.y = angle;
+        leaf.rotation.z = -0.24;
+        leaf.position.set(Math.cos(angle) * 0.3, 0.8 + (i % 3) * 0.12, Math.sin(angle) * 0.3);
+        leaf.castShadow = true;
+        plant.add(leaf);
+      }
+      plant.position.set(x, 0, z);
+      scene.add(plant);
+    }
+
+    function artButtonMarkup(exhibit, index) {
+      return `<button class="work" type="button" data-exhibit="${exhibit.id}" aria-current="${exhibit.id === activeExhibit}">
+        <span class="work-index">${String(index + 1).padStart(2, "0")}</span>
+        <span><span class="work-title">${exhibit.title}</span><span class="work-note">${exhibit.artist} · ${exhibit.dynasty}</span></span>
+      </button>`;
+    }
+
+    function buildWorkNav() {
+      workList.innerHTML = exhibits.map(artButtonMarkup).join("");
+      workList.querySelectorAll("[data-exhibit]").forEach((button) => {
+        button.addEventListener("click", () => focusArtwork(button.dataset.exhibit));
+      });
+    }
+
+    async function addPainting(exhibit, x, index) {
+      let texture;
+      try {
+        texture = await new THREE.TextureLoader().loadAsync(`./${exhibit.image}`);
+        texture.encoding = THREE.sRGBEncoding;
+      } catch {
+        texture = makeCanvasTexture((ctx, w, h) => {
+          ctx.fillStyle = "#e8dfcc";
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = "#493d31";
+          ctx.textAlign = "center";
+          ctx.font = "54px Songti SC, STSong, serif";
+          ctx.fillText(exhibit.title, w / 2, h / 2);
+        }, 768, 512);
+      }
+      const image = texture.image;
+      const width = index === 1 ? 4.15 : 1.9;
+      const height = 1.68;
+      const canvasWidth = index === 1 ? 1600 : 800;
+      const canvasHeight = Math.round(canvasWidth * height / width);
+      const fittedTexture = makeCanvasTexture((ctx, w, h) => {
+        ctx.fillStyle = "#e8dec8";
+        ctx.fillRect(0, 0, w, h);
+        if (image && image.width && image.height) {
+          const scale = Math.min((w - 24) / image.width, (h - 24) / image.height);
+          const drawWidth = image.width * scale;
+          const drawHeight = image.height * scale;
+          ctx.drawImage(image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
+        }
+      }, canvasWidth, canvasHeight);
+      const group = new THREE.Group();
+      group.position.set(x, 2.24, -7.9);
+
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(width + 0.13, height + 0.13, 0.1),
+        standardMaterial(0x3c3027, 0.74)
+      );
+      frame.castShadow = true;
+      frame.userData.exhibitId = exhibit.id;
+      group.add(frame);
+
+      const art = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshStandardMaterial({ map: fittedTexture, roughness: 0.9 })
+      );
+      art.position.z = 0.058;
+      art.userData.exhibitId = exhibit.id;
+      group.add(art);
+      paintingObjects.push(frame, art);
+      scene.add(group);
+    }
+
+    function updateCamera() {
+      const cosPitch = Math.cos(view.pitch);
+      camera.position.set(
+        view.target.x + Math.sin(view.yaw) * cosPitch * view.distance,
+        view.target.y + Math.sin(view.pitch) * view.distance,
+        view.target.z + Math.cos(view.yaw) * cosPitch * view.distance
+      );
+      camera.lookAt(view.target);
+    }
+
+    function setCurrentExhibit(id, announce = true) {
+      if (!id) return;
+      activeExhibit = id;
+      workList.querySelectorAll("[data-exhibit]").forEach((button) => {
+        button.setAttribute("aria-current", String(button.dataset.exhibit === id));
+      });
+      if (announce) {
+        const exhibit = exhibits.find((item) => item.id === id);
+        if (exhibit) toast(`已聚焦《${exhibit.title}》`);
+      }
+    }
+
+    function focusArtwork(id, openPanel = true) {
+      const index = exhibits.findIndex((item) => item.id === id);
+      if (index < 0) return;
+      const exhibit = exhibits[index];
+      setCurrentExhibit(id, false);
+      desired.target.set([-4.375, 0, 4.375][index], 2.2, -7.9);
+      desired.yaw = 0;
+      desired.pitch = 0;
+      desired.distance = index === 1 ? 4.8 : 4.2;
+      if (openPanel) showDetail(index);
+    }
+
+    function resetView() {
+      desired.target.set(0, 2.0, -7.55);
+      desired.yaw = 0;
+      desired.pitch = -0.015;
+      desired.distance = 13.8;
+      hideDetail();
+      setCurrentExhibit(exhibits[1]?.id || exhibits[0]?.id, false);
+    }
+
+    function focusDoorCheck() {
+      hideDetail();
+      desired.target.set(0, 2.05, 8.02);
+      desired.yaw = 0;
+      desired.pitch = 0.02;
+      desired.distance = 5.0;
+      view.target.copy(desired.target);
+      view.yaw = desired.yaw;
+      view.pitch = desired.pitch;
+      view.distance = desired.distance;
+      updateCamera();
+    }
+
+    function showDetail(index) {
+      const exhibit = exhibits[index];
+      if (!exhibit) return;
+      detailOpen = true;
+      setCurrentExhibit(exhibit.id, false);
+      detailTitle.textContent = exhibit.title;
+      detailMeta.textContent = `${exhibit.artist} · ${exhibit.dynasty} · ${exhibit.medium}`;
+      detailIntro.textContent = exhibit.intro;
+      detailAppreciation.textContent = exhibit.appreciation;
+      detailIndex.textContent = `${index + 1} / ${exhibits.length}`;
+      detail.classList.add("open");
+      detail.setAttribute("aria-hidden", "false");
+      detail.dataset.exhibit = exhibit.id;
+    }
+
+    function hideDetail() {
+      detailOpen = false;
+      detail.classList.remove("open");
+      detail.setAttribute("aria-hidden", "true");
+    }
+
+    function stepArtwork(delta) {
+      if (!exhibits.length) return;
+      let index = exhibits.findIndex((item) => item.id === activeExhibit);
+      if (index < 0) index = 0;
+      index = (index + delta + exhibits.length) % exhibits.length;
+      focusArtwork(exhibits[index].id, true);
+    }
+
+    function bindInteraction() {
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+      let moved = 0;
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+
+      canvas.addEventListener("pointerdown", (event) => {
+        dragging = true;
+        moved = 0;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        canvas.setPointerCapture(event.pointerId);
+      });
+      canvas.addEventListener("pointermove", (event) => {
+        if (!dragging) return;
+        const dx = event.clientX - lastX;
+        const dy = event.clientY - lastY;
+        lastX = event.clientX;
+        lastY = event.clientY;
+        moved += Math.abs(dx) + Math.abs(dy);
+        desired.yaw -= dx * 0.005;
+        desired.pitch = Math.max(-0.2, Math.min(0.55, desired.pitch + dy * 0.0035));
+      });
+      canvas.addEventListener("pointerup", (event) => {
+        dragging = false;
+        if (moved > 8) return;
+        const rect = canvas.getBoundingClientRect();
+        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hit = raycaster.intersectObjects(paintingObjects, false)[0];
+        if (hit?.object?.userData?.exhibitId) focusArtwork(hit.object.userData.exhibitId, true);
+      });
+      canvas.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        desired.distance = Math.max(3.0, Math.min(14.0, desired.distance + event.deltaY * 0.006));
+      }, { passive: false });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.code === "ArrowLeft") desired.yaw += 0.08;
+        else if (event.code === "ArrowRight") desired.yaw -= 0.08;
+        else if (event.code === "ArrowUp" || event.code === "Equal") desired.distance = Math.max(3, desired.distance - 0.5);
+        else if (event.code === "ArrowDown" || event.code === "Minus") desired.distance = Math.min(14, desired.distance + 0.5);
+        else if (event.code === "KeyE" || event.code === "Enter") {
+          const index = Math.max(0, exhibits.findIndex((item) => item.id === activeExhibit));
+          showDetail(index);
+        } else if (event.code === "Escape" || event.code === "KeyQ") hideDetail();
+        else if (event.code === "KeyR") resetView();
+        else return;
+        event.preventDefault();
+      });
+
+      document.getElementById("reset-btn").addEventListener("click", resetView);
+      document.getElementById("detail-close").addEventListener("click", hideDetail);
+      document.getElementById("detail-prev").addEventListener("click", () => stepArtwork(-1));
+      document.getElementById("detail-next").addEventListener("click", () => stepArtwork(1));
+      cameraButton.addEventListener("click", toggleGesture);
+    }
+
+    async function ensureMediaPipe() {
+      if (window.FilesetResolver && window.HandLandmarker) return;
+      const vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
+      window.FilesetResolver = vision.FilesetResolver;
+      window.HandLandmarker = vision.HandLandmarker;
+      window.MediaPipeVision = vision;
+    }
+
+    async function toggleGesture() {
+      if (gestureRunning) {
+        window.MuseumGesture?.stop();
+        gestureRunning = false;
+        camwrap.hidden = true;
+        cameraButton.textContent = "启用手势";
+        toast("手势控制已关闭");
+        return;
+      }
+      if (cameraStarting) return;
+      cameraStarting = true;
+      cameraButton.textContent = "启动中…";
+      camwrap.hidden = false;
+      try {
+        await ensureMediaPipe();
+        if (!window.MuseumGesture) throw new Error("手势模块未加载");
+        await window.MuseumGesture.init(document.getElementById("cam"));
+        gestureRunning = true;
+        cameraButton.textContent = "关闭手势";
+        camNote.textContent = "手势已启用 · 捏合打开当前画作";
+        toast("手势已启用 · 捏合查看画作");
+      } catch (error) {
+        gestureRunning = false;
+        camwrap.hidden = true;
+        cameraButton.textContent = "启用手势";
+        const hint = error?.hint || error?.message || "手势启动失败";
+        toast(`${hint}，仍可使用鼠标和键盘`);
+      } finally {
+        cameraStarting = false;
+      }
+    }
+
+    function applyGesture(delta) {
+      if (!gestureRunning || !window.MuseumGesture) return;
+      const state = window.MuseumGesture.getState();
+      if (state.forward) desired.distance = Math.max(3.0, desired.distance - delta * 1.45);
+      if (state.back) desired.distance = Math.min(14.0, desired.distance + delta * 1.25);
+      if (state.turn) desired.yaw += state.turn * delta * 0.7;
+      if (state.pinchPressed) {
+        if (detailOpen) hideDetail();
+        else {
+          const index = Math.max(0, exhibits.findIndex((item) => item.id === activeExhibit));
+          showDetail(index);
+        }
+      }
+    }
+
+    function resize() {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    const clock = new THREE.Clock();
+    function animate() {
+      const delta = Math.min(clock.getDelta(), 0.05);
+      applyGesture(delta);
+      const smoothing = Math.min(1, delta * 7);
+      view.target.lerp(desired.target, smoothing);
+      view.yaw += (desired.yaw - view.yaw) * smoothing;
+      view.pitch += (desired.pitch - view.pitch) * smoothing;
+      view.distance += (desired.distance - view.distance) * smoothing;
+      updateCamera();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    async function boot() {
+      buildRoom();
+      buildWorkNav();
+      bindInteraction();
+
+      const entries = await Promise.all(PARTS.map(async (id, index) => {
+        const template = await loadPart(id);
+        setLoading(index + 1);
+        return [id, template];
+      }));
+      const templates = Object.fromEntries(entries);
+      placeArchitecture(templates);
+      buildPlant(-9.9, -5.7);
+      buildPlant(9.9, -5.7);
+      await Promise.all(exhibits.map((exhibit, index) => addPainting(exhibit, [-4.375, 0, 4.375][index], index)));
+
+      const successCount = PARTS.filter((id) => templates[id]).length;
+      assetStatus.textContent = successCount === PARTS.length
+        ? "七件构件已就绪 · 三幅花鸟画无遮挡"
+        : `已加载 ${successCount} / 7 件构件，其余使用结构占位`;
+      setLoading(PARTS.length, assetStatus.textContent);
+      ready = true;
+      document.body.dataset.ready = "true";
+      document.body.dataset.assetCount = String(successCount);
+      window.HuaniaoGallery = {
+        ready: true,
+        exhibits,
+        parts: Object.keys(PART_SPECS),
+        loadedParts: PARTS.filter((id) => Boolean(templates[id])),
+        errors: partErrors,
+        focusArtwork,
+        focusDoorCheck,
+        resetView,
+        hideDetail,
+        getState: () => ({
+          activeExhibit,
+          detailOpen,
+          gestureRunning,
+          camera: camera.position.toArray(),
+          target: view.target.toArray()
+        })
+      };
+      setTimeout(() => loading.classList.add("done"), 280);
+      setTimeout(() => toast("拖拽环视，点击画作阅读赏析"), 800);
+    }
+
+    window.addEventListener("resize", resize);
+    updateCamera();
+    animate();
+    boot().catch((error) => {
+      console.error("[花鸟厅] 初始化失败", error);
+      assetStatus.textContent = "场景初始化失败，请刷新重试";
+      loadingCount.textContent = String(error?.message || error);
+    });
+  </script>
 </body>
 </html>
-
-
-
