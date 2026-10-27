@@ -1418,7 +1418,6 @@ window.MuseumExteriorLayout = (function () {
     /* 画廊墙恢复：外侧半壁墙挂立轴画，保留游廊的观画功能。 */
     galleryWall(-8.9, 1);
     galleryWall(8.9, -1);
-    galleryWallX(-17.7, 8.3, 27.6);
   }
 
   /* ---------- 中轴拱桥：序厅方向跨中心湖，连接北侧园路 ---------- */
