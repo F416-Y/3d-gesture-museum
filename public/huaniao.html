@@ -410,6 +410,7 @@
       "bookshelf": { size: [1.55, 2.0, 0.55] }
     };
     const PARTS = Object.keys(PART_SPECS);
+    const HALL2_EXHIBIT_IDS = ["xieshengzhenqintu", "wuniutu", "molantu"];
 
     function setLoading(count, message) {
       const ratio = count / PARTS.length;
@@ -422,7 +423,10 @@
       for (let attempt = 0; attempt < 60; attempt++) {
         const list = window.MuseumConfig?.exhibits;
         if (Array.isArray(list)) {
-          exhibits = list.filter((item) => item.hall === "hall2");
+          const byHall = list.filter((item) => item.hall === "hall2");
+          exhibits = byHall.length === 3
+            ? byHall
+            : HALL2_EXHIBIT_IDS.map((id) => list.find((item) => item.id === id)).filter(Boolean);
           activeExhibit = exhibits[1]?.id || exhibits[0]?.id || null;
           return;
         }
