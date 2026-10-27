@@ -665,11 +665,13 @@ window.MuseumExteriorLayout = (function () {
       var LW = gateW / 2 - 0.08, i2, piv, leaf;
       if (opts && opts.closedDoor) {
         /* 正式展厅大门：双扇闭合，门洞只作为弹窗触发位置，不能直接穿入。 */
+        /* 门扇顶沿贴住挂落底部（y≈2.73m），不再留下低门缝；门脚仍落在台阶基面。 */
+        var closedDoorH = 2.72;
         for (i2 = -1; i2 <= 1; i2 += 2) {
-          leaf = box(LW, 2.4, 0.08, M.door, i2 * (LW / 2 + 0.015), 1.2, -0.05, 0, g);
+          leaf = box(LW, closedDoorH, 0.08, M.door, i2 * (LW / 2 + 0.015), closedDoorH / 2, -0.05, 0, g);
           leaf.castShadow = false;
           box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 0.5, -0.11, 0, g);
-          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 1.9, -0.11, 0, g);
+          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), closedDoorH - 0.5, -0.11, 0, g);
         }
         var doorNx = side === 'E' ? 1 : side === 'W' ? -1 : 0;
         var doorNz = side === 'S' ? 1 : side === 'N' ? -1 : 0;
