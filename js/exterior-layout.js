@@ -643,7 +643,7 @@ window.MuseumExteriorLayout = (function () {
   }
 
   /* ---------- 入口门楼（院墙上的大门：门柱 + 顶檐 + 朱砂门 + 台阶 + 匾） ---------- */
-  function gateHouse(side, cx, cz, x0, x1, z0, z1, gateW, label) {
+  function gateHouse(side, cx, cz, x0, x1, z0, z1, gateW, label, opts) {
     var gx, gz, ry;
     if (side === 'S') { gx = cx; gz = z1; ry = 0; }
     if (side === 'N') { gx = cx; gz = z0; ry = Math.PI; }
@@ -663,11 +663,29 @@ window.MuseumExteriorLayout = (function () {
        装扇院门撤内侧抱鼓石一对（让开门扇内旋立扇位置） */
     if (label) {
       var LW = gateW / 2 - 0.08, i2, piv, leaf;
-      for (i2 = -1; i2 <= 1; i2 += 2) {
-        piv = new THREE.Group(); piv.position.set(i2 * (gateW / 2 - 0.07), 0, -0.05); g.add(piv);
-        leaf = box(LW, 2.4, 0.08, M.door, -i2 * LW / 2, 1.2, 0, 0, piv);
-        leaf.castShadow = false;
-        piv.rotation.y = -i2 * Math.PI / 2;
+      if (opts && opts.closedDoor) {
+        /* 正式展厅大门：双扇闭合，门洞只作为弹窗触发位置，不能直接穿入。 */
+        for (i2 = -1; i2 <= 1; i2 += 2) {
+          leaf = box(LW, 2.4, 0.08, M.door, i2 * (LW / 2 + 0.015), 1.2, -0.05, 0, g);
+          leaf.castShadow = false;
+          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 0.5, -0.11, 0, g);
+          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 1.9, -0.11, 0, g);
+        }
+        var doorNx = side === 'E' ? 1 : side === 'W' ? -1 : 0;
+        var doorNz = side === 'S' ? 1 : side === 'N' ? -1 : 0;
+        var doorHall = { '山水': 'hall1', '花鸟': 'hall2', '人物': 'hall3', '书斋': 'hall4', '文创雅集馆': 'hall5' }[label] || null;
+        if (doorHall) HALL_DOORS.push({
+          hallId: doorHall, tag: label, x: gx, z: gz, nx: doorNx, nz: doorNz,
+          tx: -doorNz, tz: doorNx, w: gateW, sx: gx - doorNx * 2.2, sz: gz - doorNz * 2.2,
+          syaw: Math.atan2(doorNx, doorNz)
+        });
+      } else {
+        for (i2 = -1; i2 <= 1; i2 += 2) {
+          piv = new THREE.Group(); piv.position.set(i2 * (gateW / 2 - 0.07), 0, -0.05); g.add(piv);
+          leaf = box(LW, 2.4, 0.08, M.door, -i2 * LW / 2, 1.2, 0, 0, piv);
+          leaf.castShadow = false;
+          piv.rotation.y = -i2 * Math.PI / 2;
+        }
       }
     }
     /* 雀替（门柱顶部贴脸小斗） */
@@ -728,7 +746,7 @@ window.MuseumExteriorLayout = (function () {
           fenceRun(r[0], r[1], r[0], cz - gateW / 2 - 0.7);
           fenceRun(r[0], cz + gateW / 2 + 0.7, r[0], r[3]);
         }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, gateW, label);
+        gateHouse(k, cx, cz, x0, x1, z0, z1, gateW, label, opts);
       } else if (opts.backdoor && k === { N: 'S', S: 'N', E: 'W', W: 'E' }[entry]) {   /* 【已停用】后门小门楼随全园后门一并撤除 */
         /* 后门：后墙留 1.8m 门洞 + 小门楼（无匾） */
         if (k === 'N' || k === 'S') {
@@ -2419,6 +2437,7 @@ galleryWall(8.5, -1, 3.7);
 
   /* ---------- 总装入口 ---------- */
   function build(scene) {
+    HALL_DOORS.length = 0;
     S.scene = scene;
     initMaterials();
     buildGreenery();
@@ -2441,7 +2460,7 @@ galleryWall(8.5, -1, 3.7);
     return { waters: WATERS };
   }
 
-  return { build: build, slots: S.slots, mats: M, ctx: S };
+  return { build: build, slots: S.slots, mats: M, ctx: S, hallDoors: HALL_DOORS };
 })();
 /* ---------- 原型的日光与半球光（从原型主控段自动抓取） ---------- */
 window.MuseumExteriorLayout.addLights = function (scene) {
