@@ -73,6 +73,9 @@ async function main() {
     });
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(String(error?.message || error)));
+    page.on("console", (message) => {
+      if (message.type() === "error") console.error(`BROWSER_CONSOLE: ${message.text()}`);
+    });
     page.on("response", (response) => {
       const url = response.url();
       if (response.status() >= 400 && !url.endsWith("/favicon.ico")) {
@@ -87,7 +90,7 @@ async function main() {
     await page.waitForFunction(
       () => document.body.dataset.ready === "true" && window.HuaniaoGallery?.ready,
       null,
-      { timeout: 180000 },
+      { timeout: 60000 },
     );
     await page.waitForTimeout(1500);
 

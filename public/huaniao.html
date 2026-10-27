@@ -389,12 +389,12 @@
     const view = { target: new THREE.Vector3(0, 2.0, -7.55), yaw: 0, pitch: -0.015, distance: 13.8 };
     const desired = { target: view.target.clone(), yaw: 0, pitch: -0.015, distance: 13.8 };
 
-    const exhibits = (window.MuseumConfig?.exhibits || []).filter((item) => item.hall === "hall2");
+    let exhibits = [];
     const paintingObjects = [];
     const partObjects = {};
     const partErrors = [];
     let ready = false;
-    let activeExhibit = exhibits[1]?.id || exhibits[0]?.id || null;
+    let activeExhibit = null;
     let detailOpen = false;
     let cameraStarting = false;
     let gestureRunning = false;
@@ -416,6 +416,19 @@
       loadingBar.style.width = `${Math.round(ratio * 100)}%`;
       loadingCount.textContent = `构件 ${count} / ${PARTS.length}`;
       if (message) assetStatus.textContent = message;
+    }
+
+    async function loadHallExhibits() {
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const list = window.MuseumConfig?.exhibits;
+        if (Array.isArray(list)) {
+          exhibits = list.filter((item) => item.hall === "hall2");
+          activeExhibit = exhibits[1]?.id || exhibits[0]?.id || null;
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      throw new Error("MuseumConfig 未加载，无法取得花鸟厅展品");
     }
 
     function toast(message) {
@@ -1020,6 +1033,7 @@
     }
 
     async function boot() {
+      await loadHallExhibits();
       if (exhibits.length !== 3) {
         throw new Error(`花鸟厅展品数据异常：期望 3 件，实际 ${exhibits.length}`);
       }
