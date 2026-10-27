@@ -65,8 +65,7 @@ window.MuseumGallery = (function () {
     return t;
   }
 
-  function tex(seed) {
-    var id = MAP[seed];
+  function texById(id) {
     if (!id) return null;
     if (cache[id]) return cache[id];
     if (!loader && typeof THREE !== "undefined" && THREE.TextureLoader) loader = new THREE.TextureLoader();
@@ -95,8 +94,13 @@ window.MuseumGallery = (function () {
     return fallback;
   }
 
+  function tex(seed) {
+    return texById(MAP[seed]);
+  }
+
   return {
     tex: tex,
+    texById: texById,
     map: MAP,
     list: function () {
       var out = [];
