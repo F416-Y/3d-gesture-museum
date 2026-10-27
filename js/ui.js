@@ -129,10 +129,10 @@ window.MuseumUI = (function () {
         '<div class="hall-prompt-kicker"><span>展厅导览</span><span>ENTRY · 入口</span></div>' +
         '<h2 id="hall-prompt-title">进入' + esc(tag) + '展厅？</h2>' +
         '<div class="hall-prompt-rule"></div>' +
-        '<p class="p-desc">展厅大门已关闭。确认后进入' + esc(tag) + '展厅，取消则留在连廊。</p>' +
+        '<p class="p-desc">展厅大门已关闭。确认后进入' + esc(tag) + '展厅，取消则留在门外。</p>' +
         '<div class="p-hall-actions">' +
           '<button id="hall-enter-btn" class="p-hall-enter" type="button"><span>进入展厅</span><b>→</b></button>' +
-          '<button id="hall-cancel-btn" class="p-hall-cancel" type="button">留在连廊</button>' +
+          '<button id="hall-cancel-btn" class="p-hall-cancel" type="button">留在门外</button>' +
         '</div>' +
       '</section>';
     el.panel.classList.add("open");
