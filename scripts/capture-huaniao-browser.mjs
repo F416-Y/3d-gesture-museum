@@ -114,7 +114,7 @@ async function main() {
       },
       {
         file: "组员5-09-花鸟厅画作无遮挡.png",
-        prepare: () => window.HuaniaoGallery.focusArtwork("wuniutu", false),
+        prepare: () => window.HuaniaoGallery.focusGalleryWall(),
       },
       {
         file: "组员5-10-门关闭检查.png",

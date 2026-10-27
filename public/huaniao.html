@@ -263,10 +263,12 @@
     .bar i { display: block; width: 0; height: 100%; background: var(--seal); transition: width .25s ease; }
     .loading-count { margin-top: 9px; font: 10px/1 Georgia, serif; letter-spacing: .14em; color: var(--ink-soft); }
     @media (max-width: 850px) {
-      .topbar { height: 72px; padding: 12px 16px; }
-      .brand-copy h1 { font-size: 19px; }
+      .topbar { height: 72px; gap: 8px; padding: 10px 12px; }
+      .back { padding: 7px 10px; font-size: 12px; }
+      .brand { gap: 8px; }
+      .brand-copy h1 { font-size: 16px; letter-spacing: .08em; white-space: nowrap; }
       .brand-copy p { display: none; }
-      .top-actions .action:not(#camera-btn) { display: none; }
+      .top-actions { display: none; }
       .side-copy { display: none; }
       .works { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; padding: 6px; transform: none; }
       .works-head, .room-note { display: none; }
@@ -849,6 +851,15 @@
       if (openPanel) showDetail(index);
     }
 
+    function focusGalleryWall() {
+      hideDetail();
+      desired.target.set(0, 2.12, -7.55);
+      desired.yaw = 0;
+      desired.pitch = 0;
+      desired.distance = 9.2;
+      setCurrentExhibit(exhibits[1]?.id || exhibits[0]?.id, false);
+    }
+
     function resetView() {
       desired.target.set(0, 2.0, -7.55);
       desired.yaw = 0;
@@ -863,7 +874,7 @@
       desired.target.set(0, 2.05, 8.02);
       desired.yaw = 0;
       desired.pitch = 0.02;
-      desired.distance = 5.0;
+      desired.distance = 7.8;
       view.target.copy(desired.target);
       view.yaw = desired.yaw;
       view.pitch = desired.pitch;
@@ -1020,6 +1031,9 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      if (!detailOpen) {
+        desired.distance = window.innerWidth < 600 ? 20.5 : 13.8;
+      }
     }
 
     const clock = new THREE.Clock();
@@ -1072,6 +1086,7 @@
         errors: partErrors,
         paintingCount: paintingObjects.length,
         focusArtwork,
+        focusGalleryWall,
         focusDoorCheck,
         resetView,
         hideDetail,
