@@ -668,18 +668,18 @@ window.MuseumExteriorLayout = (function () {
           fenceRun(r[0], r[1], r[0], cz - 0.9 - 0.35);
           fenceRun(r[0], cz + 0.9 + 0.35, r[0], r[3]);
         }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, 1.8, null);
+        /* 后门只保留围栏开口，不再生成额外小门楼。 */
       } else if (opts.sideDoors && opts.sideDoors[k] !== undefined) {
         /* 侧门（对齐游廊端头）：围栏留 1.8m 门洞 + 小门楼（无匾），做法同后门 */
         var at = opts.sideDoors[k];
         if (k === 'N' || k === 'S') {
           fenceRun(r[0], r[1], at - 1.25, r[1]);
           fenceRun(at + 1.25, r[1], r[2], r[1]);
-          gateHouse(k, at, cz, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         } else {
           fenceRun(r[0], r[1], r[0], at - 1.25);
           fenceRun(r[0], at + 1.25, r[0], r[3]);
-          gateHouse(k, cx, at, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         }
       } else {
         fenceRun(r[0], r[1], r[2], r[3]);
@@ -1313,11 +1313,7 @@ window.MuseumExteriorLayout = (function () {
     pavPatch(14, 22.4, 4.2, 5.8); pavPatch(-14, 22.4);     // 东亭地坪南延，盖住与东廊间的敞口
     pavPatch(-14, 27.0, 3.0, 1.2);       // 西短廊与西廊之间地坪补齐
     /* 双廊北端不做收头门楼：廊顶（庑殿式收头）尽端即敞口，出廊即中轴南院，北对水榭庭院南门 */
-    /* 中轴双廊画廊墙随廊加宽外移至 ±8.9（外柱 8.4 外侧 0.5m，仍在廊顶覆盖内）：半壁墙 + 每开间立轴 + 暖光洗画 */
-    galleryWall(-8.9, 1);
-    galleryWall(8.9, -1);
-    /* 东长廊画墙随北侧加宽北移至 −17.7（北柱 −17.2 外侧 0.5m，廊顶北缘 −17.8 覆盖），画面朝南 */
-    galleryWallX(-17.7, 8.3, 27.6);
+    /* 中西画廊内容已并入人物厅，外景仅保留游廊建筑，不再生成重复画墙。 */
   }
 
   /* ---------- 中心庭：只保留一块与周边留出约 2m 间距的大水池 ---------- */
