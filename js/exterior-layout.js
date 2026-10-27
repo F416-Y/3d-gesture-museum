@@ -1212,12 +1212,12 @@ window.MuseumExteriorLayout = (function () {
     strip.rotation.x = 0.5;
   }
   /* 半壁廊墙：廊外侧重柱间封墙（墙脚石 + 纸筋白墙 + 墨瓦压顶）+ 每开间一幅立轴 */
-  function galleryWall(x, faceDir, topY) {    var len = 10.4, zc = 15.5, wallTop = topY || 2.42, wallH = wallTop - 0.12;   /* 南端收进内转角亭（z=22.4 一线），让出台基与侧墙 */
+  function galleryWall(x, faceDir, topY) {    var len = 10.4, zc = 15.5, wallTop = topY || 2.8, wallH = wallTop - 0.12;   /* 中轴画廊专用竖幅墙，整体抬高，保留一个空位 */
     box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
     box(0.15, wallH, len, M.paper, x, 0.12 + wallH / 2, zc);
     box(0.22, 0.14, len + 0.1, M.ink, x, wallTop, zc);
-    var zs = [11.6, 14.2, 16.8, 19.4], i;
-    for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0), 1, undefined, 0.35);
+    var zs = [11.9, 14.8, 17.7, 20.6], seeds = x < 0 ? [710, 711, 712] : [720, 721, 722], i;
+    for (i = 0; i < 3; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, seeds[i], 1, undefined, 0.58);
   }
 
   /* 横向半壁廊墙（东长廊用，画面朝南）：同 galleryWall 做法，沿 x 展开 */
