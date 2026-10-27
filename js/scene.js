@@ -2171,11 +2171,17 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙挂画：左韩熙载、中洛神赋、右步辇图
-    addPainting(g, { x: -5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 3.4, 2.2, "hanxizai");
-    addPainting(g, { x: 0,   y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "luoshenfu");
-    addPainting(g, { x: 5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "buniantu");
-    buildPartHallTitle(g, "人物丹青", "观古鉴今 · 以画识人", 0, 4.0, -8.5, 0);
+    // 人物厅内部对比展线：左侧西方，右侧中方；长廊后续可整体删除
+    // 西方侧：蒙娜丽莎、星月夜与米洛的维纳斯
+    addPainting(g, { x: -8.6, y: 2.55, z: -5.2, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.4, 1.6, "monalisa");
+    addPainting(g, { x: -8.6, y: 2.55, z: 0.0,  ry: Math.PI / 2, lamp: [0.9, 0] }, 2.4, 1.6, "starrynight");
+    addVenusSculpture(g, -4.5, 0.8, 0.0);
+
+    // 中方侧：韩熙载、洛神赋、步辇图
+    addPainting(g, { x: 8.6, y: 2.55, z: -5.2, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.2, 1.5, "hanxizai");
+    addPainting(g, { x: 8.6, y: 2.55, z: -1.0, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.2, 1.5, "luoshenfu");
+    addPainting(g, { x: 8.6, y: 2.55, z: 3.2,  ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.2, 1.5, "buniantu");
+    buildPartHallTitle(g, "人物对照", "西方之体 · 中方之神", 0, 4.0, -8.5, 0);
 
     // 中央将军俑
     addPedestalLocal(g, 0, F, 0, "jiangjunyong", "将军俑 · 秦");
@@ -2642,18 +2648,19 @@ window.MuseumScene = (function () {
   }
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
-    var paintings = [
-      /* 双廊画廊墙：4 开间 z 11.6 / 14.2 / 16.8 / 19.4；墙位 x=±8.9（2026-10-04 原型更新） */
-      ["hanxizai",          -8.76, 11.6],
-      ["qianlijiangshan",   -8.76, 14.2],
-      ["fuchunshanjv",      -8.76, 16.8],
-      ["xishanxinglvtu",    -8.76, 19.4],
-      ["buniantu",           8.76, 11.6],
-      ["xieshengzhenqintu",  8.76, 14.2],
-      ["wuniutu",            8.76, 16.8],
-      ["molantu",            8.76, 19.4],
-      /* 东长廊半壁画廊（z=-17.7，面朝南）：第 1 开间挂洛神赋图 */
-      ["luoshenfu",          9.91, -16.2],
+      var paintings = [
+      /* 人物厅中西对照：左侧西方、右侧中国，与人物厅实际挂画一致。 */
+      ["monalisa",           28.42, -17.3],
+      ["starrynight",        28.42, -14.7],
+      ["hanxizai",           45.08, -19.7],
+      ["qianlijiangshan",    45.08, -18.5],
+      ["fuchunshanjv",       45.08, -17.3],
+      ["xishanxinglvtu",     45.08, -16.1],
+      ["buniantu",           45.08, -14.9],
+      ["xieshengzhenqintu",  45.08, -13.7],
+      ["wuniutu",            45.08, -12.5],
+      ["molantu",            45.08, -11.3],
+      ["luoshenfu",          45.08, -10.5],
       /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
       ["lantingjixu",        40.84, 10.0],
       ["jizhiwengao",        40.84, 15.0],
@@ -3018,7 +3025,7 @@ window.MuseumScene = (function () {
         /* 展品热点：同上（旧路径自带 20 条，此处只补 proto 布局缺的 12 条） */
         registerProtoExhibitSpots();
         /* 组员6：西方绘画与雕塑（新增展品，置于中心庭院东侧）*/
-        buildWesternCorner(scene);
+        /* 中西绘画已统一迁入人物厅，不再在中心庭院生成重复画廊。 */
       } else {
         buildJiangnanCompound(scene);
       }

@@ -156,6 +156,12 @@ window.MuseumExteriorSlots = {
       }
       /* 竖幅立轴画心（山水/人物/花鸟各厅墙面挂画用）：远山 + 近坡 + 枯树 + 朱印 */
       function scrollTexV(seed) {
+        if (window.MuseumGallery && window.MuseumGallery.tex) {
+          var real = typeof seed === 'string' && window.MuseumGallery.texById
+            ? window.MuseumGallery.texById(seed)
+            : window.MuseumGallery.tex(seed);
+          if (real) return real;
+        }
         var cv = document.createElement('canvas'); cv.width = 96; cv.height = 192;
         var ctx = cv.getContext('2d');
         ctx.fillStyle = '#ece3cd'; ctx.fillRect(0, 0, 96, 192);
@@ -448,6 +454,7 @@ window.MuseumExteriorSlots = {
           p = at(sig * (len / 2 - 0.42), bOff);
           wallScrollAt(p[0], p[1], Math.atan2(-sig * ux, -sig * uz), seed);
         }
+        function sideArtwork(sig, bOff, id) { sideScroll(sig, bOff, id); }
         function potAt(uOff, bOff, seed) { p = at(uOff, bOff); potted(p[0], p[1], floor, seed); }
         function pedestalAt(uOff, bOff, seed) { p = at(uOff, bOff); pedestalVase(p[0], p[1], floor, seed); }
         function pot2(uOff, bOff, seed) { p = at(uOff, bOff); scrollPot(p[0], p[1], floor, seed); }
@@ -469,7 +476,18 @@ window.MuseumExteriorSlots = {
           sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
           lampPair(2.2, -0.45);
         } else if (tag === '人物') {
-          sideScroll(-1, 0.8, seedBase + 1); sideScroll(1, 0.8, seedBase + 2);
+          /* 面向正门时左侧为西方，右侧为中国，形成同题材对照。 */
+          sideArtwork(-1, 1.8, 'monalisa');
+          sideArtwork(-1, -0.8, 'starrynight');
+          var chineseWall = [
+            ['hanxizai', 4.2], ['qianlijiangshan', 3.0],
+            ['fuchunshanjv', 1.8], ['xishanxinglvtu', 0.6],
+            ['buniantu', -0.6], ['xieshengzhenqintu', -1.8],
+            ['wuniutu', -3.0], ['molantu', -4.2], ['luoshenfu', -5.0]
+          ];
+          for (i = 0; i < chineseWall.length; i++) {
+            sideArtwork(1, chineseWall[i][1], chineseWall[i][0]);
+          }
           if (L.warrior) {
             var wpos = [[-len / 4, dep / 2 - 3.3], [len / 4, dep / 2 - 3.3], [-len / 4, dep / 2 - 4.5], [len / 4, dep / 2 - 4.5]];
             for (i = 0; i < 4; i++) {
@@ -485,8 +503,6 @@ window.MuseumExteriorSlots = {
             ped.castShadow = ped.receiveShadow = true; scene.add(ped);
             if (instantiate(L.horse, { mode: 'h', size: 1.1, x: p[0], y: floor + 0.75, z: p[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
           }
-          p = at(0, dep / 2 - 0.6); /* 后墙挂对轴（后门已撤，厅心马踏飞燕可绕行） */
-          backScroll(-1.9, seedBase + 10); backScroll(1.9, seedBase + 11);
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
