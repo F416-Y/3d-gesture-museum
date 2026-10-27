@@ -64,7 +64,7 @@ window.MuseumConfig = {
    * ============================================================ */
   exhibits: [
     {
-      id: "qianlijiangshan", type: "painting", image: "assets/images/qianlijiangshan.jpg", hall: "hall1",
+      id: "qianlijiangshan", type: "painting", image: "assets/images/qianlijiangshan.jpg", hall: "hall3",
       title: "千里江山图",
       artist: "王希孟", dynasty: "北宋", era: "约 1113 年",
       medium: "绢本设色 · 纵 51.5cm × 横 1191.5cm",
@@ -73,7 +73,7 @@ window.MuseumConfig = {
       appreciation: "全卷最惊人的地方，是年轻的王希孟对空间与色彩的统驭能力。青绿设色以石青、石绿反复罩染，在山体明暗转换处形成浓丽而不浮躁的光泽；长卷随视线渐次展开，近景屋舍、中景林木与远景群山层层推远，让观者像沿江远游。它既是青绿山水的集大成之作，也把北宋人对理想江山秩序与壮阔气象的想象凝固在绢素之上。",
     },
     {
-      id: "fuchunshanjv", type: "painting", image: "assets/images/fuchunshanjv.jpg", hall: "hall1",
+      id: "fuchunshanjv", type: "painting", image: "assets/images/fuchunshanjv.jpg", hall: "hall3",
       title: "富春山居图",
       artist: "黄公望", dynasty: "元代", era: "1350 年",
       medium: "纸本水墨 · 纵 33cm × 横 636.9cm（无用师卷）",
@@ -82,7 +82,7 @@ window.MuseumConfig = {
       appreciation: "黄公望并不追求繁琐的实景描摹，而是以干笔皴擦、淡墨积染写出山峦的呼吸与江水的空阔。山石轮廓松散，林木点染率意，画面在平远铺陈中不断转换节奏，呈现文人所推崇的平淡天真。尤其可贵的是，长卷没有强烈戏剧冲突，却能让观者顺着坡岸、沙渚和远山慢慢进入一种安静的时间感，因此被视为中国文人山水画的典范。",
     },
     {
-      id: "xishanxinglvtu", type: "painting", image: "assets/images/xishanxinglvtu.jpg", hall: "hall1",
+      id: "xishanxinglvtu", type: "painting", image: "assets/images/xishanxinglvtu.jpg", hall: "hall3",
       title: "溪山行旅图",
       artist: "范宽", dynasty: "北宋", era: "约 11 世纪初",
       medium: "绢本水墨 · 纵 206.3cm × 横 103.3cm",
@@ -91,7 +91,7 @@ window.MuseumConfig = {
       appreciation: "范宽把主峰置于画面中央，几乎占去大半幅空间，让观者第一眼便感到山峰压顶般的重量。山石以密集的雨点皴反复积累，墨色由淡到浓，塑造出坚硬而浑厚的岩体；飞瀑、密林与细小的人物又将宏大尺度反衬出来。近看笔触繁密，远观却秩序井然，这种由局部真实汇成整体崇高的方式，正是北宋山水最成熟的视觉语言。",
     },
     {
-      id: "xieshengzhenqintu", type: "painting", image: "assets/images/xieshengzhenqintu.jpg", hall: "hall2",
+      id: "xieshengzhenqintu", type: "painting", image: "assets/images/xieshengzhenqintu.jpg", hall: "hall3",
       title: "写生珍禽图",
       artist: "黄筌", dynasty: "五代", era: "约 10 世纪",
       medium: "绢本设色 · 纵 41.5cm × 横 70.8cm",
@@ -100,7 +100,7 @@ window.MuseumConfig = {
       appreciation: "这卷作品最值得看的是观察的耐性。黄筌根据不同动物的体态与习性安排朝向、动作和位置，羽毛、甲壳、足爪与触须都被交代得清清楚楚，却仍保持画面的明净节奏。精微而不板滞，富丽而不甜俗，所谓黄家富贵在这里不是装饰趣味，而是建立在写生能力与技法控制上的自信。它也为后世理解五代花鸟画的写实高度提供了直观样本。",
     },
     {
-      id: "wuniutu", type: "painting", image: "assets/images/wuniutu.jpg", hall: "hall2",
+      id: "wuniutu", type: "painting", image: "assets/images/wuniutu.jpg", hall: "hall3",
       title: "五牛图",
       artist: "韩滉", dynasty: "唐", era: "约 8 世纪",
       medium: "纸本设色 · 纵 20.8cm × 横 139.8cm",
@@ -109,7 +109,7 @@ window.MuseumConfig = {
       appreciation: "画中没有背景，五头牛却并不显得孤立，因为韩滉用姿态、眼神和身体朝向建立了一条连续的观看节奏。线条粗重像书法中的篆籀，转折处又有柔软韧性，既写出牛的筋骨与体量，也写出皮毛的温度。尤其末尾回望的牛，使静止长卷产生回环往复的时间感。它把日常牲畜提升为庄重而亲近的绘画主题，是唐代绘画由人物、鞍马扩展到生活观察的重要证据。",
     },
     {
-      id: "molantu", type: "painting", image: "assets/images/molantu.jpg", hall: "hall2",
+      id: "molantu", type: "painting", image: "assets/images/molantu.jpg", hall: "hall3",
       title: "墨兰图",
       artist: "郑思肖", dynasty: "宋末元初", era: "约 13 世纪",
       medium: "纸本水墨 · 纵 25.7cm × 横 42.4cm",
@@ -253,7 +253,7 @@ window.MuseumConfig = {
       appreciation: "这幅画最耐看的地方是「不确定」。达·芬奇没有画出明确的微笑，而是用层层罩染把笑意含在眼角与嘴角之间，观者的视线一动，表情就跟着变——他画的不是一个人，而是「看一个人时我们自己的心理」。背景同样如此：远山被画得比近处更蓝更淡，这是最早的空气透视实践之一。把它放进本馆人物厅的三幅长卷旁边看，对照会更清楚：中国画用线条与留白写「神」，故事靠人物之间的位置关系；《蒙娜丽莎》用明暗与空气写「心」，故事收在一个人脸上。两种传统都在回答同一个问题——怎么让一张脸承载一整个世界。",
     },
     {
-      id: "starrynight", type: "painting", hall: "hall1",
+      id: "starrynight", type: "painting", hall: "hall3",
       title: "星月夜",
       artist: "文森特·梵高", dynasty: "后印象派", era: "1889 年",
       medium: "布面油画 · 73.7 × 92.1cm",
