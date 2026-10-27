@@ -1212,7 +1212,7 @@ window.MuseumExteriorLayout = (function () {
     strip.rotation.x = 0.5;
   }
   /* 半壁廊墙：廊外侧重柱间封墙（墙脚石 + 纸筋白墙 + 墨瓦压顶）+ 每开间一幅立轴 */
-  function galleryWall(x, faceDir, topY) {    var len = 10.4, zc = 15.5, wallTop = topY || 2.8, wallH = wallTop - 0.12;   /* 中轴画廊专用竖幅墙，整体抬高，保留一个空位 */
+  function galleryWall(x, faceDir, topY) {    var len = 10.4, zc = 15.5, wallTop = topY || 3.7, wallH = wallTop - 0.12;   /* 中轴画廊专用竖幅墙，整体抬高，保留一个空位 */
     box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
     box(0.15, wallH, len, M.paper, x, 0.12 + wallH / 2, zc);
     box(0.22, 0.14, len + 0.1, M.ink, x, wallTop, zc);
@@ -1416,8 +1416,8 @@ window.MuseumExteriorLayout = (function () {
     /* 中轴双廊画廊墙随廊加宽外移至 ±8.9（外柱 8.4 外侧 0.5m，仍在廊顶覆盖内）：半壁墙 + 每开间立轴 + 暖光洗画 */
     /* 东长廊画墙随北侧加宽北移至 −17.7（北柱 −17.2 外侧 0.5m，廊顶北缘 −17.8 覆盖），画面朝南 */
     /* 画廊墙恢复：外侧半壁墙挂立轴画，保留游廊的观画功能。 */
-galleryWall(-8.9, 1);
-galleryWall(8.9, -1);
+galleryWall(-8.5, 1, 3.7);
+galleryWall(8.5, -1, 3.7);
   }
 
   /* ---------- 中轴拱桥：序厅方向跨中心湖，连接北侧园路 ---------- */
