@@ -96,8 +96,11 @@ async function main() {
       assetCount: Number(document.body.dataset.assetCount),
       errors: window.HuaniaoGallery.errors,
       loadedParts: window.HuaniaoGallery.loadedParts,
+      exhibitCount: window.HuaniaoGallery.exhibits.length,
+      workButtons: document.querySelectorAll("[data-exhibit]").length,
+      paintingMeshes: window.HuaniaoGallery.paintingCount,
     }));
-    if (state.assetCount !== 7 || state.errors.length) {
+    if (state.assetCount !== 7 || state.exhibitCount !== 3 || state.workButtons !== 3 || state.paintingMeshes !== 6 || state.errors.length) {
       throw new Error(`花鸟厅资源未全部加载：${JSON.stringify(state)}`);
     }
 
