@@ -2627,18 +2627,19 @@ window.MuseumScene = (function () {
   }
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
-    var paintings = [
-      /* 双廊画廊墙：4 开间 z 11.6 / 14.2 / 16.8 / 19.4；墙位 x=±8.9（2026-10-04 原型更新） */
-      ["hanxizai",          -8.76, 11.6],
-      ["qianlijiangshan",   -8.76, 14.2],
-      ["fuchunshanjv",      -8.76, 16.8],
-      ["xishanxinglvtu",    -8.76, 19.4],
-      ["buniantu",           8.76, 11.6],
-      ["xieshengzhenqintu",  8.76, 14.2],
-      ["wuniutu",            8.76, 16.8],
-      ["molantu",            8.76, 19.4],
-      /* 东长廊半壁画廊（z=-17.7，面朝南）：第 1 开间挂洛神赋图 */
-      ["luoshenfu",          9.91, -16.2],
+      var paintings = [
+      /* 人物厅中西对照：左侧西方、右侧中国，与 slots.js 的侧墙挂画一致。 */
+      ["monalisa",           28.42, -17.3],
+      ["starrynight",        28.42, -14.7],
+      ["hanxizai",           45.08, -19.7],
+      ["qianlijiangshan",    45.08, -18.5],
+      ["fuchunshanjv",       45.08, -17.3],
+      ["xishanxinglvtu",     45.08, -16.1],
+      ["buniantu",           45.08, -14.9],
+      ["xieshengzhenqintu",  45.08, -13.7],
+      ["wuniutu",            45.08, -12.5],
+      ["molantu",            45.08, -11.3],
+      ["luoshenfu",          45.08, -10.5],
       /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
       ["lantingjixu",        40.84, 10.0],
       ["jizhiwengao",        40.84, 15.0],
@@ -3033,8 +3034,7 @@ window.MuseumScene = (function () {
         registerProtoEntities();
         /* 展品热点：同上（旧路径自带 20 条，此处只补 proto 布局缺的 12 条） */
         registerProtoExhibitSpots();
-        /* 组员6：西方绘画与雕塑（新增展品，置于中心庭院东侧）*/
-        buildWesternCorner(scene);
+        /* 中西绘画已统一迁入人物厅，不再在中心庭院生成重复画廊。 */
       } else {
         buildJiangnanCompound(scene);
       }
