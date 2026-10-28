@@ -970,7 +970,7 @@ window.MuseumScene = (function () {
   }
 
   /* ---------- 入口门楼（院墙上的大门：门柱 + 顶檐 + 朱砂门 + 台阶 + 匾） ---------- */
-  function gateHouse(side, cx, cz, x0, x1, z0, z1, gateW, label) {
+  function gateHouse(side, cx, cz, x0, x1, z0, z1, gateW, label, opts) {
     var gx, gz, ry;
     if (side === 'S') { gx = cx; gz = z1; ry = 0; }
     if (side === 'N') { gx = cx; gz = z0; ry = Math.PI; }
@@ -990,11 +990,29 @@ window.MuseumScene = (function () {
        装扇院门撤内侧抱鼓石一对（让开门扇内旋立扇位置） */
     if (label) {
       var LW = gateW / 2 - 0.08, i2, piv, leaf;
-      for (i2 = -1; i2 <= 1; i2 += 2) {
-        piv = new THREE.Group(); piv.position.set(i2 * (gateW / 2 - 0.07), 0, -0.05); g.add(piv);
-        leaf = box(LW, 2.4, 0.08, M.door, -i2 * LW / 2, 1.2, 0, 0, piv);
-        leaf.castShadow = false;
-        piv.rotation.y = -i2 * Math.PI / 2;
+      if (opts && opts.closedDoor) {
+        /* 正式展厅大门：双扇闭合，门洞只作为弹窗触发位置，不能直接穿入。 */
+        for (i2 = -1; i2 <= 1; i2 += 2) {
+          leaf = box(LW, 2.72, 0.08, M.door, i2 * (LW / 2 + 0.015), 1.36, -0.05, 0, g);
+          leaf.castShadow = false;
+          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 0.5, -0.11, 0, g);
+          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 2.22, -0.11, 0, g);
+        }
+        var doorNx = side === 'E' ? 1 : side === 'W' ? -1 : 0;
+        var doorNz = side === 'S' ? 1 : side === 'N' ? -1 : 0;
+        var doorHall = { '山水': 'hall1', '花鸟': 'hall2', '人物': 'hall3', '书斋': 'hall4', '文创雅集馆': 'hall5' }[label] || null;
+        if (doorHall) HALL_DOORS.push({
+          hallId: doorHall, tag: label, x: gx, z: gz, nx: doorNx, nz: doorNz,
+          tx: -doorNz, tz: doorNx, w: gateW, sx: gx - doorNx * 2.2, sz: gz - doorNz * 2.2,
+          syaw: Math.atan2(doorNx, doorNz)
+        });
+      } else {
+        for (i2 = -1; i2 <= 1; i2 += 2) {
+          piv = new THREE.Group(); piv.position.set(i2 * (gateW / 2 - 0.07), 0, -0.05); g.add(piv);
+          leaf = box(LW, 2.4, 0.08, M.door, -i2 * LW / 2, 1.2, 0, 0, piv);
+          leaf.castShadow = false;
+          piv.rotation.y = -i2 * Math.PI / 2;
+        }
       }
     }
     /* 雀替（门柱顶部贴脸小斗） */
@@ -1055,7 +1073,7 @@ window.MuseumScene = (function () {
           fenceRun(r[0], r[1], r[0], cz - gateW / 2 - 0.7);
           fenceRun(r[0], cz + gateW / 2 + 0.7, r[0], r[3]);
         }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, gateW, label);
+        gateHouse(k, cx, cz, x0, x1, z0, z1, gateW, label, opts);
       } else if (opts.backdoor && k === { N: 'S', S: 'N', E: 'W', W: 'E' }[entry]) {   /* 【已停用】后门小门楼随全园后门一并撤除 */
         /* 后门：后墙留 1.8m 门洞 + 小门楼（无匾） */
         if (k === 'N' || k === 'S') {
@@ -1065,18 +1083,18 @@ window.MuseumScene = (function () {
           fenceRun(r[0], r[1], r[0], cz - 0.9 - 0.35);
           fenceRun(r[0], cz + 0.9 + 0.35, r[0], r[3]);
         }
-        gateHouse(k, cx, cz, x0, x1, z0, z1, 1.8, null);
+        /* 后门只保留围栏开口，不再生成额外小门楼。 */
       } else if (opts.sideDoors && opts.sideDoors[k] !== undefined) {
         /* 侧门（对齐游廊端头）：围栏留 1.8m 门洞 + 小门楼（无匾），做法同后门 */
         var at = opts.sideDoors[k];
         if (k === 'N' || k === 'S') {
           fenceRun(r[0], r[1], at - 1.25, r[1]);
           fenceRun(at + 1.25, r[1], r[2], r[1]);
-          gateHouse(k, at, cz, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         } else {
           fenceRun(r[0], r[1], r[0], at - 1.25);
           fenceRun(r[0], at + 1.25, r[0], r[3]);
-          gateHouse(k, cx, at, x0, x1, z0, z1, 1.8, null);
+          /* 侧门只保留围栏开口，不再生成额外小门楼。 */
         }
       } else {
         fenceRun(r[0], r[1], r[2], r[3]);
@@ -1309,34 +1327,35 @@ window.MuseumScene = (function () {
     addWindow(-7.44, 2.3, 33.3, -Math.PI / 2);
     addWindow(7.44, 2.3, 29.5, Math.PI / 2);
     addWindow(7.44, 2.3, 32.5, Math.PI / 2);
-    /* 中庭铜鼎：3m 见方石座 + 三足两耳大鼎（通高约 2.4m） */
-    box(3, 0.5, 3, M.stoneDark, 0, 1.2 + 0.25, 29.5, 0, g);
+    /* 中庭铜鼎：3m 见方石座 + 三足两耳大鼎（通高约 2.4m）；热点与模型统一在 z=27。 */
+    var dingZ = 27.0;
+    box(3, 0.5, 3, M.stoneDark, 0, 1.2 + 0.25, dingZ, 0, g);
     var dingY = 1.2 + 0.5, legA;
     var dingG = new THREE.Group(); g.add(dingG);
     for (legA = 0; legA < 3; legA++) {
       var la = legA * 2.094;
-      cyl(0.09, 0.12, 0.7, 8, M.ink, Math.cos(la) * 0.55, dingY + 0.35, 29.5 + Math.sin(la) * 0.55, dingG);
+      cyl(0.09, 0.12, 0.7, 8, M.ink, Math.cos(la) * 0.55, dingY + 0.35, dingZ + Math.sin(la) * 0.55, dingG);
     }
-    cyl(0.95, 0.75, 1.0, 16, M.ink, 0, dingY + 1.15, 29.5, dingG);
-    cyl(1.02, 1.02, 0.16, 16, M.ink, 0, dingY + 1.72, 29.5, dingG);
-    box(0.14, 0.5, 0.3, M.ink, -0.6, dingY + 2.0, 29.5, 0, dingG);
-    box(0.14, 0.5, 0.3, M.ink, 0.6, dingY + 2.0, 29.5, 0, dingG);
-    S.slots.ding.push({ group: dingG, x: 0, y: dingY, z: 29.5 });
+    cyl(0.95, 0.75, 1.0, 16, M.ink, 0, dingY + 1.15, dingZ, dingG);
+    cyl(1.02, 1.02, 0.16, 16, M.ink, 0, dingY + 1.72, dingZ, dingG);
+    box(0.14, 0.5, 0.3, M.ink, -0.6, dingY + 2.0, dingZ, 0, dingG);
+    box(0.14, 0.5, 0.3, M.ink, 0.6, dingY + 2.0, dingZ, 0, dingG);
+    S.slots.ding.push({ group: dingG, x: 0, y: dingY, z: dingZ });
     /* 导览序厅陈设：铜鼎四周木柱红绳护栏（南面留观瞻口）+ 展签 + 门内两侧导览立牌 + 暖光 */
     (function () {
       var py = 1.2;   /* 台基面 */
       var posts = [], pi;
       for (pi = 0; pi < posts.length; pi++) {
-        cyl(0.045, 0.055, 0.85, 8, M.wood, posts[pi][0], py + 0.425, 29.5 + posts[pi][1], g);
+        cyl(0.045, 0.055, 0.85, 8, M.wood, posts[pi][0], py + 0.425, dingZ + posts[pi][1], g);
         var pb = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), M.ink);
-        pb.position.set(posts[pi][0], py + 0.9, 29.5 + posts[pi][1]); pb.castShadow = true; g.add(pb);
+        pb.position.set(posts[pi][0], py + 0.9, dingZ + posts[pi][1]); pb.castShadow = true; g.add(pb);
       }
       var yUp = new THREE.Vector3(0, 1, 0), dir = new THREE.Vector3();
       for (pi = 0; pi < posts.length; pi++) {
         var q0 = posts[pi], q1 = posts[(pi + 1) % posts.length];
         if (q0[1] === 2.3 && q1[1] === 2.3) continue;   /* 南面留观瞻口 */
         var rl = Math.sqrt((q1[0] - q0[0]) * (q1[0] - q0[0]) + (q1[1] - q0[1]) * (q1[1] - q0[1]));
-        var rope = cyl(0.02, 0.02, rl, 6, M.lampRed, (q0[0] + q1[0]) / 2, py + 0.68, 29.5 + (q0[1] + q1[1]) / 2, g);
+        var rope = cyl(0.02, 0.02, rl, 6, M.lampRed, (q0[0] + q1[0]) / 2, py + 0.68, dingZ + (q0[1] + q1[1]) / 2, g);
         dir.set(q1[0] - q0[0], 0, q1[1] - q0[1]).normalize();
         rope.quaternion.setFromUnitVectors(yUp, dir);
       }
@@ -1392,17 +1411,17 @@ window.MuseumScene = (function () {
   /* ---------- 展厅群（细分参考图尺寸，殿厅加大版） ----------
    * 花鸟 22×16.5 主厅重檐 / 山水 17.5×15 / 人物 17.5×11 / 景韵轩 12×9.5
    * 文创雅集馆 11×27（由文创/临摹连续合并） / 书斋 8×27（由书斋/茶室连续合并） */
-  function buildHuaniao()  { buildCourtComplex(0, -29.25, 22, 16.5, 'S', '花鸟', { gateW: 4, wallH: 3.4, hallD: 8.5, chongyan: true, treeScale: 1.0 }); }
-  function buildShanshui() { buildCourtComplex(-37.25, -12.5, 17.5, 15, 'E', '山水', { gateW: 4, wallH: 3.4, hallD: 8.5, treeScale: 1.0 }); }
-  function buildRenwu()    { buildCourtComplex(36.75, -15.5, 17.5, 11, 'S', '人物', { gateW: 4, wallH: 3.2, hallD: 5.5, sideDoors: { W: -16 } }); }
+  function buildHuaniao()  { buildCourtComplex(0, -29.25, 22, 16.5, 'S', '花鸟', { gateW: 4, wallH: 3.4, hallD: 8.5, chongyan: true, treeScale: 1.0, closedDoor: true }); }
+  function buildShanshui() { buildCourtComplex(-39.25, -12.5, 21.5, 15, 'E', '山水', { gateW: 4, wallH: 3.4, hallD: 8.5, treeScale: 1.0, closedDoor: true }); }
+  function buildRenwu()    { buildCourtComplex(38.75, -15.5, 21.5, 11, 'S', '人物', { gateW: 4, wallH: 3.2, hallD: 5.5, sideDoors: { W: -16 }, closedDoor: true }); }
   function buildYaji()     { buildHall(-38, -29.5, 12, 7, 'S', '雅集'); }
   function buildJingyun()  { buildCourtComplex(39, -30, 12, 9.5, 'S', '景韵', { gateW: 2.4, wallH: 3.0, hallD: 4.8, treeScale: 0.75 }); }
   /* （收藏室已取消，兰竹庭院东侧留作绿地） */
   function buildWenchuang() {
-    buildCourtComplex(-39.5, 21.5, 11, 27, 'E', '文创雅集馆', { gateW: 2.4, wallH: 2.8, hallD: 6 });
+    buildCourtComplex(-41.5, 21.5, 15, 27, 'E', '文创雅集馆', { gateW: 2.4, wallH: 2.8, hallD: 6, closedDoor: true });
   }
   function buildShuzhaiChashi() {
-    buildCourtComplex(38, 19.5, 8, 27, 'W', '书斋', { gateW: 2.4, wallH: 2.8, hallD: 5.5, closedDoor: true });
+    buildCourtComplex(40, 19.5, 12, 27, 'W', '书斋', { gateW: 2.4, wallH: 2.8, hallD: 5.5, closedDoor: true });
   }
   /* （西南 / 东南角门房已取消，留作绿地） */
 
@@ -1675,32 +1694,68 @@ window.MuseumScene = (function () {
 
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
-    /* 序厅后方原有展厅连廊：连接序厅后侧与两翼展厅，必须保留。 */
+    /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
     corridor(-7, 9.5, -7, 20.4, undefined, 3.8);
     corridor(7, 9.5, 7, 20.4, undefined, 3.8);
-    corridor(-8.5, -12.5, -28.5, -12.5); // 西长廊：中心庭 → 山水馆东门
-    corridor(8.5, -16, 27.9, -16, { side: -1, c: -4.7, hw: 0.95 }, 2.8); // 东长廊·画廊：中心庭 → 人物馆西侧门（北侧加宽，南缘不动仍对景观庭院北口）
-    corridor(13.3, 26.5, 34, 26.5);      // 南花园东廊：东廊门东侧起廊（廊顶西端插进廊门檐下，不再穿门）
-    corridor(-13.3, 28.5, -34, 28.5);    // 南花园西廊：西廊门西侧起廊（同上，过门断廊、门自为顶）
-    /* 抄手游廊闭环：中轴广场 → 双廊 → 内转角亭 → 横廊 → 外转角亭 → 南花园廊 → 廊门 → 侧院 → 月洞门 → 序厅。
-       节点做法：亭顶（檐口 3.66m）高于廊顶（脊 3.35m），所有廊顶端头「插檐」收进亭檐之下，
-       同高廊顶互不相交；整条拐弯链放在 z=22.4 一线，亭顶南缘 24.4 让开台基（24.5）与中院侧墙。
-       双廊加宽 3.2m 后：内转角亭攒尖顶加大至 4.0m（x 5~9、z 20.3~24.4），双廊南端缩至 20.4
-       （廊顶尽端 20.75 仍在亭檐内，与横廊顶 20.9 之间留 0.15 缝，同高廊顶仍不相交）。 */
-    corridor(-14, 24.3, -14, 26.55);     // 西外转角亭 → 南花园西廊（短廊相接，东侧亭檐直压东廊）
-    cornerPavilion(14, 22.4); cornerPavilion(-14, 22.4);   // 外转角亭（横廊 × 南花园廊）
-    pavPatch(14, 22.4, 4.2, 5.8); pavPatch(-14, 22.4);     // 东亭地坪南延，盖住与东廊间的敞口
-    pavPatch(-14, 27.0, 3.0, 1.2);       // 西短廊与西廊之间地坪补齐
-    /* 双廊北端不做收头门楼：廊顶（庑殿式收头）尽端即敞口，出廊即中轴南院，北对水榭庭院南门 */
-    /* 中轴双廊画廊墙随廊加宽外移至 ±8.9（外柱 8.4 外侧 0.5m，仍在廊顶覆盖内）：半壁墙 + 每开间立轴 + 暖光洗画 */
-    /* 东长廊画墙随北侧加宽北移至 −17.7（北柱 −17.2 外侧 0.5m，廊顶北缘 −17.8 覆盖），画面朝南 */
-    galleryWallX(-17.7, 8.3, 27.6);
+    galleryWall(-8.9, 1, 3.58);
+    galleryWall(8.9, -1, 3.58);
   }
 
-  /* ---------- 中心庭（17×13 碎石广场 + 内院 5×5m：中心树 + 太湖石 + 石桌凳 + 条凳 + 石灯 + 陶罐） ---------- */
+  /* ---------- 中轴拱桥：序厅方向跨中心湖，桥长约 16m、宽约 2.2m ---------- */
+  function buildCentralArchBridge() {
+    var g = new THREE.Group();
+    g.name = 'central-arch-bridge';
+    g.rotation.y = Math.PI / 2;
+    S.scene.add(g);
+    var x0 = -10.0, x1 = 5.45, steps = 18, width = 2.45, i;
+    function archY(x) { return 0.42 + 0.78 * Math.sin(Math.PI * (x - x0) / (x1 - x0)); }
+    var outer = new THREE.Shape();
+    outer.moveTo(x0, 0); outer.lineTo(x1, 0); outer.lineTo(x1, archY(x1) + 0.72);
+    for (i = steps; i >= 0; i--) outer.lineTo(x0 + (x1 - x0) * i / steps, archY(x0 + (x1 - x0) * i / steps) + 0.72);
+    outer.closePath();
+    var opening = new THREE.Path(), hx0 = x0 + 1.25, hx1 = x1 - 1.25;
+    opening.moveTo(hx0, 0); opening.lineTo(hx0, 0.24);
+    for (i = 0; i <= steps; i++) {
+      var hx = hx0 + (hx1 - hx0) * i / steps;
+      opening.lineTo(hx, 0.24 + 1.18 * Math.sin(Math.PI * (hx - hx0) / (hx1 - hx0)));
+    }
+    opening.lineTo(hx1, 0); opening.closePath(); outer.holes.push(opening);
+    var wallGeo = new THREE.ExtrudeGeometry(outer, { depth: width, bevelEnabled: false, curveSegments: 4, steps: 1 });
+    wallGeo.translate(0, 0, -width / 2);
+    var wall = new THREE.Mesh(wallGeo, M.stone); wall.castShadow = wall.receiveShadow = true; g.add(wall);
+    for (i = 0; i < steps; i++) {
+      var a = x0 + (x1 - x0) * i / steps, b = x0 + (x1 - x0) * (i + 1) / steps;
+      var mid = (a + b) / 2, dy = archY(b) - archY(a);
+      var seg = box(b - a + 0.10, 0.18, width + 0.12, M.stone, mid, archY(mid) + 0.78, 0, Math.atan2(dy, b - a), g);
+      seg.receiveShadow = true;
+      [-1, 1].forEach(function (side) { var post = cyl(0.075, 0.09, 0.78, 8, M.stone, mid, archY(mid) + 1.20, side * (width / 2 - 0.2), g); post.rotation.z = Math.atan2(dy, b - a); });
+    }
+    for (i = 0; i < 2; i++) box(1.1, 0.18, width + 0.55, M.stone, i ? x1 + 0.55 : x0 - 0.55, 0.20, 0, 0, g);
+  }
+
+  /* ---------- 中轴真实拱桥：优先加载单桥 GLB，失败回退程序桥 ---------- */
+  function loadCentralArchBridge() {
+    if (!THREE.GLTFLoader) { buildCentralArchBridge(); return; }
+    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/rodin_bridge_single.glb', function (gltf) {
+      var bridge = gltf.scene; bridge.name = 'rodin-central-arch-bridge'; bridge.updateMatrixWorld(true);
+      var raw = new THREE.Box3().setFromObject(bridge), rawSize = raw.getSize(new THREE.Vector3());
+      if (!Math.max(rawSize.x, rawSize.z)) { buildCentralArchBridge(); return; }
+      if (rawSize.x >= rawSize.z) { bridge.scale.set(16.0 / rawSize.x, 2.6 / rawSize.y, 2.2 / rawSize.z); bridge.rotation.y = Math.PI / 2; }
+      else { bridge.scale.set(2.2 / rawSize.x, 2.6 / rawSize.y, 16.0 / rawSize.z); bridge.rotation.y = 0; }
+      bridge.updateMatrixWorld(true);
+      var fitted = new THREE.Box3().setFromObject(bridge), center = fitted.getCenter(new THREE.Vector3());
+      var group = new THREE.Group(); group.name = 'central-arch-bridge-glb'; group.add(bridge);
+      group.position.set(-center.x, 0.06 - fitted.min.y, -2.2 - center.z);
+      bridge.traverse(function (node) { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
+      S.scene.add(group);
+    }, undefined, function () { buildCentralArchBridge(); });
+  }
+
+  /* ---------- 中心庭（中心湖约 16×8m，中心坐标 0,-2.2） ---------- */
   function buildZhongxinCourt() {
     /* 中央庭院只保留一块特别大的水池；删除亭子、池中建筑、草坪内景与内部连廊。 */
-    pond(0, -11.5, 12, 7.5, 55);
+    irregularPond(0, -2.2, 16.0, 8.0, 55);
+    loadCentralArchBridge();
     return;
     /* 周边碎石广场 */
     var g = new THREE.Mesh(new THREE.PlaneGeometry(17, 13), M.gravel);
@@ -1814,6 +1869,19 @@ window.MuseumScene = (function () {
     /* 东南角临水半亭：白墙 + 大立轴，隔水可赏 */
     halfPavilion(6.0, 4.2);
     /* 北墙已改围栏，原冰裂棂花窗移除（全院围栏统一） */
+  }
+
+  /* 序厅后方挡墙：整墙无门，门后只允许通过独立展厅入口进入。 */
+  function buildAxisScreenWall() {
+    box(6.4, 0.5, 1.05, M.stoneDark, 0, 0.25, 18.8);
+    box(6.0, 0.26, 0.82, M.stone, 0, 0.63, 18.8);
+    box(5.8, 3.4, 0.5, M.paper, 0, 2.46, 18.8);
+    box(6.0, 0.16, 0.66, M.ink, 0, 4.24, 18.8);
+    box(6.4, 0.2, 1.05, M.tile, 0, 4.42, 18.8);
+    box(3.6, 2.3, 0.14, M.ink, 0, 2.46, 19.12);
+    box(3.2, 1.9, 0.16, M.plaza, 0, 2.46, 19.14);
+    box(3.6, 2.3, 0.14, M.ink, 0, 2.46, 18.48);
+    box(3.2, 1.9, 0.16, M.plaza, 0, 2.46, 18.46);
   }
 
   /* ---------- 中轴南院：开阔青砖广场（z 8~24.5）——大踏跺、影壁、水榭南门一线贯通，不压亭子 ---------- */
@@ -1979,10 +2047,6 @@ window.MuseumScene = (function () {
   function buildPocketGardens() {
     pocket(-21, 23.8, 18, 6.4, 301);   // 南花园西廊北侧，整体南移让出廊道
     pocket(18, 30.6, 13, 4.6, 302);    // 南花园东廊北侧，让出廊道
-    pocket(-36, -23, 14, 5, 303);
-    pocket(36, -23.5, 13, 5, 304);
-    pocket(-20, -17.2, 10, 5.6, 305);  // 西长廊北侧，让出廊道
-    pocket(22, -10.4, 8, 7.2, 306, true);    // 东长廊南侧，让出廊道（西篱撤除，让位景观庭院东栏）
     pocket(-41, 1.5, 5, 11, 307);
   }
 
@@ -2012,6 +2076,31 @@ window.MuseumScene = (function () {
       lotus(cx + ((s % 100) / 100 - 0.5) * rx * 1.1,
             cz + ((s % 97) / 97 - 0.5) * rz * 1.1, 0.22 + (s % 50) / 500);
     }
+  }
+
+  /* ---------- 中央自然曲池：非规则池岸，中心为 (0,-2.2)，约 16×8m ---------- */
+  function irregularPond(cx, cz, rx, rz, seed) {
+    var s = seed >>> 0, i, n = 32, points = [], bedPoints = [], shore = [];
+    function radiusAt(a) { return 0.95 + 0.075 * Math.sin(a * 3 + 0.6) + 0.045 * Math.sin(a * 5 - 0.9); }
+    for (i = 0; i < n; i++) {
+      var a = i / n * Math.PI * 2, r = radiusAt(a), x = Math.cos(a) * rx * r, z = Math.sin(a) * rz * r;
+      points.push(new THREE.Vector2(x, -z)); bedPoints.push(new THREE.Vector2(x * 1.035, -z * 1.05)); shore.push({ a: a, r: r });
+    }
+    var bed = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(bedPoints)), M.ink);
+    bed.rotation.x = -Math.PI / 2; bed.position.set(cx, -0.14, cz); S.scene.add(bed);
+    var water = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(points)), M.water);
+    water.rotation.x = -Math.PI / 2; water.position.set(cx, 0.06, cz); water.receiveShadow = true; S.scene.add(water);
+    var stones = Math.max(18, Math.round((rx + rz) * 3.9));
+    for (i = 0; i < stones; i++) {
+      var t = i / stones * n, k0 = Math.floor(t) % n, k1 = (k0 + 1) % n, f = t - Math.floor(t);
+      var rr0 = shore[k0].r + (shore[k1].r - shore[k0].r) * f, aa = i / stones * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var sr = 0.19 + (s % 100) / 100 * 0.15;
+      var st = new THREE.Mesh(blobGeo(sr, 0.28, 0.62, seed + i), M.rock);
+      st.position.set(cx + Math.cos(aa) * (rx * rr0 + 0.14), sr * 0.31, cz + Math.sin(aa) * (rz * rr0 + 0.14));
+      st.rotation.y = aa * 2.3; st.castShadow = st.receiveShadow = true; S.scene.add(st);
+    }
+    for (i = 0; i < 6; i++) { s = (s * 1664525 + 1013904223) >>> 0; lotus(cx + ((s % 100) / 100 - 0.5) * rx * 1.15, cz + ((s % 97) / 97 - 0.5) * rz * 1.05, 0.22 + (s % 50) / 500); }
   }
 
   /* ---------- 旱景石床（枯山水式：碎石浅床 + 沿边自然石一圈 + 床内立石组） ---------- */
@@ -2344,6 +2433,7 @@ window.MuseumScene = (function () {
 
   /* ---------- 总装入口 ---------- */
   function build(scene) {
+    HALL_DOORS.length = 0;
     S.scene = scene;
     initMaterials();
     buildGreenery();
@@ -2354,19 +2444,19 @@ window.MuseumScene = (function () {
     buildHuaniao();           // 花鸟 18×15（重檐正房）
     buildShanshui();          // 山水 15×15
     buildRenwu();             // 人物 16×9
-    buildYaji();              // 雅集室 12×7
-    buildJingyun();           // 景韵轩 9×8
+    /* 雅集室、景韵轩已撤除。 */
     buildWenchuang();         // 文创雅集馆：文创 / 临摹连续合并
     buildShuzhaiChashi();     // 书斋：书斋 / 茶室连续合并
     buildZhongxinCourt();     // 中心庭（17×13 广场 + 5×5 内院）
     /* 中央庭院只保留 buildZhongxinCourt() 的大水池；其余旧内院不再装配。 */
-    buildCorridors();         // 游廊系统（中轴双廊 + 东西横廊 + 南花园两廊）
+    buildAxisScreenWall();    // 序厅后方挡墙
+    buildCorridors();         // 只保留中轴画廊
     buildPocketGardens();
     buildLandscapeFill();     // 空旷草地：曲池、曲廊、山石组
     return { waters: WATERS };
   }
 
-  return { build: build, slots: S.slots, mats: M, ctx: S };
+  return { build: build, slots: S.slots, mats: M, ctx: S, hallDoors: HALL_DOORS };
 })();
 
 /* =====================================================================
