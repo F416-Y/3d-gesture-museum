@@ -22,14 +22,6 @@ window.MuseumExteriorSlots = {
         }
         return cache[id];
       }
-      function loadExternal(path) {
-        if (!cache[path]) {
-          cache[path] = new Promise(function (resolve) {
-            loader.load(path, function (g) { resolve(g.scene); }, undefined, function () { resolve(null); });
-          });
-        }
-        return cache[path];
-      }
       /* 克隆模板：按 mode('h' 对高度 / 'max' 对最大边) 缩放到 size，
          包围盒底面中心落到 (x,y,z)，可再绕 y 转 ry */
       function instantiate(tpl, o) {
@@ -185,13 +177,6 @@ window.MuseumExteriorSlots = {
       }
       /* 竖幅立轴画心（山水/人物/花鸟各厅墙面挂画用）：远山 + 近坡 + 枯树 + 朱印 */
       function scrollTexV(seed) {
-        /* 纯绘画厅优先使用真实馆藏图；素材未加载时再回退到程序化画心。 */
-        if (window.MuseumGallery && window.MuseumGallery.tex) {
-          var real = typeof seed === 'string' && window.MuseumGallery.texById
-            ? window.MuseumGallery.texById(seed)
-            : window.MuseumGallery.tex(seed);
-          if (real) return real;
-        }
         var cv = document.createElement('canvas'); cv.width = 96; cv.height = 192;
         var ctx = cv.getContext('2d');
         ctx.fillStyle = '#ece3cd'; ctx.fillRect(0, 0, 96, 192);
@@ -433,7 +418,6 @@ window.MuseumExteriorSlots = {
         var faceRy = horiz ? (bz < 0 ? 0 : Math.PI) : (bx < 0 ? Math.PI / 2 : -Math.PI / 2);
         function at(uOff, bOff) { return [h.cx + ux * uOff + bx * bOff, h.cz + uz * uOff + bz * bOff]; }
         var tag = h.tag;
-        var paintingOnly = (tag === '山水' || tag === '花鸟');
         var isBook = (tag === '书斋' || tag === '临摹');
         var seedBase = (Math.floor(Math.abs(h.cx) * 31 + Math.abs(h.cz) * 17) >>> 0);
         var shelfTpl = isBook ? (L.shelf || L.display) : (L.display || L.shelf);
@@ -482,7 +466,6 @@ window.MuseumExteriorSlots = {
           p = at(sig * (len / 2 - 0.42), bOff);
           wallScrollAt(p[0], p[1], Math.atan2(-sig * ux, -sig * uz), seed);
         }
-        function sideArtwork(sig, bOff, id) { sideScroll(sig, bOff, id); }
         function potAt(uOff, bOff, seed) { p = at(uOff, bOff); potted(p[0], p[1], floor, seed); }
         function pedestalAt(uOff, bOff, seed) { p = at(uOff, bOff); pedestalVase(p[0], p[1], floor, seed); }
         function pot2(uOff, bOff, seed) { p = at(uOff, bOff); scrollPot(p[0], p[1], floor, seed); }
@@ -631,8 +614,8 @@ window.MuseumExteriorSlots = {
           }
         }
       }
-      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), loadExternal('assets/models/venus.glb')]).then(function (fs) {
-        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], venus: fs[6] };
+      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse')]).then(function (fs) {
+        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
       });

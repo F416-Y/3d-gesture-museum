@@ -45,7 +45,7 @@ async function load() {
     const ids = await listFavorites(user.current);
     items.value = ids.map((id) => exhibitMeta(id)).filter((e) => e.id);
   } catch (e) {
-    console.warn("[云墨] 收藏加载失败：", e);
+    console.warn("[云间入墨] 收藏加载失败：", e);
   } finally {
     loading.value = false;
   }
@@ -61,7 +61,7 @@ async function remove(item) {
     await removeFavorite(user.current, item.id);
     items.value = items.value.filter((e) => e.id !== item.id);
   } catch (e) {
-    console.warn("[云墨] 取消收藏失败：", e);
+    console.warn("[云间入墨] 取消收藏失败：", e);
   }
 }
 

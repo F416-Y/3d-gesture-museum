@@ -19,6 +19,8 @@ window.MuseumMain = (function () {
   var cameraOn = false;
   var hallDoorPrompt = { door: null, dismissed: null };
   var interiorExitPrompt = { armed: false, open: false, dismissed: false, hallId: null, x: 0, z: 0 };
+  var seatPromptEl = null;
+  var seated = null;
 
   /* ---------- 全景俯瞰模式 ----------
    * player.js 每帧把相机锁在 1.6m 人眼高度、俯仰角为 0，所以只能第一人称。
@@ -38,6 +40,7 @@ window.MuseumMain = (function () {
   function init() {
     // 必须先初始化 UI：getStage() / getVideo() 依赖 init() 里缓存的 DOM 引用
     MuseumUI.init();
+    seatPromptEl = document.getElementById("seat-prompt");
 
     // 渲染器
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -94,10 +97,13 @@ window.MuseumMain = (function () {
       interiorExitPrompt.z = interiorSpawn[1];
     }
     MuseumExhibit.init();
+    /* 穿画流程：入口按钮 / 视频层 / 四画选择（组员1） */
+    if (window.MuseumInkWorlds) MuseumInkWorlds.init();
 
     // 回调接线
     MuseumPlayer.setOnHallChange(function (hallId) {
       MuseumUI.setHall(hallId);
+      if (window.MuseumInkWorlds) MuseumInkWorlds.setHall(hallId);
     });
     if (window.MuseumInteriorOnly) MuseumUI.setHall(window.MuseumInteriorHall || "hall4");
     MuseumExhibit.setOnFocusChange(function (exhibitId) {
@@ -126,7 +132,19 @@ window.MuseumMain = (function () {
   /* ---------- 事件绑定 ---------- */
   function bindEvents() {
     window.addEventListener("keydown", function (e) {
+      // 穿画视频 / 四画选择打开时，游戏快捷键全部让位给弹层
+      if (window.MuseumInkWorlds && MuseumInkWorlds.isBlocking()) return;
       keys[e.code] = true;
+      if (e.code === "KeyF") {
+        e.preventDefault();
+        if (!panorama.on && !MuseumUI.isPanelOpen()) toggleSeat();
+        return;
+      }
+      if (e.code === "Escape" && seated) {
+        e.preventDefault();
+        standUp();
+        return;
+      }
       if (e.code === "KeyE") { e.preventDefault(); MuseumExhibit.pick(); }
       // Q / Esc：关闭展品弹窗（看完信息后退出）
       if ((e.code === "KeyQ" || e.code === "Escape") && MuseumUI.isPanelOpen()) {
@@ -150,6 +168,7 @@ window.MuseumMain = (function () {
 
      // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
+      if (window.MuseumInkWorlds && MuseumInkWorlds.isBlocking()) return; // 穿画/四画选择时不吃鼠标
       if (panorama.on) return;                      // 全景模式下与键盘/E 键一致，不做拾取
       if (suppressClickAfterDrag) {
         suppressClickAfterDrag = false;
@@ -214,6 +233,51 @@ window.MuseumMain = (function () {
         }
       },
     });
+  }
+
+  function nearestSeat() {
+    if (seated || panorama.on || MuseumUI.isPanelOpen() || window.MuseumInteriorOnly) return null;
+    var seats = (MuseumScene.seats || []), p = MuseumPlayer.getPosition();
+    var nearest = null, best = 2.0;
+    for (var i = 0; i < seats.length; i++) {
+      var dx = p.x - seats[i].x, dz = p.z - seats[i].z;
+      var d = Math.sqrt(dx * dx + dz * dz);
+      if (d < best) { best = d; nearest = seats[i]; }
+    }
+    return nearest;
+  }
+
+  function updateSeatPrompt() {
+    if (!seatPromptEl) return;
+    if (seated) {
+      seatPromptEl.textContent = "正在观画 · 按 F 或 Esc 起身";
+      seatPromptEl.classList.add("show");
+      return;
+    }
+    var seat = nearestSeat();
+    if (seat) {
+      seatPromptEl.textContent = "中轴画廊观画坐凳 · 按 F 坐下";
+      seatPromptEl.classList.add("show");
+    } else {
+      seatPromptEl.classList.remove("show");
+    }
+  }
+
+  function toggleSeat() {
+    if (seated) { standUp(); return; }
+    var seat = nearestSeat();
+    if (!seat) return;
+    seated = seat;
+    MuseumPlayer.setSeated(true);
+    MuseumPlayer.teleport(seat.x, seat.z, seat.yaw);
+    MuseumUI.toast("已坐下观画 · 正面视角");
+  }
+
+  function standUp() {
+    if (!seated) return;
+    seated = null;
+    MuseumPlayer.setSeated(false);
+    MuseumUI.toast("已起身");
   }
 
   /* ---------- 展厅闭门提示 ---------- */
@@ -409,12 +473,14 @@ window.MuseumMain = (function () {
       fpsFrames = 0; fpsStamp = nowMs;
     }
 
+    var inkBlocking = !!(window.MuseumInkWorlds && MuseumInkWorlds.isBlocking());
     var gs = MuseumGesture.getState();
-    var input = composeInput(gs);
+    var input = inkBlocking ? NEUTRAL_INPUT : composeInput(gs);
 
     // 捏合：弹窗打开时关闭弹窗，否则拾取当前展品（等价于按 E）。
     // 边沿触发 + 600ms 冷却防连开连关；全景模式下不拾取（与点击一致），但仍可关弹窗
-    if (gs.pinchPressed && nowMs - lastPinchPick > 600) {
+    // 穿画 / 四画选择层打开时，捏合由 ink-worlds.js 自己消费，这里不响应
+    if (!inkBlocking && gs.pinchPressed && nowMs - lastPinchPick > 600) {
       lastPinchPick = nowMs;
       if (MuseumUI.isPanelOpen()) {
         MuseumUI.hidePanel();
@@ -423,7 +489,12 @@ window.MuseumMain = (function () {
       }
     }
 
-    if (panorama.on) {
+    if (seated) {
+      MuseumPlayer.update(dt, NEUTRAL_INPUT, camera);
+    } else if (inkBlocking) {
+      // 冻结漫游：键盘/手势都不驱动位移，画面停在原地看着弹层
+      MuseumPlayer.update(dt, NEUTRAL_INPUT, camera);
+    } else if (panorama.on) {
       // 冻结漫游位移（人站在原地看着，退出后回到原处），再覆写相机姿态
       MuseumPlayer.update(dt, NEUTRAL_INPUT, camera);
       updatePanorama(dt, input);
@@ -431,7 +502,8 @@ window.MuseumMain = (function () {
       MuseumPlayer.update(dt, input, camera);
       if (window.MuseumAvatar) MuseumAvatar.update(camera, dt);
     }
-    updateHallDoorPrompt();
+    if (!inkBlocking) updateHallDoorPrompt();
+    updateSeatPrompt();
     MuseumExhibit.update();
     MuseumScene.update();
     if (window.MuseumLighting) window.MuseumLighting.update(dt);   /* 昼夜平滑过渡 */

@@ -12,7 +12,7 @@ if (url && key) {
   supabase = createClient(url, key);
   ready = true;
 } else {
-  console.warn("[云墨] 未配置 Supabase 凭证（.env.local），用户/评论/收藏功能暂不可用");
+  console.warn("[云间入墨] 未配置 Supabase 凭证（.env.local），用户/评论/收藏功能暂不可用");
 }
 
 export { supabase, ready };

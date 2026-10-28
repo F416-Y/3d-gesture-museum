@@ -131,12 +131,16 @@ window.MuseumUI = (function () {
   function showHallPrompt(tag, onEnter, onCancel) {
     if (!el.panel || !el.panelBody) return;
     el.panelBody.innerHTML =
-      '<h2>进入' + esc(tag) + '展厅？</h2>' +
-      '<p class="p-desc">展厅大门已关闭。确认后进入' + esc(tag) + '展厅，取消则留在连廊。</p>' +
-      '<div class="p-hall-actions">' +
-        '<button id="hall-enter-btn" class="p-hall-enter" type="button">进入展厅</button>' +
-        '<button id="hall-cancel-btn" class="p-hall-cancel" type="button">取消</button>' +
-      '</div>';
+      '<section class="panel-card hall-prompt-card" aria-labelledby="hall-prompt-title">' +
+        '<div class="hall-prompt-kicker"><span>展厅导览</span><span>ENTRY · 入口</span></div>' +
+        '<h2 id="hall-prompt-title">进入' + esc(tag) + '展厅？</h2>' +
+        '<div class="hall-prompt-rule"></div>' +
+        '<p class="p-desc">展厅大门已关闭。确认后进入' + esc(tag) + '展厅，取消则暂留门外。</p>' +
+        '<div class="p-hall-actions">' +
+          '<button id="hall-enter-btn" class="p-hall-enter" type="button"><span>进入展厅</span><b>→</b></button>' +
+          '<button id="hall-cancel-btn" class="p-hall-cancel" type="button">暂留门外</button>' +
+        '</div>' +
+      '</section>';
     el.panel.classList.add("open");
     el.panel.setAttribute("aria-hidden", "false");
     var enter = document.getElementById("hall-enter-btn");

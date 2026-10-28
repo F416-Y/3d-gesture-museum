@@ -4,7 +4,7 @@
  *       组员1 —— 接缝（碰撞体 / 展品热点 / 展厅区域 / 性能）
  * ------------------------------------------------------------
  * 职责：
- *   1. 搭建「云墨美术馆」园区：地面、草坪、道路、围墙、门柱、行道树
+ *   1. 搭建「云间入墨」园区：地面、草坪、道路、围墙、门柱、行道树
  *   2. 搭建博物馆主楼外观（新中式：基座、一层大厅、二层外观、四坡屋顶、匾额）
  *   3. 搭建可进入的室内展厅：一楼中国绘画厅 + 西侧文明对话连廊
  *   4. 布置展品（程序化名画贴图 / 几何雕塑，组员6 可替换为真实素材）
@@ -22,6 +22,7 @@ window.MuseumScene = (function () {
   var scene = null;
   var camera = null;
   var spotMeshes = [];          // 展品热点 mesh（exhibit.js 拾取用）
+  var seats = [];               // 可坐观画点（main.js 交互用）
   var obstacles = [];           // 碰撞体（player.js 用）
   var animWindowDoors = [];     // 微风摆动的窗扇门（buildPartWindowWall 注册）
   var hallRegions = {};         // 展厅区域判定（player.js 用）
@@ -918,8 +919,22 @@ window.MuseumScene = (function () {
         buildBox(g, 0.16, oh + 0.12, th + 0.08, o.u + ow / 2 + 0.08, bodyY + (oh + 0.12) / 2, 0, brick);
         buildBox(g, ow + 0.32, 0.18, th + 0.08, o.u, bodyY + oh + 0.09, 0, brick);
         if (opt.steps !== false) buildPartDoorSteps(g, o.u, ow, bodyY, opt.outward || 1, th);
-        /* 双扇门：大敞开 —— 绕门轴转到 80°，两扇都朝墙外侧折开，洞口全通透 */
-        var leafW = ow / 2 - 0.04, openA = 1.40;
+      /* 独立展厅内饰使用闭合门；园区外观仍保持原来的敞开门效果。 */
+      var leafW = ow / 2 - 0.04;
+      if (window.MuseumInteriorOnly) {
+        [-1, 1].forEach(function (s) {
+          var leaf = new _g.Mesh(new _g.BoxGeometry(leafW, oh - 0.06, 0.06), wood);
+          leaf.position.set(o.u + s * (leafW / 2),
+                            bodyY + (oh - 0.06) / 2,
+                            0);
+          leaf.castShadow = true;
+          g.add(leaf);
+        });
+        /* 中缝略加深，避免两扇门看起来像一整块墙 */
+        buildBox(g, 0.045, oh - 0.06, 0.075, o.u,
+          bodyY + (oh - 0.06) / 2, 0, brick);
+      } else {
+        var openA = 1.40;
         [-1, 1].forEach(function (s) {
           var hinge = o.u + s * (ow / 2);
           var leaf = new _g.Mesh(new _g.BoxGeometry(leafW, oh - 0.06, 0.06), wood);
@@ -930,6 +945,7 @@ window.MuseumScene = (function () {
           leaf.castShadow = true;
           g.add(leaf);
         });
+      }
       } else {
         var wh = oh || 1.2;
         if (sill > 0) buildBox(g, ow, sill, th, o.u, bodyY + sill / 2, 0, plaster);
@@ -1006,7 +1022,7 @@ window.MuseumScene = (function () {
      *
      * 进度：已建 hall2 花鸟画展区（样板厅，函数定义见本函数下方）
      *       待建 hall0 序厅 / hall1 山水展区 / hall3 人物展区 /
-     *            hall4 书斋茶室 / hall5 文创区 / 中央庭院 courtyard
+     *            hall4 书斋 / hall5 文创雅集馆 / 中央庭院 courtyard
      *            （含水池、太湖石、竹丛、东西曲廊、马头墙与漏窗）
      * ============================================================ */
 
@@ -1674,7 +1690,7 @@ window.MuseumScene = (function () {
 
     var plaque = new _g.Mesh(
       new _g.PlaneGeometry(2.6, 0.9),
-      canvasMat(drawSign("云墨", "美术馆"), { side: _g.DoubleSide })
+      canvasMat(drawSign("云间入墨", "美术馆"), { side: _g.DoubleSide })
     );
     plaque.position.set(x, 3.75, z + 0.31);
     root.add(plaque);
@@ -1930,7 +1946,7 @@ window.MuseumScene = (function () {
     buildPartHorseHeadWall(g, halfW, 1, -halfD, halfD, WH);
 
     // 背景墙（北墙中央馆名 + 山水底纹）
-    buildPartBackdrop(g, W - 1.2, 3.0, "云墨美术馆");
+    buildPartBackdrop(g, W - 1.2, 3.0, "云间入墨");
 
     // 四根木柱
     buildPartColumn(g, -6, -3, WH, 0.35);
@@ -2211,7 +2227,7 @@ window.MuseumScene = (function () {
     addPainting(g, { x: 0, y: 2.6, z: -halfD + 0.2, ry: 0, lamp: [0, 0.9] }, 4.0, 1.8, "xishanxinglvtu");
     buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0);
     buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0);
-    buildPartHallTitle(g, "书斋茶室", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
+    buildPartHallTitle(g, "书斋", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
 
     // 中央茶席长案 3.2m x 1m + 六方凳
     buildPartLongTable(g, 0, F, 0, 3.2, 1.0);
@@ -2262,7 +2278,7 @@ window.MuseumScene = (function () {
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
     // 北墙：匾额 + 五幅小画
-    buildPartHallTitle(g, "文创雅集", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
+    buildPartHallTitle(g, "文创雅集馆", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
     [-4, -2, 0, 2, 4].forEach(function (px, idx) {
       var ids = ["xieshengzhenqintu", "wuniutu", "fuchunshanjv", "xishanxinglvtu", "qianlijiangshan"];
       addPainting(g, { x: px, y: 2.05, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 0.9, 1.35, ids[idx]);
@@ -2603,28 +2619,9 @@ window.MuseumScene = (function () {
    * 展品热点登记（proto 布局）
    * ------------------------------------------------------------
    * 坐标见 docs/展品落位表.md 与 tools/exhibit-anchors.json。
-   * 9 幅画挂中轴双廊的画廊墙（半壁墙 x=±8.1，画面在 x=±7.96），
+   * 人物厅承载中西对照展线；中轴画廊保留中国画主线。
    * 玩家走中间过道、两侧都能触发；3 件雕塑在序厅 / 人物厅 / 中心庭。
    * ============================================================ */
-  /* ============================================================
-   * 中西对话 · 对话院（景观庭院，x 11.5~18 / z −15~−7）
-   *   · 米洛的维纳斯（assets/models/venus.glb，CC0，SMK 扫描）
-   *   · 蒙娜丽莎 / 星月夜（assets/images/*.jpg，PD-old，维基共享资源）
-   * 位置说明：原稿放在中心庭东侧（x≈9, z≈−13）会堵住东长廊西口，现改到景观庭院
-   *           东侧围栏内、与「清泉石上流」影壁同院 —— 展线为"看完中国画三厅 → 进对话院看西画对照"。
-   * 故事线：docs/展陈故事线-中西对话.md（人像 / 风景 / 形体 三组对照）
-   * ============================================================ */
-  function buildWesternCorner(scene) {
-    var wx = 17.3, wz = -11.5;      // 景观庭院东侧围栏内（画朝西，对着院内）
-    var wall = new _g.Mesh(new _g.BoxGeometry(0.28, 3.6, 5.0), mat(0xefe9dc, { roughness: 0.9 }));
-    wall.position.set(wx, 1.95, wz);
-    wall.castShadow = true; wall.receiveShadow = true;
-    scene.add(wall);
-    obstacles.push({ type: "rect", x0: wx - 0.15, z0: wz - 2.6, x1: wx + 0.15, z1: wz + 2.6 });
-    addPainting(scene, { x: wx - 0.05, y: 2.45, z: wz - 1.1, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "monalisa");
-    addPainting(scene, { x: wx - 0.05, y: 2.45, z: wz + 1.1, ry: -Math.PI / 2, lamp: [-0.9, 0] }, 2.4, 1.6, "starrynight");
-    addVenusSculpture(scene, wx - 1.9, 0.8, wz);
-  }
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
       var paintings = [
@@ -2677,14 +2674,13 @@ window.MuseumScene = (function () {
    * 数据来源：docs/外观原型-坐标对接表.md（组长按原型抽的院墙/台基范围）。
    * 原型只画外观、不提供碰撞体，这里按表逐栋补上。
    * 规则：
-   *   - 院落式：登记一圈院墙，主门洞（表里「洞口宽」）与后门断开；
+   *   - 院落式：登记一圈院墙，只保留主门洞与必要的侧门；
    *     人物厅西墙另有 2.5m 侧门（对齐游廊端头）。
    *   - 单体式（雅集/兰竹）：没有院墙，按正房面阔×进深登记四面墙，
    *     正门 2.6m / 后门 1.8m 断开（与 buildHall 实际留洞一致）。
    *   - ⚠️ 台基一律不登记：序厅 1.2m 高台由 player.js 的 terrainHeightAt 高度跟随处理。
    * ============================================================ */
   var WALL_T = 0.4;        // 墙体厚（对齐原型 wallRun/fenceRun 的量级）
-  var BACK_DOOR_W = 1.8;   // 院落式后门净宽（原型 buildCourtComplex「后墙留 1.8m 门洞」）
 
   function rectObs(x0, z0, x1, z1) {
     obstacles.push({ type: "rect", x0: Math.min(x0, x1), z0: Math.min(z0, z1),
@@ -2712,18 +2708,14 @@ window.MuseumScene = (function () {
     });
   }
 
-  /* 一圈院墙/墙体：四边各挖该边的门洞（主门 / 后门 / 侧门）。
-     b.noBack = true 表示该院无后门（原型调用里不带 backdoor，后墙整面封死） */
+  /* 一圈院墙/墙体：只挖主门与明确登记的侧门，后墙始终封实。 */
   function pushEnclosure(b) {
     var cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
-    var back = { N: 'S', S: 'N', E: 'W', W: 'E' }[b.entry];
-    var backW = b.backW || BACK_DOOR_W;
     function gaps(side) {
       var alongX = (side === 'N' || side === 'S');
       var g = [];
       if (side === b.entry) g.push({ c: alongX ? cx : cz, w: b.gate });
-      else if (side === back && !b.noBack) g.push({ c: alongX ? cx : cz, w: backW });
-      if (b.sideDoor && b.sideDoor[side] !== undefined) g.push({ c: b.sideDoor[side], w: BACK_DOOR_W });
+      if (b.sideDoor && b.sideDoor[side] !== undefined) g.push({ c: b.sideDoor[side], w: 1.8 });
       return g;
     }
     pushWallRun('x', b.z0, b.x0, b.x1, gaps('N'));
@@ -2734,15 +2726,13 @@ window.MuseumScene = (function () {
 
   function registerProtoObstacles() {
     /* 院落式：矩形取对接表的「院墙范围」，gate 取「洞口宽」 */
-    [
+    if (!window.MuseumNoCorridors) [
       { x0: -11, x1: 11,    z0: -37.5,  z1: -21,    entry: 'S', gate: 5.4 },                        // 花鸟 hall2
-      { x0: 28,  x1: 45.5,  z0: -21,    z1: -10,    entry: 'S', gate: 5.4, sideDoor: { W: -16 } },  // 人物 hall3（西墙侧门接东长廊）
-      { x0: -46, x1: -28.5, z0: -20,    z1: -5,     entry: 'E', gate: 5.4, noBack: true },         // 山水 hall1（后门已取消：架排后墙封死）
-      { x0: 34,  x1: 42,    z0: 6,      z1: 19,     entry: 'W', gate: 3.8 },                        // 书斋 hall4
-      { x0: -45, x1: -34,   z0: 8,      z1: 21,     entry: 'E', gate: 3.8 },                        // 文创 hall5
+      { x0: 28,  x1: 49.5,  z0: -21,    z1: -10,    entry: 'S', gate: 5.4, sideDoor: { W: -16 } },  // 人物 hall3（西墙侧门接东长廊）
+      { x0: -50, x1: -28.5, z0: -20,    z1: -5,     entry: 'E', gate: 5.4, noBack: true },         // 山水 hall1（后门已取消：架排后墙封死）
+      { x0: 34,  x1: 46,    z0: 6,      z1: 33,     entry: 'W', gate: 2.4 },                        // 书斋（书斋/茶室合并） hall4
       { x0: 33,  x1: 45,    z0: -34.75, z1: -25.25, entry: 'S', gate: 3.8 },                        // 景韵（装饰）
-      { x0: 34,  x1: 42,    z0: 20,     z1: 33,     entry: 'W', gate: 3.8 },                        // 茶室（装饰）
-      { x0: -45, x1: -34,   z0: 22,     z1: 35,     entry: 'E', gate: 3.8 },                        // 临摹（装饰）
+      { x0: -49, x1: -34,   z0: 8,      z1: 35,     entry: 'E', gate: 2.4 },                        // 文创雅集馆（文创/临摹合并） hall5
     ].forEach(pushEnclosure);
 
     /* 各栋正房（厅本体）另由 registerProtoHallWalls() 读 slots.hall 登记 */
@@ -2763,11 +2753,22 @@ window.MuseumScene = (function () {
       pushEnclosure({
         x0: h.cx - h.w / 2, x1: h.cx + h.w / 2,
         z0: h.cz - h.d / 2, z1: h.cz + h.d / 2,
-        entry: h.entry, gate: 2.6, backW: 1.8,
-        /* 山水馆后门已取消：原型 buildShanshui 的 opts 里没有 backdoor，
-           该开关同时管「馆本体后墙」与「院墙后门」两处（见原型 buildHall:659 / buildCourtComplex:811） */
-        noBack: h.tag === '山水',
+        entry: h.entry, gate: 2.6,
       });
+    });
+  }
+
+  /* 闭门展厅：门体本身是外观生成物，碰撞层按同一坐标补一条薄门障碍。
+     玩家必须在门外确认进入，避免从门缝直接穿入院内。 */
+  function registerProtoHallDoors() {
+    var doors = (window.MuseumExteriorLayout && window.MuseumExteriorLayout.hallDoors) || [];
+    doors.forEach(function (d) {
+      var half = (d.w || d.width || 2.6) / 2;
+      if (Math.abs(d.nz) > 0.5) {
+        obstacles.push({ type: 'rect', x0: d.x - half, z0: d.z - 0.18, x1: d.x + half, z1: d.z + 0.18 });
+      } else {
+        obstacles.push({ type: 'rect', x0: d.x - 0.18, z0: d.z - half, x1: d.x + 0.18, z1: d.z + half });
+      }
     });
   }
 
@@ -2794,15 +2795,8 @@ window.MuseumScene = (function () {
     /* 东、西两墙 */
     seg(-50, -40, -50, 40);
     seg(50, -40, 50, 40);
-    /* 北墙：中央 x±6.5 外凸至 z=-43（北门楼），中间留空为北门 */
-    seg(-50, -40, -6.5, -40);
-    seg(-6.5, -40, -6.5, -43);
-    seg(-6.5, -43, 6.5, -43);
-    seg(6.5, -43, 6.5, -40);
-    seg(6.5, -40, 50, -40);
-    /* 北门楼内两侧墙垛（原型 z -42.15~-41.05、x ±3.3~±6.5 的实体，中间 x±3.3 为门洞） */
-    rectObs(-6.5, -42.15, -3.3, -41.05);
-    rectObs(3.3, -42.15, 6.5, -41.05);
+    /* 北墙拉直为 z=-40，北门与中央外凸部整体取消。 */
+    seg(-50, -40, 50, -40);
     /* 南墙：两角 z=40 → 内折 z=36，中央 x±11 留作序厅大门 */
     seg(26, 40, 50, 40);
     seg(26, 40, 26, 36);
@@ -2832,12 +2826,11 @@ window.MuseumScene = (function () {
        原「后墙照壁（z=25）」已迁至中轴南院 z=20.2（见 registerProtoDeco），此处不再堵墙 */
     rectObs(-11.0, 24.5, -2.6, 24.74);
     rectObs(2.6, 24.5, 11.0, 24.74);
-    /* 侧墙（x=±7.25）：东月洞门 z=26.5 留空 [25.0, 28.1]、西月洞门 z=28.5 留空 [27.0, 30.0]
-       （原型 wallRun 分段；两门已挪成不对称，不再是同一 z） */
-    rectObs(-7.45, 24.5, -7.05, 27.0);
-    rectObs(-7.45, 30.0, -7.05, 34.5);
-    rectObs(7.05, 24.5, 7.45, 25.0);
-    rectObs(7.05, 28.1, 7.45, 34.5);
+    /* 侧墙（x=±7.25）：按完整高度月洞的 3.3m 净洞宽留空，避免碰撞层把洞口重新堵死。 */
+    rectObs(-7.45, 24.5, -7.05, 26.85);
+    rectObs(-7.45, 30.15, -7.05, 34.5);
+    rectObs(7.05, 24.5, 7.45, 24.85);
+    rectObs(7.05, 28.15, 7.45, 34.5);
     /* 侧院围栏（x=±11.25）：各留廊门洞 */
     rectObs(11.11, 24.5, 11.39, 25.25);
     rectObs(11.11, 27.75, 11.39, 34.5);
@@ -2851,7 +2844,7 @@ window.MuseumScene = (function () {
       [24.45, 26.35, 32.65, 34.55].forEach(function (z) { circleObs(x, z, 0.24); });
     });
     /* 台上铜鼎（原型 slots.ding 落点） */
-    circleObs(0, 29.5, 1.02);
+    circleObs(0, 27.5, 1.02);
     /* 南门外守门石狮一对（原型 buildSouthEntrance 的 lion(±5.9, 37.6)，通座高约 2.5m）。
        在园区南墙外的前庭广场上，属墙外范围 —— 见 PR 描述，请组长确认是否要挡 */
     circleObs(-5.9, 37.6, 0.95);
@@ -2867,56 +2860,29 @@ window.MuseumScene = (function () {
    *         檐枋挂落屋顶（在头顶）、水面（需另做禁行区，本轮未做）。
    * ============================================================ */
   function registerProtoDeco() {
-    /* 游廊坐槛：两列通长实心条，玩家只能走中间净宽约 1.5m */
+    /* 游廊坐槛：两列通长实心条，按当前模型留出更宽的第三人称行走净宽 */
     [
-      [-8.55, 9.5, -8.25, 20.4], [-5.75, 9.5, -5.45, 20.4],        // 中轴西廊（corridor(-7,9.5,-7,20.4, cw 3.2)；坐槛在 ±(w/2-0.2)=±1.4）
-      [5.45, 9.5, 5.75, 20.4], [8.25, 9.5, 8.55, 20.4],            // 中轴东廊（同上）
+      [-8.85, 9.5, -8.55, 20.4], [-5.45, 9.5, -5.15, 20.4],        // 中轴西廊（cw 3.8；坐槛在 ±1.7）
+      [5.15, 9.5, 5.45, 20.4], [8.55, 9.5, 8.85, 20.4],            // 中轴东廊（同上）
       [-28.5, -13.55, -8.5, -13.25], [-28.5, -11.75, -8.5, -11.45],// 西长廊
-      [8.5, -17.8, 27.9, -17.6],                                   // 东长廊北侧画廊墙（galleryWallX z=-17.7）
-      [8.5, -14.95, 12.55, -14.65], [14.45, -14.95, 27.9, -14.65], // 东长廊南侧坐槛（中心 -14.8）：对景观庭院北口断开
+      [8.5, -17.8, 27.9, -17.6],                                   // 东长廊北侧画廊墙
+      [8.5, -14.75, 12.55, -14.45], [14.45, -14.75, 27.9, -14.45], // 东长廊南侧坐槛
       [11, 27.25, 34, 27.55], [11, 25.45, 34, 25.75],              // 南花园东廊
       [-34, 29.25, -11, 29.55], [-34, 27.45, -11, 27.75],          // 南花园西廊
       [-24.25, -34, -23.95, -24.2], [-26.05, -34, -25.75, -24.2],  // 枯山水曲廊（沿 z）
       [-25, -33.25, -13.5, -32.95], [-25, -35.05, -13.5, -34.75],  // 枯山水曲廊（沿 x）
       /* 画廊半壁墙（galleryWall：len 10.4 / zc 15.5 → z 10.3~20.7，8 幅画挂在这两道墙上（x=±8.9）） */
       [-8.975, 10.3, -8.825, 20.7], [8.825, 10.3, 8.975, 20.7],
+      [-17.85, 8.3, -17.55, 27.6],                                // 东长廊画墙
     ].forEach(function (r) { rectObs(r[0], r[1], r[2], r[3]); });
 
     /* 观澜亭四柱：**新原型里观澜亭已整个拆除**
        （tools/exterior-prototype.html 全文搜不到「观澜亭」，halfPavilion 只在
         水榭庭院 (6.0, 4.2) 出现一次），原四柱碰撞体是幽灵墙，删掉 */
 
-    /* 中轴影壁（z=18.8，原型 buildAxisCourt）：收窄至 5.8m 并后移，避开序厅踏跺 */
-    rectObs(-2.9, 18.275, 2.9, 19.325);
+    /* 序厅后方无门挡墙：宽 6.4m，位于两侧连廊内缘之间。 */
+    rectObs(-3.2, 18.275, 3.2, 19.325);
 
-    /* 中心庭（17×13 碎石广场）：5×5 内院围栏在新原型里**已撤**
-       （原件 buildZhongxinCourt 注释：「主树四周敞开，树石直接落在碎石广场上」），
-       故只登记树石家具本体，不再登记围栏 */
-    circleObs(0, -13.4, 0.32);          // 中心主树（冠幅约 6m，可走树下）
-    circleObs(-1.5, -14.4, 0.9);        // 太湖石
-    circleObs(1.4, -12.0, 0.4);
-    circleObs(5.8, -9.5, 1.05);         // 石桌
-    rectObs(-6.6, -9.73, -5.0, -9.28);  // 石凳
-    /* 筒车水院（原型 waterwheel(0, -9)）：石砌长方池内净 3.6×2.0 + 池壁 → x[-2.3,2.3] z[-10.5,-7.5]，
-       池中直径 3m 双辐条大立轮（圆心 (0,-9)、外缘 r≈1.5）。
-       原「中心庭叠水喷泉 (0,-8.3) r=1.9」已取消；高架木槽在头顶 y≈2.85 不登记 */
-    rectObs(-2.3, -10.5, 2.3, -7.5);
-    circleObs(0, -9, 1.6);
-    rectObs(3.32, -16.78, 3.88, -16.22);// 石灯
-    circleObs(-4.0, -16.3, 0.22);
-    circleObs(2.2, -16.2, 0.5);
-
-    /* 水榭庭院：围栏（南面正门、北面北门各留 2.4m）+ 平台柱 + 假山 + 半亭柱 */
-    rectObs(-7, -5.14, -1.2, -4.86);
-    rectObs(1.2, -5.14, 7, -4.86);
-    rectObs(-1.5, -5.3, -0.9, -4.7);    // 北门楼西柱
-    rectObs(0.9, -5.3, 1.5, -4.7);      // 北门楼东柱
-    rectObs(-7.14, -5, -6.86, 7);
-    rectObs(6.86, -5, 7.14, 7);
-    rectObs(-7, 6.86, -1.2, 7.14);
-    rectObs(1.2, 6.86, 7, 7.14);
-    rectObs(-1.5, 6.7, -0.9, 7.3);
-    rectObs(0.9, 6.7, 1.5, 7.3);
     [2.9, 5.5].forEach(function (x) {
       [-0.2, 1.4].forEach(function (z) { circleObs(x, z, 0.11); });
     });
@@ -2927,40 +2893,6 @@ window.MuseumScene = (function () {
     circleObs(5.3, 5.3, 0.19);
     circleObs(3.2, 5.3, 0.2);
     circleObs(3.6, -3.4, 1.05);
-
-    /* 山石庭院：围栏（南留 2.4m、东留 2m 门洞）+ 山石 */
-    rectObs(-26.5, -6.14, -13.5, -5.86);
-    rectObs(-26.5, 5.86, -21.2, 6.14);
-    rectObs(-18.8, 5.86, -13.5, 6.14);
-    rectObs(-26.64, -6, -26.36, 6);
-    rectObs(-13.64, -6, -13.36, -1);
-    rectObs(-13.64, 1, -13.36, 6);
-    circleObs(-21.2, -0.6, 1.3);
-    circleObs(-18.6, 1.2, 0.75);
-    circleObs(-22.4, 2.6, 0.55);
-    circleObs(-19.5, -3.2, 0.48);
-
-    /* 荷池庭院：围栏（南留 2.8m 门洞）；荷池水面本轮不登记 */
-    rectObs(15.5, 5.76, 26.5, 6.04);
-    rectObs(15.5, 16.86, 19.6, 17.14);
-    rectObs(22.4, 16.86, 26.5, 17.14);
-    rectObs(15.36, 5.9, 15.64, 17);
-    rectObs(26.36, 5.9, 26.64, 17);
-
-    /* 兰竹庭院：三面围栏，南侧开放 */
-    rectObs(30, -3.14, 36, -2.86);
-    rectObs(29.86, -3, 30.14, 1);
-    rectObs(35.86, -3, 36.14, 1);
-
-    /* 景观庭院（原型已扩为 x 11.5~18 × z -15~-7 约 6.5×8m，北门楼拆除）：
-       北口 x 12.8~14.2、南口 x 15.2~16.8（南口东移，避开题刻墙轴线） */
-    rectObs(11.5, -15.14, 12.8, -14.86);   // 北栅栏西段
-    rectObs(14.2, -15.14, 18, -14.86);     // 北栅栏东段
-    rectObs(11.5, -7.14, 15.2, -6.86);     // 南栅栏西段
-    rectObs(16.8, -7.14, 18, -6.86);       // 南栅栏东段
-    rectObs(11.36, -15, 11.64, -7);        // 西栅栏
-    rectObs(17.86, -15, 18.14, -7);        // 东栅栏（原型 fenceRun(18, -15, 18, -7)，原登记在 x=15.5）
-    rectObs(12.35, -7.95, 14.65, -7.45);   // 影壁题刻墙「清泉石上流」（z=-7.7，含墨瓦压顶）
 
     /* 干涸河床的立石（床面可站，只有石头挡人） */
     circleObs(-19.15, -29.48, 0.5);
@@ -3015,12 +2947,45 @@ window.MuseumScene = (function () {
   /* ============================================================
    * 对外 API
    * ============================================================ */
+  function buildInteriorOnly(hallId) {
+    /* 独立内饰页：只生成选中的展厅，不叠加园区外观或外部门。 */
+    var builders = {
+      hall0: buildHall0,
+      hall1: buildHall1,
+      hall2: buildHall2,
+      hall3: buildHall3,
+      hall4: buildHall4,
+      hall5: buildHall5
+    };
+    var buildOne = builders[hallId] || builders.hall4;
+    buildOne(scene);
+    scene.background = new _g.Color(0xece6d8);
+    scene.fog = new _g.Fog(0xece6d8, 28, 90);
+    var hemi = new _g.HemisphereLight(0xfff4e0, 0x3b3228, 1.1);
+    scene.add(hemi);
+    var sun = new _g.DirectionalLight(0xfff0d8, 1.2);
+    sun.position.set(10, 16, 12);
+    scene.add(sun);
+    var bounds = {
+      hall0: [-10, 24, 10, 34], hall1: [-34, -22, -16, -4],
+      hall2: [-12, -24, 12, -8], hall3: [16, -22, 34, -4],
+      hall4: [16, 6, 32, 20], hall5: [-32, 6, -16, 20]
+    }[hallId] || [16, 6, 32, 20];
+    hallRegions[hallId || "hall4"] = { type: "rect", x0: bounds[0], z0: bounds[1], x1: bounds[2], z1: bounds[3] };
+  }
+
   return {
     init: function (opts) {
       scene = opts.scene;
       camera = opts.camera;
       obstacles.length = 0;
       spotMeshes.length = 0;
+
+      var interiorOnly = !!window.MuseumInteriorOnly;
+      if (interiorOnly) {
+        buildInteriorOnly(window.MuseumInteriorHall || "hall4");
+        return;
+      }
 
       /* 布局来源：严格遵循外观原型 tools/exterior-prototype.html
          （原作者 Kimi；整块搬入 js/exterior-layout.js）
@@ -3029,6 +2994,8 @@ window.MuseumScene = (function () {
       if (useProtoLayout) {
         window.MuseumExteriorLayout.addLights(scene);
         window.MuseumExteriorLayout.build(scene);
+        seats.length = 0;
+        Array.prototype.push.apply(seats, window.MuseumExteriorLayout.seats || []);
         /* 真模型接线：读原型的 slots 登记表，把代码件换成 assets/models/parts/opt/ 里的 GLB
            （门楼/石狮/青铜鼎/太湖石/景观石/树/竹…；任何一件失败就保留代码件） */
         if (window.MuseumExteriorSlots) window.MuseumExteriorSlots.install(scene);
@@ -3036,12 +3003,13 @@ window.MuseumScene = (function () {
         registerProtoObstacles();
         registerProtoBoundary();
         registerProtoHallWalls();
+        registerProtoHallDoors();
         registerProtoXuting();
         registerProtoDeco();
         registerProtoEntities();
         /* 展品热点：同上（旧路径自带 20 条，此处只补 proto 布局缺的 12 条） */
         registerProtoExhibitSpots();
-        /* 中西绘画已统一迁入人物厅，不再在中心庭院生成重复画廊。 */
+        /* 组员6：西方绘画与雕塑（新增展品，置于中心庭院东侧）*/
       } else {
         buildJiangnanCompound(scene);
       }
@@ -3075,11 +3043,11 @@ window.MuseumScene = (function () {
           plaza:     { type: "rect",  x0: -26,  z0: 34,   x1: 26,   z1: 41 },     // 南入口前庭（六级大台阶）
           hall0:     { type: "rect",  x0: -11,  z0: 24.5, x1: 11,   z1: 34.5 },   // 序厅（高台基 22×10）
           courtyard: { type: "rect",  x0: -9,   z0: -20,  x1: 9,    z1: 24.5 },   // 中轴庭院带（轴线庭+水榭+中心庭）
-          hall1:     { type: "rect",  x0: -46,  z0: -20,  x1: -28.5, z1: -5 },    // 山水画展区（院落 17.5×15）
+          hall1:     { type: "rect",  x0: -50,  z0: -20,  x1: -28.5, z1: -5 },    // 山水画展区（外侧扩院）
           hall2:     { type: "rect",  x0: -11,  z0: -37.5, x1: 11,  z1: -21 },    // 花鸟画展区（院落 22×16.5）
-          hall3:     { type: "rect",  x0: 28,   z0: -21,  x1: 45.5, z1: -10 },    // 人物画展区（院落 17.5×11）
-          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 42,   z1: 35.5 },   // 书斋 + 茶室（两个院落，z 6~35.5）
-          hall5:     { type: "rect",  x0: -45,  z0: 8,    x1: -34,  z1: 35.5 },   // 文创 + 临摹（两个院落，z 8~35.5）
+          hall3:     { type: "rect",  x0: 28,   z0: -21,  x1: 49.5, z1: -10 },    // 人物画展区（外侧扩院）
+          hall4:     { type: "rect",  x0: 34,   z0: 6,    x1: 46,   z1: 35.5 },   // 书斋（外侧扩院）
+          hall5:     { type: "rect",  x0: -49,  z0: 8,    x1: -34,  z1: 35.5 },   // 文创雅集馆（外侧扩院）
         });
       } else {
         Object.assign(hallRegions, {
@@ -3110,6 +3078,8 @@ window.MuseumScene = (function () {
       buildPartWindowWall(parent, x, y0, y1, z0, z1, ry);
     },
     obstacles: obstacles,
+    hallDoors: (window.MuseumExteriorLayout && window.MuseumExteriorLayout.hallDoors) || [],
+    seats: seats,
     spotMeshes: spotMeshes,
     hallRegions: hallRegions,
     getHallAt: function (x, z) {
