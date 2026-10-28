@@ -651,31 +651,20 @@ window.MuseumScene = (function () {
     }
     return cv.canvas;
   }
-  /* 木格花窗（新中式视觉关键元素，替换原来纯黑窗洞） */
-  function drawLattice() {
-    var cv = makeCanvas(256, 320);
+  /* 素窗纸：不含任何棂条格子与对角交叉。
+     用户要求墙上挂画附近不要再出现「田字格方框」和「十字木架」，
+     原来贴木格花窗的位置统一改用这张。 */
+  function drawPlainWindow() {
+    var cv = makeCanvas(128, 160);
     var ctx = cv.ctx;
-    ctx.fillStyle = "#17140f";
-    fillRect(ctx, 0, 0, 256, 320);
-    var warm = ctx.createRadialGradient(128, 150, 16, 128, 150, 190);
-    warm.addColorStop(0, "rgba(255,214,150,0.42)");
-    warm.addColorStop(1, "rgba(255,214,150,0.02)");
+    ctx.fillStyle = "#f3eee2";
+    fillRect(ctx, 0, 0, 128, 160);
+    /* 极淡的暖光晕，避免像一块死白板 */
+    var warm = ctx.createRadialGradient(64, 76, 12, 64, 76, 96);
+    warm.addColorStop(0, "rgba(255,242,214,0.55)");
+    warm.addColorStop(1, "rgba(255,242,214,0.06)");
     ctx.fillStyle = warm;
-    fillRect(ctx, 0, 0, 256, 320);
-    ctx.strokeStyle = "#7a5f46";
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4, 4, 248, 312);
-    ctx.lineWidth = 5;
-    for (var i = 1; i <= 3; i++) {
-      ctx.beginPath(); ctx.moveTo(i * 64, 0); ctx.lineTo(i * 64, 320); ctx.stroke();
-    }
-    for (var j = 1; j <= 4; j++) {
-      ctx.beginPath(); ctx.moveTo(0, j * 64); ctx.lineTo(256, j * 64); ctx.stroke();
-    }
-    ctx.strokeStyle = "#8d6c4e";
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(256, 320); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(256, 0); ctx.lineTo(0, 320); ctx.stroke();
+    fillRect(ctx, 0, 0, 128, 160);
     return cv.canvas;
   }
 
@@ -1218,7 +1207,7 @@ window.MuseumScene = (function () {
         buildBox(g, 0.18, wh + 0.24, th + 0.08, o.u + ow / 2 + 0.09, bodyY + sill + wh / 2, 0, brick);
         buildBox(g, ow + 0.36, 0.18, th + 0.08, o.u, bodyY + sill - 0.09, 0, brick);
         buildBox(g, ow + 0.36, 0.18, th + 0.08, o.u, bodyY + sill + wh + 0.09, 0, brick);
-        var pane = new _g.Mesh(new _g.PlaneGeometry(ow, wh), canvasMat(drawLattice(), { roughness: 0.55, side: _g.DoubleSide }));
+        var pane = new _g.Mesh(new _g.PlaneGeometry(ow, wh), canvasMat(drawPlainWindow(), { roughness: 0.55, side: _g.DoubleSide }));
         pane.position.set(o.u, bodyY + sill + wh / 2, th / 2 - 0.02);
         g.add(pane);
         var pane2 = pane.clone();
@@ -1353,7 +1342,7 @@ window.MuseumScene = (function () {
     buildBox(g, 10, WALL_TOP, TH, 7, WALL_TOP / 2, Z1, wallMat);
     buildBox(g, 4, WALL_TOP - 3.0, TH, 0, 3.0 + (WALL_TOP - 3.0) / 2, Z1, wallMat);
     // 南墙木格长窗（门洞两侧各一樘 2.2×2.4，落地，中心 x=±5.6）
-    var winMat = canvasMat(drawLattice(), { roughness: 0.55 });
+    var winMat = canvasMat(drawPlainWindow(), { roughness: 0.55 });
     [-5.6, 5.6].forEach(function (wx) {
       buildBox(g, 2.2, 2.4, 0.16, wx, FLOOR + 1.2, Z1 - 0.09, winMat);
     });
@@ -2187,7 +2176,7 @@ window.MuseumScene = (function () {
   }
 
   function buildPartLattice(parent, x, y, z, ry) {
-    var lattice = new _g.Mesh(new _g.PlaneGeometry(0.9, 0.9), canvasMat(drawLattice(), { roughness: 0.55 }));
+    var lattice = new _g.Mesh(new _g.PlaneGeometry(0.9, 0.9), canvasMat(drawPlainWindow(), { roughness: 0.55 }));
     lattice.position.set(x, y, z);
     lattice.rotation.y = ry;
     parent.add(lattice);
@@ -2442,24 +2431,30 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙挂画：左韩熙载、中洛神赋、右步辇图
-    addPainting(g, { x: -5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 3.4, 2.2, "hanxizai");
-    addPainting(g, { x: 0,   y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "luoshenfu");
-    addPainting(g, { x: 5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "buniantu");
-    // 北墙两侧补两幅，避免左右留下大片白墙
-    addPainting(g, { x: -9.0, y: 2.55, z: -8.55, ry: 0, lamp: [0, 0.9] }, 1.9, 1.5, "molantu");
-    addPainting(g, { x: 9.0,  y: 2.55, z: -8.55, ry: 0, lamp: [0, 0.9] }, 1.9, 1.5, "wuniutu");
-    buildPartHallTitle(g, "人物丹青", "观古鉴今 · 以画识人", 0, 4.0, -8.5, 0);
+    /* 挂画分散到三面墙，避免全部挤在北墙。
+       厅 18×18，门在西墙中间（宽 3m，占 z −1.5~1.5），门两侧仍可挂。
+         北墙 z=-8.72  三幅居中
+         东墙 x= 8.72  三个立轴（z −3.6 / 0 / 3.6）
+         南墙 z= 8.72  两幅
+         西墙 x=-8.72  门两侧各一幅 */
+    addPainting(g, { x: -3.2, y: 2.55, z: -8.72, ry: 0, lamp: [0, 0.9] }, 2.6, 1.8, "hanxizai");
+    addPainting(g, { x: 0,    y: 2.55, z: -8.72, ry: 0, lamp: [0, 0.9] }, 2.6, 1.8, "luoshenfu");
+    addPainting(g, { x: 3.2,  y: 2.55, z: -8.72, ry: 0, lamp: [0, 0.9] }, 2.6, 1.8, "buniantu");
+    buildPartHallTitle(g, "人物丹青", "观古鉴今 · 以画识人", 0, 4.0, -8.6, 0);
+
+    addPainting(g, { x: -3.0, y: 2.5, z: 8.72, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "molantu");
+    addPainting(g, { x: 3.0,  y: 2.5, z: 8.72, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "wuniutu");
+
+    addPainting(g, { x: -8.72, y: 2.5, z: -5.4, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.0, 1.4, "monalisa");
+    addPainting(g, { x: -8.72, y: 2.5, z: 5.4,  ry: Math.PI / 2, lamp: [0.9, 0] }, 2.0, 1.4, "starrynight");
+
+    buildPartVerticalScroll(g, 8.72, 2.4, -3.6, -Math.PI / 2, "xieshengzhenqintu");
+    buildPartVerticalScroll(g, 8.72, 2.4, 0.0,  -Math.PI / 2, "qianlijiangshan");
+    buildPartVerticalScroll(g, 8.72, 2.4, 3.6,  -Math.PI / 2, "xishanxinglvtu");
 
     // 中央两座对照雕塑：左西方维纳斯、右中国将军俑，各配方形石基座与铭牌
     addPedestalLocal(g, -2.2, F, 0.4, "venus", "西方雕塑");
     addPedestalLocal(g, 2.2, F, 0.4, "jiangjunyong", "中国人物雕塑");
-
-    // 侧墙立轴：左墙西方绘画，右墙中国人物，与中央雕塑的中西对照呼应
-    buildPartVerticalScroll(g, -8.4, 2.4, -3.0, Math.PI / 2, "monalisa");
-    buildPartVerticalScroll(g, -8.4, 2.4, -9.0, Math.PI / 2, "starrynight");
-    buildPartVerticalScroll(g, 8.4, 2.4, -3.0, -Math.PI / 2, "xieshengzhenqintu");
-    buildPartVerticalScroll(g, 8.4, 2.4, -9.0, -Math.PI / 2, "qianlijiangshan");
 
     // 条凳与盆栽
     buildPartBench(g, -5.5, -7.5, 0);
@@ -2497,11 +2492,17 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙：山水画 + 两侧对联
+    /* 北墙：山水画居中 + 两侧立轴（补展品 id，原先无 id 会显示空白题名纸）
+       南墙再排三幅，避免画全挤在北墙一面。
+       厅 16×14，门在西墙中间；东墙是窗格扇 + 书架，东西墙不再挂画。 */
     addPainting(g, { x: 0, y: 2.6, z: -halfD + 0.2, ry: 0, lamp: [0, 0.9] }, 4.0, 1.8, "xishanxinglvtu");
-    buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0);
-    buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0);
+    buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0, "fuchunshanjv");
+    buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0, "qianlijiangshan");
     buildPartHallTitle(g, "书斋", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
+
+    addPainting(g, { x: -3.4, y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "hanxizai");
+    addPainting(g, { x: 0,    y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "luoshenfu");
+    addPainting(g, { x: 3.4,  y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "buniantu");
 
     // 中央茶席长案 3.2m x 1m + 六方凳
     buildPartLongTable(g, 0, F, 0, 3.2, 1.0);
@@ -2551,12 +2552,17 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙：匾额 + 五幅小画
+    /* 匾额 + 挂画分两面墙。
+       原来五幅 0.9m 小画全挤在北墙，密度过高、南墙全空。
+       厅 16×14：门在东墙中间，西墙是窗格扇 + 展示架，只在南北两面挂。
+         北墙 x −3 / 0 / 3 三幅
+         南墙 x −3 / 3 两幅 */
     buildPartHallTitle(g, "文创雅集馆", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
-    [-4, -2, 0, 2, 4].forEach(function (px, idx) {
-      var ids = ["xieshengzhenqintu", "wuniutu", "fuchunshanjv", "xishanxinglvtu", "qianlijiangshan"];
-      addPainting(g, { x: px, y: 2.05, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 0.9, 1.35, ids[idx]);
-    });
+    addPainting(g, { x: -3.0, y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.6, 1.5, "xieshengzhenqintu");
+    addPainting(g, { x: 0,    y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.9, 1.5, "qianlijiangshan");
+    addPainting(g, { x: 3.0,  y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.6, 1.5, "fuchunshanjv");
+    addPainting(g, { x: -3.0, y: 2.4, z: halfD - 0.2, ry: Math.PI, lamp: [0, -0.85] }, 1.9, 1.5, "wuniutu");
+    addPainting(g, { x: 3.0,  y: 2.4, z: halfD - 0.2, ry: Math.PI, lamp: [0, -0.85] }, 1.9, 1.5, "xishanxinglvtu");
 
     // 中央 2-3 张临帖长案
     buildPartLongTable(g, -2.2, F, 0, 2.6, 0.9);

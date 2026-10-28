@@ -1356,6 +1356,19 @@ window.MuseumExteriorLayout = (function () {
     var paint = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.42),
       new THREE.MeshStandardMaterial({ map: scrollTex(seed), roughness: 0.92 }));
     paint.position.set(0, 1.5, 0.015); g.add(paint);
+    /* 真实画作：按 seed 查 gallery.js 的映射表拿展品 id，直接加载图片换材质。
+       早先依赖 gallery.tex() 内部「先给占位、再偷换 image」的异步做法，
+       实测贴图不刷新，长廊十几幅立轴一直显示题名纸。
+       这里改成与 scene.js 的 addPainting 同一套写法，可靠得多。 */
+    var _id = (window.MuseumGallery && window.MuseumGallery.map) ? window.MuseumGallery.map[seed] : null;
+    if (_id && THREE.TextureLoader) {
+      new THREE.TextureLoader().load("assets/images/" + _id + ".jpg", function (tex) {
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        tex.anisotropy = 8;
+        paint.material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, side: THREE.DoubleSide });
+        paint.material.needsUpdate = true;
+      }, undefined, function () { /* 图片缺失：保留程序化画芯 */ });
+    }
     var r1 = cyl(0.016, 0.016, 0.98, 6, M.wood, 0, 2.4, 0.02, g); r1.rotation.z = Math.PI / 2;   /* 天杆 */
     var r2 = cyl(0.035, 0.035, 1.0, 8, M.wood, 0, 0.62, 0.03, g); r2.rotation.z = Math.PI / 2;   /* 地杆 */
     var k1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.ink); k1.position.set(-0.53, 0.62, 0.03); k1.castShadow = true; g.add(k1);
