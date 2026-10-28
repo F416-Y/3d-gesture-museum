@@ -25,7 +25,7 @@
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
   var statusEl = document.getElementById('introStatus');
-  var inkCursor = document.getElementById('inkCursor'), lastTrail = 0;
+  var inkCursor = document.getElementById('inkCursor'), inkRevealBrush = document.getElementById('inkRevealBrush'), lastTrail = 0;
   function setStatus(s) { statusEl.textContent = s; }
 
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
@@ -372,6 +372,19 @@
     return normalizePts(out, 4.4);
   }
 
+  function makeInkBlob() {
+    var out = new Float32Array(MAXN * 3), j, a, b, c, rr, wobble;
+    for (j = 0; j < MAXN; j++) {
+      a = Math.random() * Math.PI * 2; b = Math.acos(2 * Math.random() - 1); c = Math.random();
+      rr = Math.pow(c, 0.42) * (1.15 + Math.sin(j * 0.071) * 0.12);
+      wobble = 1 + 0.1 * Math.sin(a * 5 + b * 3 + j * 0.013);
+      out[j * 3] = Math.sin(b) * Math.cos(a) * rr * wobble;
+      out[j * 3 + 1] = Math.cos(b) * rr * 0.76;
+      out[j * 3 + 2] = Math.sin(b) * Math.sin(a) * rr * wobble;
+    }
+    return out;
+  }
+
   /* ---------- 预设模型：本馆零件库（门楼已撤）+ 压轴全园鸟瞰 ---------- */
   var PRESETS = [
     { id: 'bronze-ding', fb: fbDing },
@@ -396,34 +409,35 @@
     }
   }
   function loadPreset(P) {
-    if (store[P.id]) { if (PRESETS[cur] === P) applyPreset(P); return; }
+    if (store[P.id]) { if (PRESETS[cur] === P && revealReady) applyPreset(P); return; }
     if (P.id === '__museum') {
       setStatus('正在生成全园粒子沙盘…');
       setTimeout(function () {
         var pts = null;
         try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
         store[P.id] = pts || fbGate();
-        if (PRESETS[cur] === P) applyPreset(P);
+        if (PRESETS[cur] === P && revealReady) applyPreset(P);
         setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '全园粒子沙盘就绪 · 移动鼠标旋转');
       }, 30);
       return;
     }
-    if (!loader) { store[P.id] = P.fb(); if (PRESETS[cur] === P) applyPreset(P); return; }
+    if (!loader) { store[P.id] = P.fb(); if (PRESETS[cur] === P && revealReady) applyPreset(P); return; }
     loader.load('assets/models/parts/' + P.id + '.glb', function (g) {
       var pts = null;
       try { pts = sampleObject(g.scene, MAXN); } catch (e) { pts = null; }
       store[P.id] = pts || P.fb();
-      if (PRESETS[cur] === P) applyPreset(P);
+      if (PRESETS[cur] === P && revealReady) applyPreset(P);
     }, undefined, function () {
       store[P.id] = P.fb();
-      if (PRESETS[cur] === P) applyPreset(P);
+      if (PRESETS[cur] === P && revealReady) applyPreset(P);
     });
   }
-  base.set(fbDing());
+  var revealReady = false, revealDone = false, revealClock = 0;
+  base.set(makeInkBlob());
   for (var pli = 0; pli < PRESETS.length - 1; pli++) loadPreset(PRESETS[pli]);   /* 压轴不预载，播到时现采 */
 
   /* ---------- 交互状态 ---------- */
-  var spread = 1, spreadT = 1;
+  var spread = 0.72, spreadT = 0.72;
   var rotX = 0, rotY = 0, rotXT = 0, rotYT = 0, spin = 0;
   var handSeen = false;
   var density = 9000;
@@ -519,7 +533,28 @@
     var rdt = clock.getDelta();
     var dt = Math.min(rdt, 0.05), t = clock.elapsedTime;
     /* 自动巡展：每个展品停留约 4.4s，压轴全园沙盘停留 8.5s，然后循环（按真实时间走，低帧率不拖慢） */
-    if (autoOn) {
+    if (!revealDone) {
+      revealClock += rdt;
+      var brushIn = revealClock - 0.7;
+      if (brushIn > 0 && brushIn < 2.65) {
+        var revealP = Math.min(1, brushIn / 1.95), revealAngle = revealP * Math.PI * 4.2;
+        var revealCX = window.innerWidth * 0.5, revealCY = window.innerHeight * 0.55;
+        var revealR = Math.min(190, window.innerWidth * 0.16) * (0.72 + 0.28 * Math.sin(revealP * Math.PI));
+        inkRevealBrush.style.opacity = '1';
+        inkRevealBrush.style.left = (revealCX + Math.cos(revealAngle) * revealR) + 'px';
+        inkRevealBrush.style.top = (revealCY + Math.sin(revealAngle) * revealR) + 'px';
+        inkRevealBrush.style.transform = 'translate(-50%, -50%) rotate(' + (revealAngle + Math.PI * 0.25) + 'rad)';
+      } else if (revealClock >= 2.65) {
+        revealReady = true;
+        revealDone = true;
+        inkRevealBrush.style.opacity = '0';
+        applyPreset(PRESETS[cur]);
+        spread = 0.08;
+        spreadT = 1;
+        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '移动毛笔或鼠标，旋转观看墨中之形');
+      }
+    }
+    if (revealDone && autoOn) {
       autoT += rdt;
       var autoDur = (autoIdx === PRESETS.length - 1) ? 8.5 : 4.4;
       if (autoT >= autoDur) {

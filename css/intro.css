@@ -51,6 +51,11 @@
   #introPanel .val { color: rgba(28, 26, 23, 0.6); min-width: 56px; }
   #introHint { position: absolute; left: 48px; bottom: 32px; color: rgba(28, 26, 23, 0.52); font-size: 11px; letter-spacing: 2px; }
   #intro, #intro button, #intro input { cursor: none; }
+  #inkRevealBrush {
+    position: fixed; z-index: 13; width: 74px; height: 74px; pointer-events: none; opacity: 0;
+    transform: translate(-50%, -50%); filter: drop-shadow(0 7px 10px rgba(43, 34, 27, 0.22));
+  }
+  #inkRevealBrush img { display: block; width: 100%; height: 100%; object-fit: contain; }
   #inkCursor {
     position: fixed; z-index: 12; width: 48px; height: 48px; pointer-events: none;
     transform: translate(-3px, -21px); opacity: 0; transition: opacity 180ms ease;
