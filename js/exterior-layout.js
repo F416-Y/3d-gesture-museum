@@ -1053,7 +1053,7 @@ window.MuseumExteriorLayout = (function () {
       lc.font = '25px "Songti SC","STSong","SimSun",serif';
       lc.fillText('商周礼器 · 复陈', 128, 100);
       var lbT = new THREE.CanvasTexture(lbC); lbT.encoding = THREE.sRGBEncoding;
-      var lbG = new THREE.Group(); lbG.position.set(1.15, py, 31.7); lbG.rotation.y = 0.35; g.add(lbG);
+      var lbG = new THREE.Group(); lbG.position.set(1.15, py, 29.6); lbG.rotation.y = 0.35; g.add(lbG);
       cyl(0.03, 0.035, 0.72, 6, M.wood, 0, 0.36, 0, lbG);
       var lbB = box(0.62, 0.4, 0.03, M.wood, 0, 0.86, 0, 0, lbG); lbB.rotation.x = -0.42;
       var lbP = new THREE.Mesh(new THREE.PlaneGeometry(0.56, 0.28), new THREE.MeshBasicMaterial({ map: lbT }));
