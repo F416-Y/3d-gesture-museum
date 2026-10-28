@@ -1608,11 +1608,11 @@ window.MuseumScene = (function () {
     art.castShadow = true;
     parent.add(art);
 
-    // 木框（四条）
+    // 木框（上下横条 + 左右竖条）；偏移由 addFrameBox 内部按法线计算，这里不要预偏移
     var frameMat = mat(0x6d5544, { roughness: 0.7 });
     var t = 0.07;
-    addFrameBox(parent, w + t * 2, t, h + t * 2, pos.x, pos.y, pos.z - 0.02, pos.ry, frameMat);
-    addFrameBox(parent, t, h + t * 2, w + t * 2, pos.x, pos.y, pos.z - 0.02, pos.ry, frameMat);
+    addFrameBox(parent, w + t * 2, t, h + t * 2, pos.x, pos.y, pos.z, pos.ry, frameMat);
+    addFrameBox(parent, t, h + t * 2, w + t * 2, pos.x, pos.y, pos.z, pos.ry, frameMat);
 
     // 说明牌（画下）
     addSign(parent, pos.x, pos.y - h / 2 - 0.4, pos.z, ex.title + " · " + ex.dynasty);
@@ -1638,8 +1638,14 @@ window.MuseumScene = (function () {
 
   function addFrameBox(parent, w, h, d, x, y, z, ry, m) {
     var mesh = new _g.Mesh(new _g.BoxGeometry(w, h, d), m);
-    mesh.position.set(x, y, z - 0.03);
-    mesh.rotation.y = ry || 0;
+    /* 偏移必须沿画面法线，不能写死 z 轴。
+       PlaneGeometry 默认朝 +z，绕 y 转 ry 后法线为 (sin ry, 0, cos ry)；
+       早先统一减 z 0.03，朝东/朝西的墙（ry=±π/2）上画框会被推到画的侧面，
+       就是长廊里看到的「画和框不对齐」。 */
+    var r = ry || 0;
+    var nx = Math.sin(r), nz = Math.cos(r);
+    mesh.position.set(x - nx * 0.03, y, z - nz * 0.03);
+    mesh.rotation.y = r;
     parent.add(mesh);
   }
 
@@ -2440,16 +2446,20 @@ window.MuseumScene = (function () {
     addPainting(g, { x: -5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 3.4, 2.2, "hanxizai");
     addPainting(g, { x: 0,   y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "luoshenfu");
     addPainting(g, { x: 5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "buniantu");
+    // 北墙两侧补两幅，避免左右留下大片白墙
+    addPainting(g, { x: -9.0, y: 2.55, z: -8.55, ry: 0, lamp: [0, 0.9] }, 1.9, 1.5, "molantu");
+    addPainting(g, { x: 9.0,  y: 2.55, z: -8.55, ry: 0, lamp: [0, 0.9] }, 1.9, 1.5, "wuniutu");
     buildPartHallTitle(g, "人物丹青", "观古鉴今 · 以画识人", 0, 4.0, -8.5, 0);
 
-    // 中央将军俑
-    addPedestalLocal(g, 0, F, 0, "jiangjunyong", "将军俑 · 秦");
+    // 中央两座对照雕塑：左西方维纳斯、右中国将军俑，各配方形石基座与铭牌
+    addPedestalLocal(g, -2.2, F, 0.4, "venus", "西方雕塑");
+    addPedestalLocal(g, 2.2, F, 0.4, "jiangjunyong", "中国人物雕塑");
 
-    // 侧墙立轴书法
-    buildPartVerticalScroll(g, -8.4, 2.4, -3.0, Math.PI / 2);
-    buildPartVerticalScroll(g, -8.4, 2.4, -9.0, Math.PI / 2);
-    buildPartVerticalScroll(g, 8.4, 2.4, -3.0, -Math.PI / 2);
-    buildPartVerticalScroll(g, 8.4, 2.4, -9.0, -Math.PI / 2);
+    // 侧墙立轴：左墙西方绘画，右墙中国人物，与中央雕塑的中西对照呼应
+    buildPartVerticalScroll(g, -8.4, 2.4, -3.0, Math.PI / 2, "monalisa");
+    buildPartVerticalScroll(g, -8.4, 2.4, -9.0, Math.PI / 2, "starrynight");
+    buildPartVerticalScroll(g, 8.4, 2.4, -3.0, -Math.PI / 2, "xieshengzhenqintu");
+    buildPartVerticalScroll(g, 8.4, 2.4, -9.0, -Math.PI / 2, "qianlijiangshan");
 
     // 条凳与盆栽
     buildPartBench(g, -5.5, -7.5, 0);
@@ -2573,12 +2583,27 @@ window.MuseumScene = (function () {
     parent.add(g);
   }
 
-    function buildPartVerticalScroll(parent, x, y, z, ry) {
+  /* 立轴：id 给定时贴真实画作，否则退回题名纸。
+     早先固定传 drawSign("","")，画芯是一块米色空牌，
+     十几处立轴看上去全是空画框。 */
+  function buildPartVerticalScroll(parent, x, y, z, ry, id) {
     var g = new _g.Group();
     g.position.set(x, y, z);
     g.rotation.y = ry;
+
+    var paintMat = null;
+    if (id && window.MuseumGallery && window.MuseumGallery.texById) {
+      var t = window.MuseumGallery.texById(id);
+      if (t) paintMat = new _g.MeshStandardMaterial({ map: t, roughness: 0.92, side: _g.DoubleSide });
+    }
+    if (!paintMat) {
+      var ex = id ? findExhibit(id) : null;
+      paintMat = ex
+        ? canvasMat(drawPainting(ex), { side: _g.DoubleSide })
+        : canvasMat(drawSign("", ""), { side: _g.DoubleSide });
+    }
     // 卷轴
-    var scroll = new _g.Mesh(new _g.PlaneGeometry(0.55, 2.2), canvasMat(drawSign("", ""), { side: _g.DoubleSide }));
+    var scroll = new _g.Mesh(new _g.PlaneGeometry(0.55, 2.2), paintMat);
     scroll.position.z = 0.02;
     g.add(scroll);
     // 上下轴头
@@ -2694,21 +2719,37 @@ window.MuseumScene = (function () {
   }
   /* 局部坐标展台（不依赖 addPedestal 的硬编码 z=-2） */
   function addPedestalLocal(parent, x, floorY, z, exhibitId, signText) {
-    var base = new _g.Mesh(new _g.BoxGeometry(1.5, 1.05, 1.5), mat(0x7a5c48, { roughness: 0.75 }));
+    /* 方形石基座 + 上下压边，对应参考图里「西方雕塑 / 中国人物雕塑」的做法。
+       原先用深褐色木座、无压边，和效果图的石灰基座差得远。 */
+    var base = new _g.Mesh(new _g.BoxGeometry(1.5, 1.05, 1.5), mat(0xdfd9cc, { roughness: 0.88 }));
     base.position.set(x, floorY + 0.525, z);
-    base.castShadow = true;
+    base.castShadow = true; base.receiveShadow = true;
     parent.add(base);
+    buildBox(parent, 1.62, 0.07, 1.62, x, floorY + 1.015, z, mat(0xc9c2b3, { roughness: 0.9 }));
+    buildBox(parent, 1.62, 0.07, 1.62, x, floorY + 0.035, z, mat(0xc9c2b3, { roughness: 0.9 }));
     obstacles.push({ type: "circle", x: x, z: z, r: 1.0 });
 
-    var artifact;
+    var topY = floorY + 1.05;
+    /* 代码件兜底：后母戊鼎 / 将军俑。维纳斯没有代码件，直接等 GLB。 */
+    var artifact = null;
     if (exhibitId === "houmuwuding") artifact = buildDing();
-    else artifact = buildWarrior();
-    artifact.position.set(x, floorY + 1.05, z);
-    artifact.castShadow = true;
-    parent.add(artifact);
+    else if (exhibitId !== "venus") artifact = buildWarrior();
+    if (artifact) {
+      artifact.position.set(x, topY, z);
+      artifact.castShadow = true;
+      parent.add(artifact);
+    }
 
-    addSign(parent, x, floorY + 1.05, z + 0.9, signText);
-    registerSpot({ exhibitId: exhibitId, x: x, y: floorY + 1.76, z: z, radius: 2.6 });
+    /* 优先换成 GLB 真模型；失败时保留上面的代码件（维纳斯则留空不闪） */
+    var glbUrl = {
+      venus: "assets/models/parts/opt/venus.glb",
+      jiangjunyong: "assets/models/parts/opt/warrior.glb"
+    }[exhibitId];
+    if (glbUrl) tryReplaceWithGlb(parent, glbUrl, x, topY, z, 1.85, artifact);
+
+    /* 铭牌贴在基座正面（而不是浮在半空） */
+    addSign(parent, x, floorY + 0.52, z + 0.82, signText);
+    registerSpot({ exhibitId: exhibitId, x: x, y: topY + 0.9, z: z, radius: 2.6 });
   }
   /* ---------- 7. 家具零件 ---------- */
   function buildPartTeaTable(parent, x, y, z) {
