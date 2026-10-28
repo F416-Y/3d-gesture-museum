@@ -77,8 +77,37 @@ window.MuseumScene = (function () {
         ctx.fillStyle = "#24355c"; fillRect(ctx, 0, 0, W, H);
         drawStarry(ctx, W, H);
         break;
+      /* 组员6 补齐：以下 8 件既无 jpg 图源、原先也没有 case，
+         会落到 default 的纯米灰底，看上去就是一块空白画板。
+         这里按题材给程序化画芯：三件行书用竖向笔迹，五件茶事/人物用场景构图。 */
+      case "lantingjixu":    // 兰亭集序（神龙本）· 行书
+        drawCalligraphy(ctx, W, H, { paper: "#f0e7d2", cols: 7, size: 27, seed: 1031, ink: "rgba(26,22,18,0.88)" });
+        break;
+      case "jizhiwengao":    // 祭侄文稿 · 行书，稿本有涂改
+        drawCalligraphy(ctx, W, H, { paper: "#eee4cd", cols: 6, size: 26, seed: 2007, ink: "rgba(30,25,20,0.9)", smudge: true });
+        break;
+      case "hanshitie":      // 黄州寒食诗帖 · 行书，墨色枯润变化
+        drawCalligraphy(ctx, W, H, { paper: "#efe7d0", cols: 6, size: 26, seed: 3121, ink: "rgba(36,30,24,0.84)", dry: true });
+        break;
+      case "tingqintu":      // 听琴图 · 松下设琴，三人听
+        drawTeaGathering(ctx, W, H, { seed: 4177, pine: true, scene: "qin" });
+        break;
+      case "huishanchahui":  // 惠山茶会图 · 泉畔茶会
+        drawTeaGathering(ctx, W, H, { seed: 5211, spring: true, scene: "tea" });
+        break;
+      case "shimingtu":      // 事茗图 · 山居待客煮茶
+        drawTeaGathering(ctx, W, H, { seed: 6233, house: true, scene: "tea" });
+        break;
+      case "pinchatu":       // 品茶图 · 松下对坐品饮
+        drawTeaGathering(ctx, W, H, { seed: 7211, pine: true, scene: "tea" });
+        break;
+      case "luyupengchatu":  // 陆羽烹茶图 · 茶炉烹煮
+        drawTeaGathering(ctx, W, H, { seed: 8303, stove: true, scene: "tea" });
+        break;
       default:
-        ctx.fillStyle = "#d8d2c4"; fillRect(ctx, 0, 0, W, H);
+        /* 兜底也要有画面：淡青绿山水，避免再出现整块空地 */
+        ctx.fillStyle = "#dfe4d8"; fillRect(ctx, 0, 0, W, H);
+        drawInkMountains(ctx, W, H);
     }
 
     // 题签：右上竖排（新中式画作装裱习惯）
@@ -247,6 +276,241 @@ window.MuseumScene = (function () {
     ctx.lineTo(W, H * 0.34);
     ctx.lineTo(W, H);
     ctx.fill();
+  }
+
+  /* ---------- 行书书法画芯 ----------
+   * 用不规则短笔画拼出竖排字列，模拟行书的提按与牵丝。
+   * opt: { paper 纸色, cols 列数, size 字距, seed 种子, ink 墨色,
+   *        smudge 涂改稿（祭侄文稿）, dry 枯笔（寒食帖） } */
+  function drawCalligraphy(ctx, W, H, opt) {
+    opt = opt || {};
+    var pad = 26;
+    var paper = opt.paper || "#efe6d0";
+    var ink = opt.ink || "rgba(28,24,20,0.86)";
+    var cols = opt.cols || 6;
+    var size = opt.size || 27;
+
+    /* 纸底 + 纤维纹 */
+    ctx.fillStyle = paper;
+    fillRect(ctx, 0, 0, W, H);
+    ctx.strokeStyle = "rgba(158,142,110,0.13)";
+    ctx.lineWidth = 1;
+    for (var f = 0; f < 24; f++) {
+      ctx.beginPath();
+      ctx.moveTo(0, f * (H / 24) + (f % 3) * 0.8);
+      ctx.lineTo(W, f * (H / 24) + (f % 5) * 0.6);
+      ctx.stroke();
+    }
+
+    var s = (opt.seed || 7) >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+
+    /* 竖排列：每列自上而下写字，字由 2~5 笔组成 */
+    var colW = (W - pad * 2) / cols;
+    var rows = Math.floor((H - pad * 2) / size);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (var c = 0; c < cols; c++) {
+      var cx = pad + colW * c + colW * 0.5;
+      for (var r = 0; r < rows; r++) {
+        if (rnd() < 0.07) continue;          /* 偶尔留白，避免过于规整 */
+        var cy = pad + size * (r + 0.55);
+        var strokes = 2 + Math.floor(rnd() * 4);
+        var dryHere = opt.dry && rnd() < 0.35;
+        for (var k = 0; k < strokes; k++) {
+          ctx.strokeStyle = ink;
+          ctx.globalAlpha = dryHere ? 0.42 + rnd() * 0.2 : 0.72 + rnd() * 0.26;
+          ctx.lineWidth = (dryHere ? 1.0 : 1.5) + rnd() * 1.7;
+          var x0 = cx - 9 + rnd() * 6;
+          var y0 = cy - 10 + rnd() * 7;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.bezierCurveTo(
+            x0 + (rnd() - 0.15) * 13, y0 + 4 + rnd() * 7,
+            x0 - 3 + rnd() * 15, y0 + 11 + rnd() * 7,
+            x0 + (rnd() - 0.4) * 11, y0 + 17 + rnd() * 5
+          );
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+      /* 稿本涂改：在字列上压一道半透明粗线，模拟涂掉的字 */
+      if (opt.smudge && rnd() < 0.35) {
+        var sy = pad + size * (1 + Math.floor(rnd() * (rows - 2)));
+        ctx.strokeStyle = "rgba(30,25,20,0.5)";
+        ctx.lineWidth = 7 + rnd() * 6;
+        ctx.beginPath();
+        ctx.moveTo(cx - colW * 0.3, sy);
+        ctx.lineTo(cx + colW * 0.3, sy + size * 0.6);
+        ctx.stroke();
+      }
+    }
+
+    /* 朱印：主印 + 右下角小印 */
+    ctx.fillStyle = "rgba(168,58,44,0.82)";
+    ctx.fillRect(W - pad - 26, H - pad - 30, 22, 22);
+    ctx.fillStyle = paper;
+    ctx.font = "13px 'SimSun','Songti SC',serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("印", W - pad - 15, H - pad - 19);
+    ctx.fillStyle = "rgba(168,58,44,0.62)";
+    ctx.fillRect(pad + 4, pad + 2, 13, 13);
+    ctx.textBaseline = "alphabetic";
+  }
+
+  /* ---------- 茶事 / 人物场景画芯 ----------
+   * 远山 + 地面 + 树石 + 围坐人物，按 opt 决定加松、泉、屋、炉。
+   * opt: { seed, pine 松树, spring 泉, house 屋, stove 茶炉, scene 'tea'|'qin' } */
+  function drawTeaGathering(ctx, W, H, opt) {
+    opt = opt || {};
+    var s = (opt.seed || 11) >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+
+    /* 天与纸底 */
+    ctx.fillStyle = "#e8e0c9";
+    fillRect(ctx, 0, 0, W, H);
+
+    /* 远山：两层淡墨 */
+    ctx.fillStyle = "rgba(120,134,116,0.34)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.58);
+    for (var x = 0; x <= W; x += 20) {
+      ctx.lineTo(x, H * 0.58 - Math.sin(x * 0.011 + 1.3) * 26 - Math.sin(x * 0.031) * 12);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(88,104,86,0.42)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.68);
+    for (var x2 = 0; x2 <= W; x2 += 16) {
+      ctx.lineTo(x2, H * 0.68 - Math.sin(x2 * 0.017 + 0.4) * 18);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+
+    /* 地面 */
+    ctx.fillStyle = "#cdc6ae";
+    fillRect(ctx, 0, H * 0.74, W, H * 0.26);
+
+    /* 泉：几道横向水纹 */
+    if (opt.spring) {
+      ctx.strokeStyle = "rgba(126,160,170,0.55)";
+      ctx.lineWidth = 2.5;
+      for (var w2 = 0; w2 < 4; w2++) {
+        ctx.beginPath();
+        ctx.moveTo(W * 0.06, H * 0.80 + w2 * 9);
+        ctx.bezierCurveTo(W * 0.3, H * 0.78 + w2 * 9, W * 0.55, H * 0.83 + w2 * 9, W * 0.72, H * 0.80 + w2 * 9);
+        ctx.stroke();
+      }
+    }
+
+    /* 屋舍 */
+    if (opt.house) {
+      ctx.fillStyle = "#8d6c4e";
+      ctx.beginPath();
+      ctx.moveTo(W * 0.70, H * 0.62);
+      ctx.lineTo(W * 0.88, H * 0.62);
+      ctx.lineTo(W * 0.86, H * 0.76);
+      ctx.lineTo(W * 0.72, H * 0.76);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#5b4a3a";
+      ctx.beginPath();
+      ctx.moveTo(W * 0.67, H * 0.62);
+      ctx.lineTo(W * 0.79, H * 0.53);
+      ctx.lineTo(W * 0.91, H * 0.62);
+      ctx.closePath(); ctx.fill();
+    }
+
+    /* 松树：主干 + 三层横展枝 */
+    var pineX = opt.pine ? [W * 0.14, W * 0.86] : [W * 0.16];
+    for (var pi = 0; pi < pineX.length; pi++) {
+      var px = pineX[pi];
+      ctx.strokeStyle = "#4b3b2a";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(px, H * 0.78);
+      ctx.bezierCurveTo(px + 6, H * 0.6, px - 8, H * 0.44, px + 2, H * 0.3);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(58,76,54,0.8)";
+      ctx.lineWidth = 3;
+      for (var b = 0; b < 3; b++) {
+        var by = H * (0.36 + b * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(px - 2, by);
+        ctx.quadraticCurveTo(px - 34, by - 12, px - 56, by - 4);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px + 2, by + 4);
+        ctx.quadraticCurveTo(px + 34, by - 8, px + 58, by - 2);
+        ctx.stroke();
+      }
+    }
+
+    /* 人物：围坐，中间一张矮案 */
+    var seatY = H * 0.79;
+    var persons = opt.scene === "qin" ? [[-0.22, 0], [-0.02, 1], [0.18, -1]] : [[-0.26, 1], [-0.06, 0], [0.17, 1], [0.32, -1]];
+    for (var n = 0; n < persons.length; n++) {
+      var cx2 = W * (0.5 + persons[n][0]);
+      var dirn = persons[n][1];
+      ctx.fillStyle = n === 0 ? "#5d6b58" : "#6f7a63";
+      /* 身 */
+      ctx.beginPath();
+      ctx.moveTo(cx2 - 11, seatY);
+      ctx.lineTo(cx2 + 11, seatY);
+      ctx.lineTo(cx2 + 8, seatY - 30);
+      ctx.lineTo(cx2 - 8, seatY - 30);
+      ctx.closePath(); ctx.fill();
+      /* 头 */
+      ctx.fillStyle = "#c9a37a";
+      ctx.beginPath();
+      ctx.arc(cx2 + dirn * 3, seatY - 36, 8, 0, Math.PI * 2);
+      ctx.fill();
+      /* 衣袖 */
+      ctx.strokeStyle = "rgba(80,92,72,0.75)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx2 - 10, seatY - 24);
+      ctx.quadraticCurveTo(cx2 - 18, seatY - 14, cx2 - 8, seatY - 8);
+      ctx.stroke();
+    }
+
+    /* 矮案与茶器 */
+    ctx.fillStyle = "#7a6248";
+    fillRect(ctx, W * 0.42, seatY - 14, W * 0.16, 6);
+    ctx.fillRect(ctx, W * 0.45, seatY - 8, 4, 8);
+    ctx.fillRect(ctx, W * 0.53, seatY - 8, 4, 8);
+    ctx.fillStyle = "#8fa08a";
+    ctx.beginPath();
+    ctx.arc(W * 0.47, seatY - 18, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(W * 0.52, seatY - 18, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* 茶炉：炉身 + 升起的烟 */
+    if (opt.stove) {
+      ctx.fillStyle = "#6b5a44";
+      ctx.beginPath();
+      ctx.arc(W * 0.66, seatY - 6, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(150,150,145,0.4)";
+      ctx.lineWidth = 2;
+      for (var sm = 0; sm < 3; sm++) {
+        ctx.beginPath();
+        ctx.moveTo(W * 0.66 + sm * 3 - 3, seatY - 16);
+        ctx.bezierCurveTo(W * 0.66 + sm * 4, seatY - 30, W * 0.66 - sm * 4, seatY - 44, W * 0.66 + sm * 3, seatY - 58);
+        ctx.stroke();
+      }
+    }
+
+    /* 琴：抚琴场景横置一条 */
+    if (opt.scene === "qin") {
+      ctx.fillStyle = "#5a4433";
+      ctx.save();
+      ctx.translate(W * 0.5, seatY - 20);
+      ctx.rotate(-0.06);
+      fillRect(ctx, -46, 0, 92, 7);
+      ctx.restore();
+    }
   }
 
   /* 展品说明牌（小型立牌） */
