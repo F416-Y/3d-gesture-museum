@@ -4,7 +4,7 @@
  *       组员1 —— 接缝（碰撞体 / 展品热点 / 展厅区域 / 性能）
  * ------------------------------------------------------------
  * 职责：
- *   1. 搭建「云墨美术馆」园区：地面、草坪、道路、围墙、门柱、行道树
+ *   1. 搭建「云间入墨」园区：地面、草坪、道路、围墙、门柱、行道树
  *   2. 搭建博物馆主楼外观（新中式：基座、一层大厅、二层外观、四坡屋顶、匾额）
  *   3. 搭建可进入的室内展厅：一楼中国绘画厅 + 西侧文明对话连廊
  *   4. 布置展品（程序化名画贴图 / 几何雕塑，组员6 可替换为真实素材）
@@ -1690,7 +1690,7 @@ window.MuseumScene = (function () {
 
     var plaque = new _g.Mesh(
       new _g.PlaneGeometry(2.6, 0.9),
-      canvasMat(drawSign("云墨", "美术馆"), { side: _g.DoubleSide })
+      canvasMat(drawSign("云间入墨", "美术馆"), { side: _g.DoubleSide })
     );
     plaque.position.set(x, 3.75, z + 0.31);
     root.add(plaque);
@@ -1946,7 +1946,7 @@ window.MuseumScene = (function () {
     buildPartHorseHeadWall(g, halfW, 1, -halfD, halfD, WH);
 
     // 背景墙（北墙中央馆名 + 山水底纹）
-    buildPartBackdrop(g, W - 1.2, 3.0, "云墨美术馆");
+    buildPartBackdrop(g, W - 1.2, 3.0, "云间入墨");
 
     // 四根木柱
     buildPartColumn(g, -6, -3, WH, 0.35);

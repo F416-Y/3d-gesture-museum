@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#171711">
   <title>花鸟清趣 · 云间入墨</title>
   <meta name="description" content="云间入墨数字博物馆花鸟厅：写生珍禽图、五牛图、墨兰图与江南花鸟陈设。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23a54535'/%3E%3Cpath d='M8 9h16v2H8zm0 6h16v2H8zm0 6h16v2H8z' fill='%23f0ede2'/%3E%3C/svg%3E">
   <style>
     :root {
       --paper: #eee6d5;
@@ -286,7 +287,7 @@
   </style>
 </head>
 <body data-ready="false">
-  <canvas id="scene" tabindex="0" aria-label="花鸟厅三维展陈，可拖拽环视"></canvas>
+  <canvas id="scene" tabindex="0" aria-label="花鸟厅三维展陈"></canvas>
 
   <div class="loading" id="loading" aria-live="polite">
     <div class="loading-card">
@@ -345,7 +346,6 @@
       <p class="cam-note" id="cam-note">手掌前后、食指转向、捏合查看展品</p>
     </div>
 
-    <div class="hint">拖拽环视 · 滚轮靠近 · 点击画作阅读 · 键盘方向键 / E / R</div>
     <div class="toast" id="toast" role="status"></div>
   </main>
 
@@ -400,6 +400,8 @@
     let detailOpen = false;
     let cameraStarting = false;
     let gestureRunning = false;
+    let gestureTurnArmed = true;
+    let gestureLastSwitch = 0;
     let toastTimer = 0;
 
     const PART_SPECS = {
@@ -844,20 +846,11 @@
       if (index < 0) return;
       const exhibit = exhibits[index];
       setCurrentExhibit(id, false);
-      desired.target.set([-4.375, 0, 4.375][index], 2.2, -7.9);
-      desired.yaw = 0;
-      desired.pitch = 0;
-      desired.distance = index === 1 ? 4.8 : 4.2;
       if (openPanel) showDetail(index);
     }
 
     function focusGalleryWall() {
-      hideDetail();
-      desired.target.set(0, 2.12, -7.55);
-      desired.yaw = 0;
-      desired.pitch = 0;
-      desired.distance = 9.2;
-      setCurrentExhibit(exhibits[1]?.id || exhibits[0]?.id, false);
+      resetView();
     }
 
     function resetView() {
@@ -870,16 +863,7 @@
     }
 
     function focusDoorCheck() {
-      hideDetail();
-      desired.target.set(0, 2.05, 8.02);
-      desired.yaw = 0;
-      desired.pitch = 0.02;
-      desired.distance = 7.8;
-      view.target.copy(desired.target);
-      view.yaw = desired.yaw;
-      view.pitch = desired.pitch;
-      view.distance = desired.distance;
-      updateCamera();
+      resetView();
     }
 
     function showDetail(index) {
@@ -903,12 +887,14 @@
       detail.setAttribute("aria-hidden", "true");
     }
 
-    function stepArtwork(delta) {
+    function stepArtwork(delta, openPanel = detailOpen) {
       if (!exhibits.length) return;
       let index = exhibits.findIndex((item) => item.id === activeExhibit);
       if (index < 0) index = 0;
       index = (index + delta + exhibits.length) % exhibits.length;
-      focusArtwork(exhibits[index].id, true);
+      const exhibit = exhibits[index];
+      focusArtwork(exhibit.id, openPanel);
+      toast(`已切换至《${exhibit.title}》`);
     }
 
     function bindInteraction() {
@@ -933,8 +919,6 @@
         lastX = event.clientX;
         lastY = event.clientY;
         moved += Math.abs(dx) + Math.abs(dy);
-        desired.yaw -= dx * 0.005;
-        desired.pitch = Math.max(-0.2, Math.min(0.55, desired.pitch + dy * 0.0035));
       });
       canvas.addEventListener("pointerup", (event) => {
         dragging = false;
@@ -946,16 +930,9 @@
         const hit = raycaster.intersectObjects(paintingObjects, false)[0];
         if (hit?.object?.userData?.exhibitId) focusArtwork(hit.object.userData.exhibitId, true);
       });
-      canvas.addEventListener("wheel", (event) => {
-        event.preventDefault();
-        desired.distance = Math.max(3.0, Math.min(14.0, desired.distance + event.deltaY * 0.006));
-      }, { passive: false });
-
       window.addEventListener("keydown", (event) => {
-        if (event.code === "ArrowLeft") desired.yaw += 0.08;
-        else if (event.code === "ArrowRight") desired.yaw -= 0.08;
-        else if (event.code === "ArrowUp" || event.code === "Equal") desired.distance = Math.max(3, desired.distance - 0.5);
-        else if (event.code === "ArrowDown" || event.code === "Minus") desired.distance = Math.min(14, desired.distance + 0.5);
+        if (event.code === "ArrowLeft") stepArtwork(-1);
+        else if (event.code === "ArrowRight") stepArtwork(1);
         else if (event.code === "KeyE" || event.code === "Enter") {
           const index = Math.max(0, exhibits.findIndex((item) => item.id === activeExhibit));
           showDetail(index);
@@ -998,9 +975,11 @@
         if (!window.MuseumGesture) throw new Error("手势模块未加载");
         await window.MuseumGesture.init(document.getElementById("cam"));
         gestureRunning = true;
+        gestureTurnArmed = true;
+        gestureLastSwitch = 0;
         cameraButton.textContent = "关闭手势";
-        camNote.textContent = "手势已启用 · 捏合打开当前画作";
-        toast("手势已启用 · 捏合查看画作");
+        camNote.textContent = "手势已启用 · 左右指点切画 · 捏合查看";
+        toast("手势已启用");
       } catch (error) {
         gestureRunning = false;
         camwrap.hidden = true;
@@ -1012,12 +991,8 @@
       }
     }
 
-    function applyGesture(delta) {
-      if (!gestureRunning || !window.MuseumGesture) return;
-      const state = window.MuseumGesture.getState();
-      if (state.forward) desired.distance = Math.max(3.0, desired.distance - delta * 1.45);
-      if (state.back) desired.distance = Math.min(14.0, desired.distance + delta * 1.25);
-      if (state.turn) desired.yaw += state.turn * delta * 0.7;
+    function handleGestureState(state, now) {
+      if (!state) return;
       if (state.pinchPressed) {
         if (detailOpen) hideDetail();
         else {
@@ -1025,15 +1000,25 @@
           showDetail(index);
         }
       }
+
+      if (Math.abs(state.turn) < 0.16) gestureTurnArmed = true;
+      if (gestureTurnArmed && Math.abs(state.turn) > 0.46 && now - gestureLastSwitch > 700) {
+        stepArtwork(state.turn > 0 ? -1 : 1);
+        gestureTurnArmed = false;
+        gestureLastSwitch = now;
+      }
+    }
+
+    function applyGesture() {
+      if (!gestureRunning || !window.MuseumGesture) return;
+      handleGestureState(window.MuseumGesture.getState(), performance.now());
     }
 
     function resize() {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      if (!detailOpen) {
-        desired.distance = window.innerWidth < 600 ? 20.5 : 13.8;
-      }
+      desired.distance = 13.8;
     }
 
     const clock = new THREE.Clock();
@@ -1090,16 +1075,20 @@
         focusDoorCheck,
         resetView,
         hideDetail,
+        stepArtwork,
+        handleGestureState,
         getState: () => ({
           activeExhibit,
           detailOpen,
           gestureRunning,
           camera: camera.position.toArray(),
-          target: view.target.toArray()
+          target: view.target.toArray(),
+          yaw: view.yaw,
+          pitch: view.pitch,
+          distance: view.distance
         })
       };
       setTimeout(() => loading.classList.add("done"), 280);
-      setTimeout(() => toast("拖拽环视，点击画作阅读赏析"), 800);
     }
 
     window.addEventListener("resize", resize);
