@@ -1597,11 +1597,26 @@ window.MuseumScene = (function () {
     art.castShadow = true;
     parent.add(art);
 
-    // 木框（上下横条 + 左右竖条）；偏移由 addFrameBox 内部按法线计算，这里不要预偏移
+    /* 木框：上下左右四条细边框。
+       原先两次 addFrameBox 的深度参数写错了（横条深度给了 h+2t、竖条深度给了 w+2t），
+       两个薄片各自朝画里纵深贯穿，正视就是一根横条加一根竖条交叉的十字，
+       还会从画面前后伸出来。这里用一个 Group 统一旋转，四条边深度都只有 t。 */
     var frameMat = mat(0x6d5544, { roughness: 0.7 });
     var t = 0.07;
-    addFrameBox(parent, w + t * 2, t, h + t * 2, pos.x, pos.y, pos.z, pos.ry, frameMat);
-    addFrameBox(parent, t, h + t * 2, w + t * 2, pos.x, pos.y, pos.z, pos.ry, frameMat);
+    var fg = new _g.Group();
+    fg.position.set(pos.x, pos.y, pos.z);
+    fg.rotation.y = pos.ry || 0;
+    parent.add(fg);
+    function frameEdge(ew, eh, ox, oy) {
+      var m = new _g.Mesh(new _g.BoxGeometry(ew, eh, t), frameMat);
+      m.position.set(ox, oy, -0.03);
+      m.castShadow = true;
+      fg.add(m);
+    }
+    frameEdge(w + t * 2, t, 0, h / 2 + t / 2);          /* 上边 */
+    frameEdge(w + t * 2, t, 0, -h / 2 - t / 2);         /* 下边 */
+    frameEdge(t, h + t * 2, -w / 2 - t / 2, 0);         /* 左边 */
+    frameEdge(t, h + t * 2, w / 2 + t / 2, 0);          /* 右边 */
 
     // 说明牌（画下）
     addSign(parent, pos.x, pos.y - h / 2 - 0.4, pos.z, ex.title + " · " + ex.dynasty);
@@ -1623,19 +1638,6 @@ window.MuseumScene = (function () {
     parent.add(fixture);
 
     registerSpot({ exhibitId: exhibitId, x: pos.x, y: pos.y, z: pos.z, radius: 2.8 });
-  }
-
-  function addFrameBox(parent, w, h, d, x, y, z, ry, m) {
-    var mesh = new _g.Mesh(new _g.BoxGeometry(w, h, d), m);
-    /* 偏移必须沿画面法线，不能写死 z 轴。
-       PlaneGeometry 默认朝 +z，绕 y 转 ry 后法线为 (sin ry, 0, cos ry)；
-       早先统一减 z 0.03，朝东/朝西的墙（ry=±π/2）上画框会被推到画的侧面，
-       就是长廊里看到的「画和框不对齐」。 */
-    var r = ry || 0;
-    var nx = Math.sin(r), nz = Math.cos(r);
-    mesh.position.set(x - nx * 0.03, y, z - nz * 0.03);
-    mesh.rotation.y = r;
-    parent.add(mesh);
   }
 
   /* 说明牌 */
