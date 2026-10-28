@@ -44,13 +44,17 @@ button { font-family: inherit; cursor: pointer; }
 }
 .brand { display: flex; align-items: center; gap: 14px; }
 .brand-seal {
-  font-family: var(--serif);
-  font-size: 26px; font-weight: 700;
-  color: var(--paper);
-  background: var(--cinnabar);
-  padding: 6px 10px;
-  transform: rotate(-3deg);
-  box-shadow: 0 6px 18px var(--shadow);
+  display: block; width: 48px; height: 48px; padding: 3px;
+  background: rgba(25, 25, 21, 0.76); border: 1px solid rgba(245, 241, 232, 0.68);
+  box-shadow: 0 6px 18px var(--shadow); transform: rotate(-2deg);
+}
+.brand-seal svg { display: block; width: 100%; height: 100%; }
+.brand-seal .brand-mark-pool { fill: var(--ink); }
+.brand-seal .brand-mark-cut { fill: var(--paper); }
+.brand-seal .brand-mark-stroke { fill: none; stroke: var(--paper); stroke-width: 2.2; stroke-linecap: round; }
+.brand-seal .brand-mark-dot { fill: var(--cinnabar); }
+.brand-seal::after {
+  content: ""; position: absolute; inset: 5px; border: 1px solid rgba(245, 241, 232, 0.18); pointer-events: none;
 }
 .brand-text h1 {
   font-family: var(--serif);
