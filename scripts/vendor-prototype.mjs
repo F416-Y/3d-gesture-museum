@@ -10,16 +10,16 @@
  * 用标记定位而不是行号 —— Kimi 改完原型重跑本脚本即可，不需要重新对齐行号。
  *
  * 用法：node scripts/vendor-prototype.mjs [源 html 路径]
- * 默认源：../jiangnan-painting-museum/exterior-layout.html（相对本仓库）
+ * 默认源：本项目 tools/exterior-prototype.html；导入外部原型时必须显式传路径
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = process.argv[2] || path.resolve(ROOT, '..', 'jiangnan-painting-museum', 'exterior-layout.html');
 const VENDOR = path.join(ROOT, 'tools', 'exterior-prototype.html');
 const OUT = path.join(ROOT, 'js', 'exterior-layout.js');
+const SRC = process.argv[2] || VENDOR;
 
 if (!fs.existsSync(SRC)) { console.error('找不到源原型：' + SRC); process.exit(2); }
 const html = fs.readFileSync(SRC, 'utf8');
