@@ -24,7 +24,7 @@ window.MuseumInkWorlds = (function () {
    * 四幅画的画境视频：组长提供，放到 public/videos/paintings/（见 §12.2）
    * 组长接口若存在则优先使用；函数名以其最终定稿为准，这里只做探测。 */
   // 视频由 public/videos/ink/enter-painting.mp4 提供；版本参数避免浏览器继续复用旧占位视频。
-  var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4?v=20261028-213701";
+  var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4?v=20261028-h264";
   var INK_FALLBACK_MS = 2600;     // 墨雾占位转场的时长
   var VIDEO_STALL_MS = 12000;     // 穿画视频卡住超过这个时间直接放行
   var INK_WORLD_HANDSHAKE_MS = 12000; // 组长画境接口握手超时（见 enterLeaderPainting）
