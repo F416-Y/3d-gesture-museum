@@ -2628,18 +2628,24 @@ window.MuseumScene = (function () {
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
       var paintings = [
-      /* 人物厅中西对照：左侧西方、右侧中国，与 slots.js 的侧墙挂画一致。 */
-      ["monalisa",           28.42, -17.3],
-      ["starrynight",        28.42, -14.7],
-      ["hanxizai",           45.08, -19.7],
-      ["qianlijiangshan",    45.08, -18.5],
-      ["fuchunshanjv",       45.08, -17.3],
-      ["xishanxinglvtu",     45.08, -16.1],
-      ["buniantu",           45.08, -14.9],
-      ["xieshengzhenqintu",  45.08, -13.7],
-      ["wuniutu",            45.08, -12.5],
-      ["molantu",            45.08, -11.3],
-      ["luoshenfu",          45.08, -10.5],
+      /* 人物厅中西对照：左墙西方 2 幅、右墙中国 5 幅、后墙中国 4 幅。
+         坐标必须与 slots.js 里 wallScrollAt 的实际落点一致 —— 那边
+         sideScroll 用 ±(len/2-0.42)、backScroll 用 dep/2-0.42，
+         人物厅 len=15.3、dep=5.5、中心(36.75,-17.35)：
+           左墙 x=36.75-7.23=29.52 → 取 29.57（画面厚 0.05）
+           右墙 x=36.75+7.23=43.98 → 取 43.93
+           后墙 z=-17.35-(2.75-0.42)=-19.68 */
+      ["monalisa",           29.57, -18.75],
+      ["starrynight",        29.57, -15.95],
+      ["hanxizai",           43.93, -19.55],
+      ["qianlijiangshan",    43.93, -18.45],
+      ["buniantu",           43.93, -17.35],
+      ["xieshengzhenqintu",  43.93, -16.25],
+      ["luoshenfu",          43.93, -15.15],
+      ["fuchunshanjv",       34.35, -19.68],
+      ["xishanxinglvtu",     35.95, -19.68],
+      ["wuniutu",            37.55, -19.68],
+      ["molantu",            39.15, -19.68],
       /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
       ["lantingjixu",        40.84, 10.0],
       ["jizhiwengao",        40.84, 15.0],
@@ -2653,8 +2659,8 @@ window.MuseumScene = (function () {
     ];
     var sculptures = [
       ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）
-      ["venus",         34.55, -18.2],   // 人物厅中心对照：左侧西方
-      ["jiangjunyong",  38.95, -18.2],   // 人物厅中心对照：右侧中方
+      ["venus",         34.55, -17.30],  // 人物厅中心对照：左侧西方（与 slots.js compareB 一致）
+      ["jiangjunyong",  38.95, -17.30],  // 人物厅中心对照：右侧中方
       ["matayafeiyan",  0,     -13],     // 中心庭广场点景
     ];
     paintings.forEach(function (p) {

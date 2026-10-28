@@ -408,46 +408,95 @@ window.MuseumExteriorLayout = (function () {
     var gp = parent || S.scene, s = seed >>> 0;
     var g = new THREE.Group(); gp.add(g);
     var k = sc || 1;
-    /* 假茎 */
-    cyl(0.16 * k, 0.2 * k, 1.05 * k, 10, M.wood, x, 0.52 * k, z, g);
-    /* 叶片：8 片宽叶绕茎顶放射，四层错落，用压扁的球体近似叶团 */
-    for (var j = 0; j < 8; j++) {
+    /* 假茎：加粗加高一些，单株才有体量 */
+    cyl(0.19 * k, 0.25 * k, 1.30 * k, 12, M.wood, x, 0.65 * k, z, g);
+    /* 叶片：14 片宽叶绕茎顶放射，五层错落。
+       用压扁球体近似叶团，比平面片有厚度，远处看不会消失。 */
+    var LEAVES = 14;
+    var leafGeo = new THREE.SphereGeometry(1, 8, 6);
+    for (var j = 0; j < LEAVES; j++) {
       s = (s * 1664525 + 1013904223) >>> 0;
-      var ang = (Math.PI * 2 / 8) * j + 0.3;
-      var tier = j % 4;
-      var h = (0.95 + tier * 0.13) * k;
-      var len = (1.5 - tier * 0.15) * k;
-      var w = (0.75 - tier * 0.06) * k;
-      var leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), M.leaf);
-      leaf.scale.set(len * 0.55, 0.10 * k, w * 0.5);
-      leaf.position.set(x + Math.cos(ang) * len * 0.55, h, z + Math.sin(ang) * len * 0.55);
+      var ang = (Math.PI * 2 / LEAVES) * j + 0.3;
+      var tier = j % 5;
+      var h = (1.16 + tier * 0.15) * k;
+      var len = (1.90 - tier * 0.16) * k;
+      var w = (0.92 - tier * 0.06) * k;
+      var tilt = -0.30 - tier * 0.05;
+      var leaf = new THREE.Mesh(leafGeo, M.leaf);
+      leaf.scale.set(len * 0.58, 0.12 * k, w * 0.5);
+      leaf.position.set(x + Math.cos(ang) * len * 0.52, h, z + Math.sin(ang) * len * 0.52);
       leaf.rotation.y = -ang;
-      leaf.rotation.z = -0.34;
+      leaf.rotation.z = tilt;
       leaf.castShadow = true;
+      leaf.receiveShadow = true;
       g.add(leaf);
+    }
+    /* 根部两片新芽，从茎底斜出，让株型不满在顶上 */
+    for (var n = 0; n < 2; n++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var na = ((s % 1000) / 1000) * Math.PI * 2;
+      var shoot = new THREE.Mesh(leafGeo, M.leaf);
+      shoot.scale.set(0.85 * k, 0.09 * k, 0.34 * k);
+      shoot.position.set(x + Math.cos(na) * 0.62 * k, 0.42 * k, z + Math.sin(na) * 0.62 * k);
+      shoot.rotation.y = -na;
+      shoot.rotation.z = -0.72;
+      shoot.castShadow = true;
+      g.add(shoot);
     }
     S.slots.banana.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
 
-  /* ---------- 一丛沿阶草（低面数，供撒点用） ---------- */
+  /* ---------- 一丛沿阶草（低面数，供撒点用） ----------
+   * 叶片各自变换后合并成一个 BufferGeometry，一整丛只占 1 个 draw call。
+   * 早先每根叶片是独立 Mesh，一丛 9 个 draw call，丛数一多就撑不住。 */
+  var TUFT_BASE = null;
   function grassTuft(x, z, seed, parent, sc) {
     var gp = parent || S.scene, s = seed >>> 0;
     var g = new THREE.Group(); gp.add(g);
     var k = sc || 1;
-    for (var j = 0; j < 9; j++) {
+    if (!TUFT_BASE) TUFT_BASE = new THREE.BoxGeometry(1, 1, 1);
+    var pos = [], nor = [], idx = [], off = 0;
+    var m4 = new THREE.Matrix4(), eul = new THREE.Euler(), quat = new THREE.Quaternion();
+    var vec = new THREE.Vector3(), scl = new THREE.Vector3();
+    var pAttr = TUFT_BASE.attributes.position, nAttr = TUFT_BASE.attributes.normal;
+    var BLADES = 16;
+    for (var j = 0; j < BLADES; j++) {
       s = (s * 1664525 + 1013904223) >>> 0;
       var ang = ((s % 1000) / 1000) * Math.PI * 2;
       s = (s * 1664525 + 1013904223) >>> 0;
-      var lean = (0.12 + (s % 1000) / 1000 * 0.24) * k;
+      var lean = (0.20 + (s % 1000) / 1000 * 0.36) * k;
       s = (s * 1664525 + 1013904223) >>> 0;
-      var h = (0.22 + (s % 1000) / 1000 * 0.16) * k;
-      var blade = box(0.028 * k, h, 0.012 * k, M.lawn || M.leaf, x, h / 2, z, 0, g);
-      blade.position.x += Math.cos(ang) * 0.05 * k;
-      blade.position.z += Math.sin(ang) * 0.05 * k;
-      blade.rotation.z = Math.cos(ang) * lean;
-      blade.rotation.x = -Math.sin(ang) * lean;
-      blade.castShadow = false;
+      var h = (0.36 + (s % 1000) / 1000 * 0.34) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var rad = (0.02 + (s % 1000) / 1000 * 0.10) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var bw = (0.046 + (s % 1000) / 1000 * 0.030) * k;
+      var px = x + Math.cos(ang) * rad;
+      var pz = z + Math.sin(ang) * rad;
+      eul.set(-Math.sin(ang) * lean, 0, Math.cos(ang) * lean);
+      quat.setFromEuler(eul);
+      vec.set(px, h * 0.5, pz);
+      scl.set(bw, h, bw * 0.35);
+      m4.compose(vec, quat, scl);
+      for (var i = 0; i < pAttr.count; i++) {
+        vec.set(pAttr.getX(i), pAttr.getY(i), pAttr.getZ(i)).applyMatrix4(m4);
+        pos.push(vec.x, vec.y, vec.z);
+        vec.set(nAttr.getX(i), nAttr.getY(i), nAttr.getZ(i)).transformDirection(m4);
+        nor.push(vec.x, vec.y, vec.z);
+      }
+      for (var kk = 0; kk < TUFT_BASE.index.count; kk++) {
+        idx.push(TUFT_BASE.index.getX(kk) + off);
+      }
+      off += pAttr.count;
     }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    geo.setIndex(idx);
+    var mesh = new THREE.Mesh(geo, M.lawn || M.leaf);
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    g.add(mesh);
     S.slots.grassTuft.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
 
@@ -2013,31 +2062,43 @@ window.MuseumExteriorLayout = (function () {
     plantTree(9.8, 4.5, 1.25, 991);
     plantTree(24.5, 19.6, 1.15, 992);
     plantTree(-14.5, -8.6, 1.1, 993);
-    /* 芭蕉：东侧草坪背风处，与墙体形成半围合的角隅 */
+    /* 芭蕉：东西两侧对称布置，南北草坪各点几株，避免只有一边有绿 */
     bananaPlant(20.5, 8.0, 231, S.scene, 1.05);
-    bananaPlant(22.2, 10.6, 232, S.scene, 0.85);
-    /* 枯木：北侧林缘，作为低矮的水平向构件打破乔木的竖向节奏 */
+    bananaPlant(22.4, 10.8, 232, S.scene, 0.88);
+    bananaPlant(-20.5, 8.0, 233, S.scene, 1.02);
+    bananaPlant(-22.6, 11.2, 234, S.scene, 0.86);
+    bananaPlant(28.8, 40.2, 235, S.scene, 0.96);
+    bananaPlant(-29.4, 39.6, 236, S.scene, 0.92);
+    bananaPlant(19.2, -21.0, 237, S.scene, 0.90);
+    bananaPlant(-19.6, -20.4, 238, S.scene, 0.88);
+    /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
     deadTrunk(-22.0, -28.0, 241, S.scene, 0.9);
     deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
-    /* 沿阶草：只铺在未墁地的草坪带上，避开广场、廊道与水面。
+    deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
+    deadTrunk(30.5, 42.8, 244, S.scene, 0.7);
+    /* 沿阶草：铺满所有未墁地的草坪，避开广场、廊道、水面与中轴通道。
+       数量从原来 86 丛提到约 356 丛；每丛已合并成一个 mesh，draw call 反而更省。
        确定性抖动，刷新后位置不变。 */
     (function scatterTufts() {
       var sd2 = 76231;
       function r2() { sd2 = (sd2 * 1664525 + 1013904223) >>> 0; return sd2 / 4294967296; }
       var spots = [
         /* [x0, x1, z0, z1, 数量] */
-        [-40.0, -18.0, 30.5, 36.0, 20],   /* 南花园西侧草带 */
-        [18.0, 40.0, 30.5, 36.0, 20],     /* 南花园东侧草带 */
-        [-40.0, -18.0, -34.0, -24.0, 16], /* 北侧西段林下 */
-        [18.0, 40.0, -34.0, -24.0, 16],   /* 北侧东段林下 */
-        [16.0, 26.0, 2.0, 16.0, 14]       /* 东侧草坪（芭蕉旁） */
+        [-46.0, -4.5, 37.5, 54.0, 70],    /* 正门前西侧大草坪 */
+        [4.5, 46.0, 37.5, 54.0, 70],      /* 正门前东侧大草坪 */
+        [-46.0, -17.0, -30.0, 34.0, 70],  /* 西侧绿化带 */
+        [17.0, 46.0, -30.0, 34.0, 70],    /* 东侧绿化带 */
+        [-13.4, -9.7, 8.0, 22.0, 12],     /* 中轴南院西侧窄条 */
+        [9.7, 13.4, 8.0, 22.0, 12],       /* 中轴南院东侧窄条 */
+        [-46.0, -17.0, -37.0, -23.0, 26], /* 北侧西段林下 */
+        [17.0, 46.0, -37.0, -23.0, 26]    /* 北侧东段林下 */
       ];
       spots.forEach(function (a, ai) {
         for (var i = 0; i < a[4]; i++) {
           var px = a[0] + r2() * (a[1] - a[0]);
           var pz = a[2] + r2() * (a[3] - a[2]);
-          var sc2 = 0.75 + r2() * 0.7;
-          grassTuft(px, pz, 300 + ai * 50 + i, S.scene, sc2);
+          var sc2 = 0.80 + r2() * 0.80;
+          grassTuft(px, pz, 300 + ai * 200 + i, S.scene, sc2);
         }
       });
     })();

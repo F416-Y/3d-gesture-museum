@@ -528,25 +528,69 @@ window.MuseumExteriorSlots = {
           sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
           lampPair(2.2, -0.45);
         } else if (tag === '人物') {
-          /* 面向正门时左侧为西方，右侧为中国，形成同题材对照。 */
-          sideArtwork(-1, 1.8, 'monalisa');
-          sideArtwork(-1, -0.8, 'starrynight');
+          /* 面向正门时左侧为西方，右侧为中国，形成同题材对照。
+             侧墙可用长度 = dep（5.5m），立轴宽 0.72m，故侧墙每面最多 5 幅、
+             间距 1.1m 才能排进 ±2.2 之内。早先把 9 幅全排在侧墙、
+             偏移跨到 +4.2~-5.0，超出墙面 5.5m 的范围，画会甩到墙外。 */
+          sideArtwork(-1, 1.4, 'monalisa');
+          sideArtwork(-1, -1.4, 'starrynight');
           var chineseWall = [
-            ['hanxizai', 4.2], ['qianlijiangshan', 3.0],
-            ['fuchunshanjv', 1.8], ['xishanxinglvtu', 0.6],
-            ['buniantu', -0.6], ['xieshengzhenqintu', -1.8],
-            ['wuniutu', -3.0], ['molantu', -4.2],
-            ['luoshenfu', -5.0]
+            ['hanxizai', 2.2], ['qianlijiangshan', 1.1],
+            ['buniantu', 0], ['xieshengzhenqintu', -1.1],
+            ['luoshenfu', -2.2]
           ];
           for (i = 0; i < chineseWall.length; i++) {
             sideArtwork(1, chineseWall[i][1], chineseWall[i][0]);
           }
-          /* 人物厅中心对照：左侧维纳斯，右侧将军俑；不再放旧的四俑阵和铜奔马。 */
+          /* 余下 4 幅挪到后墙：后墙宽 len（15.3m），从容排开 */
+          var backUs = [-2.4, -0.8, 0.8, 2.4];
+          var backIds = ['fuchunshanjv', 'xishanxinglvtu', 'wuniutu', 'molantu'];
+          for (i = 0; i < backUs.length; i++) {
+            backScroll(backUs[i], backIds[i], dep / 2 - 0.42);
+          }
+          /* 人物厅中心对照：左侧维纳斯，右侧将军俑；各配方形石基座与铭牌，
+             对应参考图里「西方雕塑 / 中国人物雕塑」两块铜牌的做法。 */
           var compareB = dep / 2 - 2.8;
+          /* 方形石基座 + 正面铭牌；返回顶面高度，雕塑站上去 */
+          function sculpturePlinth(px, pz, text) {
+            var pw = 1.55, ph = 0.92, pd = 1.15;
+            var pg = new THREE.Group();
+            pg.position.set(px, floor, pz);
+            scene.add(pg);
+            var body = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pd), MT.stoneG);
+            body.position.y = ph / 2;
+            body.castShadow = true; body.receiveShadow = true;
+            pg.add(body);
+            /* 上下压边，避免一块光板 */
+            var cap = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.12, 0.07, pd + 0.12), MT.stoneG);
+            cap.position.y = ph - 0.035; cap.castShadow = true; pg.add(cap);
+            var foot = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.12, 0.07, pd + 0.12), MT.stoneG);
+            foot.position.y = 0.035; foot.receiveShadow = true; pg.add(foot);
+            /* 铭牌：canvas 写字，贴在正面（朝 +z，与厅门方向一致） */
+            var cv = document.createElement('canvas');
+            cv.width = 512; cv.height = 128;
+            var cx2 = cv.getContext('2d');
+            cx2.fillStyle = '#2b2b2b'; cx2.fillRect(0, 0, 512, 128);
+            cx2.strokeStyle = 'rgba(198,168,104,0.75)'; cx2.lineWidth = 4;
+            cx2.strokeRect(10, 10, 492, 108);
+            cx2.fillStyle = '#d9c79a';
+            cx2.font = '600 52px "Microsoft YaHei", "PingFang SC", sans-serif';
+            cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+            cx2.fillText(text, 256, 66);
+            var tex = new THREE.CanvasTexture(cv);
+            tex.needsUpdate = true;
+            var badge = new THREE.Mesh(new THREE.PlaneGeometry(pw * 0.78, pw * 0.78 / 4),
+              new THREE.MeshBasicMaterial({ map: tex, transparent: false }));
+            badge.position.set(0, ph * 0.52, pd / 2 + 0.006);
+            pg.add(badge);
+            return floor + ph;
+          }
+          var plinthTop = sculpturePlinth(at(-2.2, compareB)[0], at(-2.2, compareB)[1], '西方雕塑');
           p = at(-2.2, compareB);
-          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.8, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('维纳斯');
+          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.8, x: p[0], y: plinthTop, z: p[1], ry: faceRy })) mark('维纳斯');
+          var plinthTop2 = sculpturePlinth(at(2.2, compareB)[0], at(2.2, compareB)[1], '中国人物雕塑');
           p = at(2.2, compareB);
-          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.8, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('将军俑');
+          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.8, x: p[0], y: plinthTop2, z: p[1], ry: faceRy })) mark('将军俑');
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
