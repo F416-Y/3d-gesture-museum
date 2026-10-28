@@ -511,25 +511,23 @@ window.MuseumExteriorSlots = {
           sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
           lampPair(2.2, -0.45);
         } else if (tag === '人物') {
-          /* 面向正门时左侧为西方，右侧为中国，形成同题材对照。 */
+          /* 面向正门时左墙为西方绘画、右墙为中国画；中央再分为西方雕塑 / 中国人物雕塑。 */
           sideArtwork(-1, 1.8, 'monalisa');
           sideArtwork(-1, -0.8, 'starrynight');
           var chineseWall = [
             ['hanxizai', 4.2], ['qianlijiangshan', 3.0],
             ['fuchunshanjv', 1.8], ['xishanxinglvtu', 0.6],
             ['buniantu', -0.6], ['xieshengzhenqintu', -1.8],
-            ['wuniutu', -3.0], ['molantu', -4.2],
-            ['luoshenfu', -5.0]
+            ['wuniutu', -3.0], ['molantu', -4.2], ['luoshenfu', -5.0]
           ];
           for (i = 0; i < chineseWall.length; i++) {
             sideArtwork(1, chineseWall[i][1], chineseWall[i][0]);
           }
-          /* 人物厅中心对照：左侧维纳斯，右侧将军俑；不再放旧的四俑阵和铜奔马。 */
-          var compareB = dep / 2 - 2.8;
-          p = at(-2.2, compareB);
-          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.8, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('维纳斯');
-          p = at(2.2, compareB);
-          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.8, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('将军俑');
+          var compareB = dep / 2 - 2.1;
+          p = at(-1.45, compareB);
+          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.9, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('西方雕塑');
+          p = at(1.45, compareB);
+          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('中国人物雕塑');
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
@@ -570,8 +568,8 @@ window.MuseumExteriorSlots = {
           }
         }
       }
-      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), loadExternal('assets/models/venus.glb')]).then(function (fs) {
-        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], venus: fs[6] };
+      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse'), loadExternal('assets/models/venus.glb')]).then(function (fs) {
+        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6], venus: fs[7] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
       });

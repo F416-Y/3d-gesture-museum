@@ -3,7 +3,7 @@
   <nav class="vue-nav">
     <div class="nav-halls">
           <a :href="exteriorHref('map')">平面图</a>
-          <a :href="exteriorHref('hall/courtyard')">庭院</a>
+          <a :href="exteriorHref('hall/hall0')">序厅</a>
           <a href="./shanshui.html">山水</a>
           <a href="./huaniao.html">花鸟</a>
           <a href="./renwu.html">人物</a>
