@@ -2,1103 +2,2059 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#171711">
-  <title>花鸟清趣 · 云间入墨</title>
-  <meta name="description" content="云间入墨数字博物馆花鸟厅：写生珍禽图、五牛图、墨兰图与江南花鸟陈设。">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#171816">
+  <meta name="description" content="云间入墨花鸟厅，独立 Three.js 纯画作观看空间。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23a54535'/%3E%3Cpath d='M8 9h16v2H8zm0 6h16v2H8zm0 6h16v2H8z' fill='%23f0ede2'/%3E%3C/svg%3E">
+  <title>花鸟清趣 · 云间入墨</title>
   <style>
     :root {
-      --paper: #eee6d5;
-      --paper-deep: #d8ccb6;
-      --ink: #241f1a;
-      --ink-soft: #665d50;
-      --seal: #8e382c;
-      --jade: #53675c;
-      --line: rgba(73, 61, 47, .22);
-      --panel: rgba(242, 235, 220, .92);
+      color-scheme: dark;
+      --ink: #171816;
+      --ink-soft: #23241f;
+      --paper: #f0ede2;
+      --paper-muted: #b9b5a9;
+      --wood: #5a3d29;
+      --wood-light: #8a684c;
+      --cinnabar: #a54535;
+      --mist-blue: #9cb0ac;
+      --line: rgba(235, 230, 214, 0.2);
+      --panel: rgba(20, 21, 19, 0.94);
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
     }
-    * { box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
-      color: var(--ink);
-      background: #d8d0c1;
-      font-family: "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: "Noto Serif SC", "Songti SC", "STSong", SimSun, serif;
+      letter-spacing: 0;
     }
-    button, a { font: inherit; }
-    button { color: inherit; }
-    #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
-    body::after {
-      content: "";
+
+    button,
+    a {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button:focus-visible,
+    a:focus-visible {
+      outline: 2px solid var(--cinnabar);
+      outline-offset: 3px;
+    }
+
+    #gallery {
       position: fixed;
       inset: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(circle at 50% 12%, transparent 35%, rgba(41, 33, 24, .16) 100%),
-        repeating-linear-gradient(90deg, rgba(76, 60, 40, .022) 0 1px, transparent 1px 5px);
-      mix-blend-mode: multiply;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: default;
     }
-    .hud {
+
+    #gallery.dragging {
+      cursor: grabbing;
+    }
+
+    #gallery.art-hover {
+      cursor: pointer;
+    }
+
+    .museum-ui {
       position: fixed;
       inset: 0;
       z-index: 4;
       pointer-events: none;
     }
-    .hud > * { pointer-events: auto; }
-    .topbar {
+
+    .museum-ui button,
+    .museum-ui a,
+    .museum-ui .collection {
+      pointer-events: auto;
+    }
+
+    .identity {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 86px;
+      top: max(24px, env(safe-area-inset-top));
+      left: max(28px, env(safe-area-inset-left));
       display: flex;
-      align-items: center;
-      gap: 18px;
-      padding: 16px 28px;
-      color: #f4eddf;
-      background: linear-gradient(180deg, rgba(23, 23, 17, .86), rgba(23, 23, 17, .26) 70%, transparent);
+      align-items: flex-start;
+      gap: 15px;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
     }
-    .back {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: #f4eddf;
-      text-decoration: none;
-      padding: 9px 13px;
-      border: 1px solid rgba(245, 236, 218, .35);
-      border-radius: 999px;
-      letter-spacing: .08em;
-      white-space: nowrap;
-      transition: background .2s ease, border-color .2s ease;
-    }
-    .back:hover { background: rgba(255, 250, 239, .12); border-color: rgba(255, 250, 239, .68); }
-    .brand { min-width: 0; display: flex; align-items: center; gap: 12px; }
+
     .seal {
-      width: 42px;
-      height: 42px;
-      flex: 0 0 42px;
+      width: 40px;
+      height: 40px;
       display: grid;
       place-items: center;
-      border: 2px solid #b75442;
-      color: #f1dfca;
-      background: var(--seal);
-      font-size: 15px;
-      line-height: 1.08;
-      text-align: center;
-      letter-spacing: .06em;
-      box-shadow: 0 0 0 3px rgba(142, 56, 44, .18);
+      flex: 0 0 40px;
+      border: 1px solid rgba(236, 220, 195, 0.7);
+      background: var(--cinnabar);
+      color: #f8eee1;
+      font-family: "KaiTi", "STKaiti", serif;
+      font-size: 13px;
+      line-height: 1.02;
+      box-shadow: 0 7px 20px rgba(60, 12, 8, 0.28);
     }
-    .brand-copy h1 { margin: 0; font-size: 25px; letter-spacing: .17em; font-weight: 500; }
-    .brand-copy p { margin: 4px 0 0; font: 11px/1.4 Georgia, serif; letter-spacing: .16em; color: rgba(244, 237, 223, .68); }
-    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    .action {
-      min-height: 38px;
-      padding: 0 14px;
-      border: 1px solid rgba(245, 236, 218, .35);
-      border-radius: 999px;
-      color: #f4eddf;
-      background: rgba(20, 20, 16, .24);
-      cursor: pointer;
+
+    .identity-copy {
+      padding-top: 1px;
     }
-    .action:hover { background: rgba(255, 250, 239, .14); }
-    .side-copy {
-      display: none;
+
+    .identity-kicker {
+      margin: 0 0 6px;
+      color: rgba(240, 237, 226, 0.65);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 10px;
+      text-transform: uppercase;
     }
-    .eyebrow { margin: 0 0 10px; font: 11px/1.4 Georgia, serif; letter-spacing: .25em; color: rgba(244, 237, 223, .68); }
-    .side-copy h2 { margin: 0 0 12px; font-size: clamp(28px, 4vw, 48px); font-weight: 400; letter-spacing: .13em; }
-    .side-copy p { margin: 0; max-width: 260px; font-size: 13px; line-height: 1.9; color: rgba(244, 237, 223, .82); }
-    .status-line { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 12px; color: rgba(244, 237, 223, .75); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ae8f55; box-shadow: 0 0 12px currentColor; }
-    body[data-ready="true"] .status-dot { color: #9dc6a4; background: #9dc6a4; }
-    .works {
-      position: absolute;
-      left: 50%;
-      right: auto;
-      top: auto;
-      bottom: 18px;
-      width: min(720px, calc(100vw - 52px));
-      transform: translateX(-50%);
-      padding: 8px 10px;
-      border: 1px solid rgba(239, 226, 204, .22);
-      color: #f3ead9;
-      background: rgba(28, 25, 20, .68);
-      box-shadow: 0 15px 45px rgba(22, 18, 14, .24);
-      backdrop-filter: blur(12px);
-    }
-    .works-head { display: none; }
-    .works-head h3 { margin: 0; font-size: 18px; font-weight: 500; letter-spacing: .15em; }
-    .works-head span { font: 10px/1 Georgia, serif; letter-spacing: .15em; color: var(--ink-soft); }
-    .work-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-    .work {
-      position: relative;
-      display: grid;
-      grid-template-columns: 28px minmax(0, 1fr);
-      gap: 7px;
-      width: 100%;
-      padding: 8px 10px;
-      text-align: left;
-      color: #f3ead9;
-      border: 1px solid rgba(239, 226, 204, .16);
-      background: rgba(255, 252, 245, .06);
-      cursor: pointer;
-      transition: border-color .2s ease, background .2s ease, transform .2s ease;
-    }
-    .work:hover, .work:focus-visible { transform: translateY(-2px); border-color: rgba(226, 197, 143, .55); }
-    .work[aria-current="true"] { border-color: rgba(204, 144, 108, .72); background: rgba(255, 243, 222, .13); }
-    .work-index { font: 12px/1.4 Georgia, serif; color: #d4b174; }
-    .work-title { display: block; font-size: 13px; letter-spacing: .08em; white-space: nowrap; }
-    .work-note { display: block; margin-top: 3px; font-size: 9px; color: rgba(243, 234, 217, .62); }
-    .room-note {
-      display: none;
-    }
-    .hint {
-      position: absolute;
-      left: 50%;
-      bottom: 82px;
-      transform: translateX(-50%);
-      padding: 8px 14px;
-      color: rgba(244, 237, 223, .82);
-      background: rgba(22, 22, 17, .5);
-      border: 1px solid rgba(244, 237, 223, .18);
-      border-radius: 999px;
-      font-size: 11px;
-      letter-spacing: .06em;
-      white-space: nowrap;
-      backdrop-filter: blur(8px);
-    }
-    .detail {
-      position: absolute;
-      left: 26px;
-      bottom: 24px;
-      width: min(520px, calc(100vw - 52px));
-      max-height: min(520px, calc(100vh - 128px));
-      overflow: auto;
-      padding: 24px;
-      border: 1px solid var(--line);
-      background: rgba(244, 238, 226, .97);
-      box-shadow: 0 28px 80px rgba(29, 24, 18, .28);
-      transform: translateY(18px);
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity .24s ease, transform .24s ease, visibility .24s;
-    }
-    .detail.open { opacity: 1; visibility: visible; transform: translateY(0); }
-    .detail-close {
-      position: absolute;
-      top: 10px;
-      right: 12px;
-      border: 0;
-      background: transparent;
-      color: var(--ink-soft);
-      cursor: pointer;
-      font-size: 24px;
+
+    .identity h1 {
+      margin: 0;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+      font-size: clamp(25px, 2.5vw, 34px);
+      font-weight: 500;
       line-height: 1;
     }
-    .detail h3 { margin: 0 0 4px; font-size: 28px; font-weight: 500; letter-spacing: .1em; }
-    .detail-meta { margin: 0 0 14px; font-size: 12px; color: var(--seal); letter-spacing: .04em; }
-    .detail p { margin: 0 0 11px; font-size: 13px; line-height: 1.85; color: #4b443a; }
-    .detail p:last-child { margin-bottom: 0; }
-    .detail-nav { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
-    .detail-nav button {
-      border: 1px solid var(--line);
-      background: rgba(255, 252, 245, .68);
-      padding: 7px 12px;
-      cursor: pointer;
+
+    .identity p {
+      margin: 9px 0 0;
+      color: rgba(240, 237, 226, 0.63);
+      font-size: 11px;
     }
+
+    .top-actions {
+      position: absolute;
+      top: max(24px, env(safe-area-inset-top));
+      right: max(28px, env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-button,
+    .back-link {
+      width: 38px;
+      height: 38px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(240, 237, 226, 0.24);
+      border-radius: 2px;
+      background: rgba(21, 22, 20, 0.58);
+      color: rgba(248, 244, 232, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      text-decoration: none;
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+    }
+
+    .back-link {
+      width: auto;
+      padding: 0 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .icon-button:hover,
+    .back-link:hover,
+    .icon-button.active {
+      border-color: rgba(225, 199, 161, 0.72);
+      background: rgba(70, 51, 37, 0.82);
+      color: #fff9eb;
+    }
+
+    .icon-button svg,
+    .back-link svg {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .collection {
+      position: absolute;
+      left: max(28px, env(safe-area-inset-left));
+      bottom: max(28px, env(safe-area-inset-bottom));
+      width: min(300px, calc(100vw - 56px));
+      padding: 16px 18px 15px;
+      border-left: 1px solid rgba(226, 219, 198, 0.42);
+      background: linear-gradient(90deg, rgba(18, 19, 17, 0.74), rgba(18, 19, 17, 0));
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .collection-heading {
+      margin: 0 0 10px;
+      color: rgba(240, 237, 226, 0.55);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+    }
+
+    .collection-list {
+      display: grid;
+      gap: 1px;
+    }
+
+    .painting-button {
+      position: relative;
+      display: grid;
+      grid-template-columns: 22px 1fr auto;
+      align-items: baseline;
+      gap: 8px;
+      width: 100%;
+      min-height: 33px;
+      padding: 6px 4px 6px 0;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      color: rgba(240, 237, 226, 0.7);
+      cursor: pointer;
+      transition: color 150ms ease, transform 150ms ease;
+    }
+
+    .painting-button::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      bottom: 8px;
+      left: -1px;
+      width: 2px;
+      background: transparent;
+    }
+
+    .painting-button:hover,
+    .painting-button.active {
+      color: #fffaf0;
+      transform: translateX(2px);
+    }
+
+    .painting-button.active::before {
+      background: #c35a47;
+    }
+
+    .painting-number {
+      color: rgba(222, 199, 164, 0.6);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+    }
+
+    .painting-name {
+      font-size: 13px;
+    }
+
+    .painting-era {
+      color: rgba(240, 237, 226, 0.42);
+      font-size: 10px;
+    }
+
+    .reticle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      opacity: 0.48;
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+
+    .reticle::before,
+    .reticle::after {
+      content: "";
+      position: absolute;
+      background: rgba(250, 247, 237, 0.9);
+    }
+
+    .reticle::before {
+      top: 10px;
+      left: 4px;
+      width: 14px;
+      height: 1px;
+    }
+
+    .reticle::after {
+      top: 4px;
+      left: 10px;
+      width: 1px;
+      height: 14px;
+    }
+
+    .reticle.active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.18);
+    }
+
+    .reticle.active::before,
+    .reticle.active::after {
+      background: #d16a56;
+    }
+
+    .location {
+      position: absolute;
+      right: max(28px, env(safe-area-inset-right));
+      bottom: max(28px, env(safe-area-inset-bottom));
+      color: rgba(240, 237, 226, 0.5);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+      text-align: right;
+      line-height: 1.7;
+    }
+
+    .location strong {
+      display: block;
+      color: rgba(242, 237, 222, 0.76);
+      font-weight: 400;
+    }
+
     .camwrap {
       position: absolute;
-      left: 26px;
-      bottom: 26px;
-      width: 224px;
+      right: max(28px, env(safe-area-inset-right));
+      bottom: max(28px, env(safe-area-inset-bottom));
+      width: 188px;
       overflow: hidden;
-      border: 1px solid rgba(244, 237, 223, .32);
-      background: rgba(20, 20, 16, .64);
-      box-shadow: 0 15px 40px rgba(0, 0, 0, .24);
+      border: 1px solid rgba(234, 226, 207, 0.24);
+      background: rgba(18, 19, 17, 0.86);
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
     }
-    .camwrap[hidden] { display: none; }
-    #cam { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; transform: scaleX(-1); background: #111; }
-    .cam-note { margin: 0; padding: 8px 10px; color: rgba(244, 237, 223, .76); font-size: 10px; line-height: 1.5; }
+
+    .camwrap[hidden] {
+      display: none;
+    }
+
+    #cam {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      transform: scaleX(-1);
+      background: #111;
+    }
+
+    .camwrap p {
+      margin: 0;
+      padding: 8px 10px;
+      color: rgba(240, 237, 226, 0.58);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+      line-height: 1.55;
+    }
+
     .toast {
       position: absolute;
       left: 50%;
-      top: 104px;
+      top: 96px;
+      max-width: min(480px, calc(100vw - 48px));
+      padding: 9px 14px;
       transform: translate(-50%, -8px);
-      max-width: min(520px, calc(100vw - 48px));
-      padding: 10px 16px;
-      color: #f5ecde;
-      background: rgba(30, 27, 22, .84);
-      border: 1px solid rgba(245, 236, 222, .22);
-      font-size: 12px;
+      border: 1px solid rgba(235, 230, 214, 0.18);
+      background: rgba(20, 21, 19, 0.9);
+      color: rgba(240, 237, 226, 0.82);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 10px;
       opacity: 0;
       pointer-events: none;
-      transition: opacity .2s ease, transform .2s ease;
+      transition: opacity 160ms ease, transform 160ms ease;
     }
-    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .art-panel {
+      position: absolute;
+      top: max(22px, env(safe-area-inset-top));
+      right: max(22px, env(safe-area-inset-right));
+      bottom: max(22px, env(safe-area-inset-bottom));
+      z-index: 8;
+      width: min(392px, calc(100vw - 44px));
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid rgba(227, 211, 183, 0.32);
+      background:
+        linear-gradient(180deg, rgba(88, 59, 39, 0.12), transparent 24%),
+        var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      transform: translateX(calc(100% + 28px));
+      visibility: hidden;
+      transition: transform 280ms cubic-bezier(0.2, 0.78, 0.22, 1), visibility 280ms;
+    }
+
+    .art-panel.open {
+      transform: translateX(0);
+      visibility: visible;
+    }
+
+    .panel-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: rgba(240, 237, 226, 0.64);
+      cursor: pointer;
+    }
+
+    .panel-close:hover {
+      color: #fffaf0;
+    }
+
+    .panel-close svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .panel-scroll {
+      height: 100%;
+      overflow-y: auto;
+      padding: 38px 34px 36px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(202, 185, 151, 0.35) transparent;
+    }
+
+    .panel-kicker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 17px;
+      color: #c4a77f;
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+    }
+
+    .panel-kicker::after {
+      content: "";
+      width: 42px;
+      height: 1px;
+      background: rgba(196, 167, 127, 0.44);
+    }
+
+    .panel-title {
+      margin: 0;
+      color: #f5efe2;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+      font-size: 34px;
+      font-weight: 500;
+      line-height: 1.15;
+    }
+
+    .panel-artist {
+      margin: 9px 0 0;
+      color: rgba(240, 237, 226, 0.58);
+      font-size: 12px;
+    }
+
+    .panel-meta {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 8px 14px;
+      margin: 27px 0 0;
+      padding: 18px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .panel-meta dt {
+      color: rgba(240, 237, 226, 0.38);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+    }
+
+    .panel-meta dd {
+      margin: 0;
+      color: rgba(240, 237, 226, 0.74);
+    }
+
+    .panel-copy {
+      margin: 24px 0 0;
+      color: rgba(240, 237, 226, 0.7);
+      font-size: 13px;
+      line-height: 2;
+      text-align: justify;
+    }
+
+    .panel-note-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 30px 0 12px;
+      color: #d7c3a4;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .panel-note-title::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      background: var(--cinnabar);
+      transform: rotate(45deg);
+    }
+
+    .panel-note {
+      margin: 0;
+      color: rgba(240, 237, 226, 0.72);
+      font-size: 13px;
+      line-height: 2;
+      text-align: justify;
+    }
+
     .loading {
       position: fixed;
       inset: 0;
       z-index: 20;
       display: grid;
       place-items: center;
-      background: #e9e1d1;
-      color: var(--ink);
-      transition: opacity .65s ease, visibility .65s;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(76, 96, 88, 0.28), transparent 36%),
+        #171816;
+      transition: opacity 450ms ease, visibility 450ms;
     }
-    .loading.done { opacity: 0; visibility: hidden; }
-    .loading-card { width: min(420px, calc(100vw - 56px)); text-align: center; }
+
+    .loading.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loading-inner {
+      width: min(330px, calc(100vw - 56px));
+      text-align: center;
+    }
+
     .loading-mark {
-      width: 66px;
-      height: 66px;
-      margin: 0 auto 24px;
+      width: 54px;
+      height: 54px;
       display: grid;
       place-items: center;
-      border: 2px solid var(--seal);
-      color: var(--seal);
-      font-size: 22px;
-      letter-spacing: .08em;
-      transform: rotate(-3deg);
+      margin: 0 auto 22px;
+      border: 1px solid rgba(226, 207, 176, 0.62);
+      color: #e5d6bf;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+      font-size: 16px;
+      line-height: 1.05;
     }
-    .loading h2 { margin: 0; font-size: 30px; font-weight: 400; letter-spacing: .2em; }
-    .loading p { margin: 12px 0 18px; font-size: 12px; letter-spacing: .1em; color: var(--ink-soft); }
-    .bar { height: 2px; overflow: hidden; background: rgba(59, 48, 37, .14); }
-    .bar i { display: block; width: 0; height: 100%; background: var(--seal); transition: width .25s ease; }
-    .loading-count { margin-top: 9px; font: 10px/1 Georgia, serif; letter-spacing: .14em; color: var(--ink-soft); }
-    @media (max-width: 850px) {
-      .topbar { height: 72px; gap: 8px; padding: 10px 12px; }
-      .back { padding: 7px 10px; font-size: 12px; }
-      .brand { gap: 8px; }
-      .brand-copy h1 { font-size: 16px; letter-spacing: .08em; white-space: nowrap; }
-      .brand-copy p { display: none; }
-      .top-actions { display: none; }
-      .side-copy { display: none; }
-      .works { top: auto; left: 12px; right: 12px; bottom: 12px; width: auto; padding: 6px; transform: none; }
-      .works-head, .room-note { display: none; }
-      .work-list { grid-template-columns: repeat(3, 1fr); }
-      .work { grid-template-columns: 1fr; padding: 7px; }
-      .work-index { margin-bottom: 5px; }
-      .work-note { display: none; }
-      .hint { display: none; }
-      .detail { left: 12px; right: 12px; bottom: 12px; width: auto; max-height: 53vh; padding: 20px; }
-      .camwrap { width: 150px; left: 12px; top: 116px; bottom: auto; }
+
+    .loading h2 {
+      margin: 0;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+      font-size: 24px;
+      font-weight: 500;
     }
+
+    .loading p {
+      min-height: 18px;
+      margin: 10px 0 20px;
+      color: rgba(240, 237, 226, 0.46);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+    }
+
+    .loading-track {
+      height: 1px;
+      overflow: hidden;
+      background: rgba(240, 237, 226, 0.14);
+    }
+
+    .loading-bar {
+      width: 4%;
+      height: 100%;
+      background: #b66a55;
+      transition: width 300ms ease;
+    }
+
+    .load-error {
+      color: #d58977 !important;
+    }
+
+    .part-caption {
+      position: fixed;
+      left: max(28px, env(safe-area-inset-left));
+      bottom: max(28px, env(safe-area-inset-bottom));
+      z-index: 5;
+      display: none;
+      padding: 12px 0 12px 16px;
+      border-left: 2px solid var(--cinnabar);
+      background: linear-gradient(90deg, rgba(18, 19, 17, 0.74), transparent);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    }
+
+    .part-mode .part-caption {
+      display: block;
+    }
+
+    .part-mode .museum-ui {
+      display: none;
+    }
+
+    .touch-nav {
+      display: none;
+    }
+
+    .part-mode #gallery {
+      cursor: grab;
+    }
+
+    .part-caption strong {
+      display: block;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+      font-size: 20px;
+      font-weight: 500;
+    }
+
+    .part-caption span {
+      display: block;
+      margin-top: 6px;
+      color: rgba(240, 237, 226, 0.54);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+    }
+
+    @media (max-width: 720px) {
+      .identity {
+        top: max(18px, env(safe-area-inset-top));
+        left: max(18px, env(safe-area-inset-left));
+      }
+
+      .seal {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+        font-size: 11px;
+      }
+
+      .identity-kicker,
+      .identity p {
+        display: none;
+      }
+
+      .identity h1 {
+        padding-top: 6px;
+        font-size: 24px;
+      }
+
+      .top-actions {
+        top: max(18px, env(safe-area-inset-top));
+        right: max(18px, env(safe-area-inset-right));
+      }
+
+      .icon-button,
+      .back-link {
+        width: 36px;
+        height: 36px;
+      }
+
+      .back-link {
+        width: auto;
+        padding: 0 10px;
+      }
+
+      .collection {
+        left: 18px;
+        right: 18px;
+        bottom: max(18px, env(safe-area-inset-bottom));
+        width: auto;
+        padding: 12px 14px;
+        background: rgba(18, 19, 17, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .collection-heading,
+      .painting-era,
+      .painting-number {
+        display: none;
+      }
+
+      .collection-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .painting-button {
+        display: block;
+        min-height: 28px;
+        padding: 5px 2px;
+        text-align: center;
+      }
+
+      .painting-button::before {
+        top: auto;
+        right: 20%;
+        bottom: 0;
+        left: 20%;
+        width: auto;
+        height: 1px;
+      }
+
+      .painting-name {
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .location {
+        display: none;
+      }
+
+      .camwrap {
+        right: 18px;
+        bottom: 84px;
+        width: 144px;
+      }
+
+      .toast {
+        top: 76px;
+      }
+
+      .touch-nav {
+        position: absolute;
+        right: 18px;
+        bottom: 84px;
+        display: none;
+        gap: 6px;
+      }
+
+      .art-panel {
+        top: auto;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        width: auto;
+        max-height: min(72vh, 640px);
+        border-top: 1px solid rgba(227, 211, 183, 0.32);
+        border-left: 0;
+        transform: translateY(calc(100% + 18px));
+      }
+
+      .art-panel.open {
+        transform: translateY(0);
+      }
+
+      .panel-scroll {
+        padding: 34px 24px 28px;
+      }
+
+      .panel-title {
+        font-size: 29px;
+      }
+
+      .part-caption {
+        left: 18px;
+        bottom: max(18px, env(safe-area-inset-bottom));
+      }
+    }
+
+    @media (max-width: 720px) and (pointer: coarse) {
+      .touch-nav {
+        display: flex;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; }
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
     }
   </style>
 </head>
 <body data-ready="false">
-  <canvas id="scene" tabindex="0" aria-label="花鸟厅三维展陈"></canvas>
+  <canvas id="gallery" aria-label="花鸟厅三维展厅"></canvas>
 
-  <div class="loading" id="loading" aria-live="polite">
-    <div class="loading-card">
-      <div class="loading-mark">花鸟</div>
-      <h2>花鸟清趣</h2>
-      <p>正在布置写生珍禽、五牛与墨兰</p>
-      <div class="bar"><i id="loading-bar"></i></div>
-      <div class="loading-count" id="loading-count">构件 0 / 7</div>
-    </div>
-  </div>
-
-  <main class="hud">
-    <header class="topbar">
-      <a class="back" href="./index.html#/hall/plaza" aria-label="返回云间入墨园区">← 返回园区</a>
-      <div class="brand">
-        <span class="seal">花鸟<br>清趣</span>
-        <div class="brand-copy">
-          <h1>花鸟厅</h1>
-          <p>MUSEUM OF BIRDS · FLOWERS · INK</p>
-        </div>
-      </div>
-      <div class="top-actions">
-        <button class="action" id="reset-btn" type="button">重置视角</button>
-        <button class="action" id="camera-btn" type="button">启用手势</button>
+  <div class="museum-ui">
+    <header class="identity">
+      <div class="seal" aria-hidden="true">云间<br>入墨</div>
+      <div class="identity-copy">
+        <p class="identity-kicker">云间入墨 · 花鸟厅</p>
+        <h1>花鸟清趣</h1>
+        <p>一庭花鸟 · 三卷生机</p>
       </div>
     </header>
 
-    <section class="side-copy" aria-labelledby="hall-heading">
-      <p class="eyebrow">HALL II · 翎毛写生</p>
-      <h2 id="hall-heading">一庭花鸟，<br>三卷生机。</h2>
-      <p>以原作观看为核心，沿中轴看《五牛图》，两侧对读《写生珍禽图》与《墨兰图》。</p>
-      <div class="status-line"><i class="status-dot"></i><span id="asset-status">正在加载七件厅堂构件</span></div>
-    </section>
+    <nav class="top-actions" aria-label="展厅工具与返回入口">
+      <button class="icon-button" id="gesture-button" type="button" title="开启或关闭手势控制" aria-label="开启或关闭手势控制">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4.5a2 2 0 0 0-4 0v7"/><path d="M10.5 7V5.5a2 2 0 1 0-4 0V13"/><path d="M6.5 9V7.5a2 2 0 1 0-4 0v7.2a6.3 6.3 0 0 0 6.3 6.3h2.4a6.8 6.8 0 0 0 6.8-6.8v-3.7a2 2 0 0 0-4 0v2.7"/><path d="M14.5 13V9.5a2 2 0 0 1 4 0V14"/></svg>
+      </button>
+      <button class="icon-button" id="reset-button" type="button" title="回到入口视角" aria-label="回到入口视角">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+      <a class="back-link" href="./index.html" title="返回园区" aria-label="返回园区">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        <span>返回园区</span>
+      </a>
+    </nav>
 
-    <aside class="works" aria-label="花鸟厅展品导览">
-      <div class="works-head"><h3>花鸟三品</h3><span>SELECT A WORK</span></div>
-      <div class="work-list" id="work-list"></div>
-      <div class="room-note"><span>七件厅堂构件</span><span id="door-state">双扇门 · 闭合</span></div>
-    </aside>
+    <div class="reticle" id="reticle" aria-hidden="true"></div>
 
-    <section class="detail" id="detail" aria-live="polite" aria-hidden="true">
-      <button class="detail-close" id="detail-close" type="button" aria-label="关闭作品说明">×</button>
-      <h3 id="detail-title"></h3>
-      <p class="detail-meta" id="detail-meta"></p>
-      <p id="detail-intro"></p>
-      <p id="detail-appreciation"></p>
-      <div class="detail-nav">
-        <button type="button" id="detail-prev">上一幅</button>
-        <button type="button" id="detail-next">下一幅</button>
-        <span id="detail-index" style="margin-left:auto;color:var(--ink-soft);font-size:11px"></span>
+    <section class="collection" aria-label="展品目录">
+      <p class="collection-heading">花鸟三品 / Collection</p>
+      <div class="collection-list">
+        <button class="painting-button" type="button" data-exhibit="xieshengzhenqintu">
+          <span class="painting-number">01</span>
+          <span class="painting-name">写生珍禽图</span>
+          <span class="painting-era">五代</span>
+        </button>
+        <button class="painting-button active" type="button" data-exhibit="wuniutu">
+          <span class="painting-number">02</span>
+          <span class="painting-name">五牛图</span>
+          <span class="painting-era">唐</span>
+        </button>
+        <button class="painting-button" type="button" data-exhibit="molantu">
+          <span class="painting-number">03</span>
+          <span class="painting-name">墨兰图</span>
+          <span class="painting-era">宋末元初</span>
+        </button>
       </div>
     </section>
 
-    <div class="camwrap" id="camwrap" hidden>
-      <video id="cam" autoplay muted playsinline></video>
-      <p class="cam-note" id="cam-note">手掌前后、食指转向、捏合查看展品</p>
+    <div class="location" aria-hidden="true">
+      <strong>花鸟厅 · 北墙</strong>
+      15.0 × 10.8 m
     </div>
 
-    <div class="toast" id="toast" role="status"></div>
-  </main>
+    <div class="camwrap" id="camwrap" hidden>
+      <video id="cam" autoplay muted playsinline></video>
+      <p id="cam-note">手势已启用 · 左右指点切画 · 捏合查看</p>
+    </div>
 
-  <noscript>本页需要启用 JavaScript 才能展示三维花鸟厅。</noscript>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <aside class="art-panel" id="art-panel" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="panel-title">
+    <button class="panel-close" id="panel-close" type="button" aria-label="关闭画作说明" title="关闭">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+    <div class="panel-scroll">
+      <p class="panel-kicker" id="panel-kicker">花鸟三品 · 02</p>
+      <h2 class="panel-title" id="panel-title">五牛图</h2>
+      <p class="panel-artist" id="panel-artist">韩滉 · 唐</p>
+      <dl class="panel-meta">
+        <dt>年代</dt>
+        <dd id="panel-era">约 8 世纪</dd>
+        <dt>形制</dt>
+        <dd id="panel-medium">纸本设色 · 纵 20.8cm × 横 139.8cm</dd>
+        <dt>收藏</dt>
+        <dd id="panel-collection">故宫博物院</dd>
+      </dl>
+      <p class="panel-copy" id="panel-intro"></p>
+      <h3 class="panel-note-title">观看笔记</h3>
+      <p class="panel-note" id="panel-note"></p>
+    </div>
+  </aside>
+
+  <div class="part-caption" aria-live="polite">
+    <strong id="part-name">木柱与柱础</strong>
+    <span id="part-meta">4.200 m · 底面原点 · 正面 +Z</span>
+  </div>
+
+  <div class="loading" id="loading" role="status" aria-live="polite">
+    <div class="loading-inner">
+      <div class="loading-mark" aria-hidden="true">花鸟</div>
+      <h2>入画</h2>
+      <p id="loading-status">正在布置花鸟厅</p>
+      <div class="loading-track"><div class="loading-bar" id="loading-bar"></div></div>
+    </div>
+  </div>
 
   <script src="./js/vendor/three.min.js"></script>
   <script src="./js/vendor/GLTFLoader.js"></script>
   <script src="./js/config.js"></script>
   <script src="./js/gesture.js"></script>
-  <script type="module">
-    const THREE = window.THREE;
-    const canvas = document.getElementById("scene");
-    const loading = document.getElementById("loading");
-    const loadingBar = document.getElementById("loading-bar");
-    const loadingCount = document.getElementById("loading-count");
-    const assetStatus = document.getElementById("asset-status");
-    const workList = document.getElementById("work-list");
-    const detail = document.getElementById("detail");
-    const detailTitle = document.getElementById("detail-title");
-    const detailMeta = document.getElementById("detail-meta");
-    const detailIntro = document.getElementById("detail-intro");
-    const detailAppreciation = document.getElementById("detail-appreciation");
-    const detailIndex = document.getElementById("detail-index");
-    const toastEl = document.getElementById("toast");
-    const camwrap = document.getElementById("camwrap");
-    const cameraButton = document.getElementById("camera-btn");
-    const camNote = document.getElementById("cam-note");
+  <script>
+    (function () {
+      "use strict";
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      var PART_IDS = ["column", "lattice-window", "skylight", "painting-frame"];
+      var PART_INFO = {
+        column: { name: "木柱与柱础", size: "4.200 m", front: "+Z", origin: "底面中心" },
+        "lattice-window": { name: "室内格扇窗", size: "1.820 × 2.200 × 0.315 m", front: "+Z", origin: "底面中心" },
+        skylight: { name: "藻井天窗", size: "6.000 × 0.295 × 6.000 m", front: "俯视", origin: "底面中心" },
+        "painting-frame": { name: "挂画木框", size: "1.100 × 1.600 × 0.136 m", front: "+Z", origin: "底面中心" }
+      };
+      var PART_URLS = {
+        column: "./assets/models/parts/opt/column.glb",
+        "lattice-window": "./assets/models/parts/opt/lattice-window.glb",
+        skylight: "./assets/models/parts/opt/skylight.glb",
+        "painting-frame": "./assets/models/parts/opt/painting-frame.glb"
+      };
 
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x2c2922);
-    scene.fog = new THREE.Fog(0x2c2922, 18, 42);
-
-    const camera = new THREE.PerspectiveCamera(47, window.innerWidth / window.innerHeight, 0.1, 80);
-    const view = { target: new THREE.Vector3(0, 2.0, -7.55), yaw: 0, pitch: -0.015, distance: 13.8 };
-    const desired = { target: view.target.clone(), yaw: 0, pitch: -0.015, distance: 13.8 };
-
-    let exhibits = [];
-    const paintingObjects = [];
-    const partObjects = {};
-    const partErrors = [];
-    let ready = false;
-    let activeExhibit = null;
-    let detailOpen = false;
-    let cameraStarting = false;
-    let gestureRunning = false;
-    let gestureTurnArmed = true;
-    let gestureLastSwitch = 0;
-    let toastTimer = 0;
-
-    const PART_SPECS = {
-      "door-column": { size: [1.0, 4.5, 0.8] },
-      "door-leaf": { size: [2.0, 3.0, 0.18] },
-      "door-canopy": { size: [6.2, 1.7, 1.6] },
-      "wall-pillar": { size: [0.72, 2.6, 0.72] },
-      "back-wall": { size: [14.0, 3.6, 0.55] },
-      "long-table": { size: [2.4, 1.0, 0.75] },
-      "bookshelf": { size: [1.55, 2.0, 0.55] }
-    };
-    const PARTS = Object.keys(PART_SPECS);
-    const HALL2_EXHIBIT_IDS = ["xieshengzhenqintu", "wuniutu", "molantu"];
-
-    function setLoading(count, message) {
-      const ratio = count / PARTS.length;
-      loadingBar.style.width = `${Math.round(ratio * 100)}%`;
-      loadingCount.textContent = `构件 ${count} / ${PARTS.length}`;
-      if (message) assetStatus.textContent = message;
-    }
-
-    async function loadHallExhibits() {
-      for (let attempt = 0; attempt < 60; attempt++) {
-        const list = window.MuseumConfig?.exhibits;
-        if (Array.isArray(list)) {
-          const byHall = list.filter((item) => item.hall === "hall2");
-          exhibits = byHall.length === 3
-            ? byHall
-            : HALL2_EXHIBIT_IDS.map((id) => list.find((item) => item.id === id)).filter(Boolean);
-          activeExhibit = exhibits[1]?.id || exhibits[0]?.id || null;
-          return;
+      var PAINTINGS = [
+        {
+          id: "xieshengzhenqintu",
+          title: "写生珍禽图",
+          artist: "黄筌",
+          dynasty: "五代",
+          era: "约 10 世纪",
+          medium: "绢本设色 · 纵 41.5cm × 横 70.8cm",
+          collection: "故宫博物院",
+          intro: "《写生珍禽图》传为五代西蜀画家黄筌所作，画面排列着雀鸟、龟、昆虫等二十余种小生命。每只动物各自独立，却都经过细致观察与精确描绘，勾线工整，设色清丽。它很可能是一件供学习者临摹的课徒画稿。",
+          appreciation: "这卷作品最值得看的是观察的耐性。黄筌根据不同动物的体态与习性安排朝向、动作和位置，羽毛、甲壳、足爪与触须都被交代得清清楚楚，却仍保持画面的明净节奏。精微而不板滞，富丽而不甜俗，所谓黄家富贵在这里不是装饰趣味，而是建立在写生能力与技法控制上的自信。",
+          x: -4.45,
+          bottom: 1.20,
+          width: 4.18,
+          height: 2.67,
+          artWidth: 3.56,
+          artHeight: 2.37
+        },
+        {
+          id: "wuniutu",
+          title: "五牛图",
+          artist: "韩滉",
+          dynasty: "唐",
+          era: "约 8 世纪",
+          medium: "纸本设色 · 纵 20.8cm × 横 139.8cm",
+          collection: "故宫博物院",
+          intro: "《五牛图》是唐代画家韩滉的重要作品，也是现存最早的纸本中国画之一。画卷依次描绘五头姿态各异的牛，有俯首、回眸，也有缓步前行。牛体用厚重而富有弹性的线条塑成，鼻绳、缰络等细节交代分明，体现唐代动物画的写实水平。",
+          appreciation: "画中没有背景，五头牛却并不显得孤立，因为韩滉用姿态、眼神和身体朝向建立了一条连续的观看节奏。线条粗重像书法中的篆籀，转折处又有柔软韧性，既写出牛的筋骨与体量，也写出皮毛的温度。尤其末尾回望的牛，使静止长卷产生回环往复的时间感。",
+          x: 0,
+          bottom: 1.20,
+          width: 4.18,
+          height: 2.67,
+          artWidth: 3.56,
+          artHeight: 2.37
+        },
+        {
+          id: "molantu",
+          title: "墨兰图",
+          artist: "郑思肖",
+          dynasty: "宋末元初",
+          era: "约 13 世纪",
+          medium: "纸本水墨 · 纵 25.7cm × 横 42.4cm",
+          collection: "大阪市立美术馆",
+          intro: "《墨兰图》是宋末元初画家郑思肖的代表作品，以水墨写出一株露根兰花。兰叶疏朗，花朵清简，画面不画泥土，却寄托着作者在朝代更替后的故国之思。作品把简练的物象与强烈的象征意义结合在一起，是文人画的重要例证。",
+          appreciation: "郑思肖画兰而不画土，让根系裸露悬空，这个看似简省的构图选择，实际包含极强烈的政治与情感指向。兰叶以中锋写出，劲挺而富有弹性，墨色枯润变化不多，却通过穿插、俯仰和留白形成清冷气息。画面越简，象征越集中。",
+          x: 4.45,
+          bottom: 1.20,
+          width: 4.18,
+          height: 2.67,
+          artWidth: 3.56,
+          artHeight: 2.37
         }
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-      throw new Error("MuseumConfig 未加载，无法取得花鸟厅展品");
-    }
+      ];
 
-    function toast(message) {
-      clearTimeout(toastTimer);
-      toastEl.textContent = message;
-      toastEl.classList.add("show");
-      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);
-    }
+      var canvas = document.getElementById("gallery");
+      var loading = document.getElementById("loading");
+      var loadingBar = document.getElementById("loading-bar");
+      var loadingStatus = document.getElementById("loading-status");
+      var reticle = document.getElementById("reticle");
+      var panel = document.getElementById("art-panel");
+      var gestureButton = document.getElementById("gesture-button");
+      var camwrap = document.getElementById("camwrap");
+      var cam = document.getElementById("cam");
+      var camNote = document.getElementById("cam-note");
+      var toastEl = document.getElementById("toast");
+      var partParam = new URLSearchParams(window.location.search).get("part");
+      var partMode = PART_IDS.indexOf(partParam) !== -1;
+      var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    function makeCanvasTexture(draw, width = 512, height = 256) {
-      const c = document.createElement("canvas");
-      c.width = width;
-      c.height = height;
-      draw(c.getContext("2d"), width, height);
-      const texture = new THREE.CanvasTexture(c);
-      texture.encoding = THREE.sRGBEncoding;
-      return texture;
-    }
+      var renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        antialias: true,
+        powerPreference: "high-performance"
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = partMode ? 0.88 : 1.02;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      if (THREE.ColorManagement) THREE.ColorManagement.legacyMode = false;
 
-    function standardMaterial(color, roughness = 0.82, metalness = 0) {
-      return new THREE.MeshStandardMaterial({ color, roughness, metalness });
-    }
+      var scene = new THREE.Scene();
+      scene.background = new THREE.Color(partMode ? 0xd6d2c7 : 0xb9beb7);
+      scene.fog = new THREE.Fog(partMode ? 0xd6d2c7 : 0xa9aea7, partMode ? 18 : 22, partMode ? 38 : 46);
 
-    function box(parent, width, height, depth, x, y, z, material) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
-      mesh.position.set(x, y, z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      parent.add(mesh);
-      return mesh;
-    }
+      var camera = new THREE.PerspectiveCamera(
+        58,
+        window.innerWidth / window.innerHeight,
+        0.05,
+        80
+      );
+      camera.rotation.order = "YXZ";
 
-    function buildRoom() {
-      const room = new THREE.Group();
-      room.name = "huaniao-room";
+      var room = new THREE.Group();
+      room.name = "huaniao-interior";
       scene.add(room);
 
-      const plaster = standardMaterial(0xe8e0d1, 0.96);
-      const wood = standardMaterial(0x5d4634, 0.72);
-      const stone = standardMaterial(0xb9b0a0, 0.9);
-      const dark = standardMaterial(0x3f3931, 0.9);
+      var clock = new THREE.Clock();
+      var elapsed = 0;
+      var templates = {};
+      var paintingMeshes = [];
+      var paintingFrames = {};
+      var hoveredId = null;
+      var isDragging = false;
+      var didDrag = false;
+      var dragStartX = 0;
+      var dragStartY = 0;
+      var lastPointerX = 0;
+      var lastPointerY = 0;
+      var activeExhibit = "wuniutu";
+      var panelOpen = false;
+      var playerPosition = new THREE.Vector3(0, 0, 4.35);
+      var playerYaw = 0;
+      var playerPitch = 0.025;
+      var gestureRunning = false;
+      var gestureStarting = false;
+      var gestureTurnArmed = true;
+      var gestureLastSwitch = 0;
+      var toastTimer = 0;
+      var isolatedRoot = null;
+      var isolatedAngle = 0.7;
+      var isolatedPitch = 0.34;
+      var noiseTextureCache = {};
 
-      const floorTexture = makeCanvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#8d7055";
-        ctx.fillRect(0, 0, w, h);
-        for (let y = 0; y < h; y += 28) {
-          ctx.strokeStyle = "rgba(48,34,22,.36)";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(w, y);
-          ctx.stroke();
-        }
-        for (let i = 0; i < 110; i++) {
-          const y = (i * 47) % h;
-          ctx.strokeStyle = `rgba(43,30,20,${0.035 + (i % 5) * 0.015})`;
-          ctx.beginPath();
-          ctx.moveTo((i * 83) % w, y);
-          ctx.bezierCurveTo(w * 0.36, y + 7, w * 0.64, y - 5, w, y + 2);
-          ctx.stroke();
-        }
-      }, 1024, 512);
-      floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-      floorTexture.repeat.set(2.5, 1.75);
-
-      const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(23.8, 15.8),
-        new THREE.MeshStandardMaterial({ map: floorTexture, color: 0xc4aa8a, roughness: 0.82 })
-      );
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.set(0, 0.008, 0);
-      floor.receiveShadow = true;
-      room.add(floor);
-
-      box(room, 23.8, 0.24, 15.8, 0, -0.12, 0, stone);
-      box(room, 0.3, 4.5, 15.7, -11.85, 2.25, 0, plaster);
-      box(room, 0.3, 4.5, 15.7, 11.85, 2.25, 0, plaster);
-      box(room, 4.85, 4.5, 0.3, -9.525, 2.25, -7.98, plaster);
-      box(room, 4.85, 4.5, 0.3, 9.525, 2.25, -7.98, plaster);
-      box(room, 10.825, 4.5, 0.3, -6.4375, 2.25, 8.0, plaster);
-      box(room, 10.825, 4.5, 0.3, 6.4375, 2.25, 8.0, plaster);
-      box(room, 2.05, 1.35, 0.3, 0, 3.825, 8.0, plaster);
-      box(room, 23.8, 0.34, 0.34, 0, 4.38, -7.95, dark);
-      box(room, 23.8, 0.34, 0.34, 0, 4.38, 8.0, dark);
-      box(room, 23.7, 0.1, 15.7, 0, 4.36, 0, plaster);
-
-      const exhibitionWallTexture = makeCanvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#eee7d8";
-        ctx.fillRect(0, 0, w, h);
-        for (let x = 0; x < w; x += 18) {
-          ctx.fillStyle = `rgba(123,108,87,${0.018 + (x % 5) * 0.004})`;
-          ctx.fillRect(x, 0, 2, h);
-        }
-        for (let i = 0; i < 70; i++) {
-          const x = (i * 79) % w;
-          const y = (i * 137) % h;
-          ctx.fillStyle = `rgba(120,104,81,${0.025 + (i % 3) * 0.012})`;
-          ctx.fillRect(x, y, 12 + (i % 5) * 4, 2);
-        }
-      }, 1024, 512);
-      exhibitionWallTexture.wrapS = exhibitionWallTexture.wrapT = THREE.RepeatWrapping;
-      exhibitionWallTexture.repeat.set(2.4, 1);
-      const exhibitionWallMat = new THREE.MeshStandardMaterial({
-        map: exhibitionWallTexture,
-        color: 0xf1eadb,
-        roughness: 0.98
-      });
-      box(room, 14.2, 3.5, 0.07, 0, 1.82, -8.06, exhibitionWallMat);
-      box(room, 23.7, 0.16, 0.14, 0, 0.08, -7.94, wood);
-
-      for (const z of [-6.8, -3.8, -0.8, 2.2, 5.2]) {
-        box(room, 23.2, 0.22, 0.26, 0, 4.18, z, dark);
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
       }
 
-      const lattice = makeCanvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#e8e0d0";
-        ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = "#473b2e";
-        ctx.lineWidth = 13;
-        for (let x = 0; x <= w; x += w / 4) {
-          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-        }
-        for (let y = 0; y <= h; y += h / 6) {
-          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-        }
-        ctx.lineWidth = 5;
-        for (let x = 0; x < w; x += w / 4) {
-          for (let y = 0; y < h; y += h / 6) {
+      function setProgress(percent, label) {
+        loadingBar.style.width = clamp(percent, 4, 100) + "%";
+        if (label) loadingStatus.textContent = label;
+      }
+
+      function showToast(message) {
+        if (!toastEl) return;
+        window.clearTimeout(toastTimer);
+        toastEl.textContent = message;
+        toastEl.classList.add("show");
+        toastTimer = window.setTimeout(function () {
+          toastEl.classList.remove("show");
+        }, 2200);
+      }
+
+      function makeCanvasTexture(key, width, height, draw, repeatX, repeatY) {
+        if (noiseTextureCache[key]) return noiseTextureCache[key];
+        var textureCanvas = document.createElement("canvas");
+        textureCanvas.width = width;
+        textureCanvas.height = height;
+        var context = textureCanvas.getContext("2d");
+        draw(context, width, height);
+        var texture = new THREE.CanvasTexture(textureCanvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(repeatX || 1, repeatY || 1);
+        texture.encoding = THREE.sRGBEncoding;
+        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        noiseTextureCache[key] = texture;
+        return texture;
+      }
+
+      function seeded(seed) {
+        var state = seed >>> 0;
+        return function () {
+          state = (state * 1664525 + 1013904223) >>> 0;
+          return state / 4294967296;
+        };
+      }
+
+      function woodFloorTexture() {
+        return makeCanvasTexture("floor", 768, 768, function (ctx, width, height) {
+          var random = seeded(21);
+          ctx.fillStyle = "#664a34";
+          ctx.fillRect(0, 0, width, height);
+          var plankHeight = 96;
+          for (var row = 0; row < 8; row += 1) {
+            var y = row * plankHeight;
+            var offset = row % 2 ? width * 0.22 : 0;
+            for (var x = -offset; x < width; x += 220) {
+              var tone = 80 + Math.floor(random() * 24);
+              ctx.fillStyle = "rgb(" + tone + "," + Math.floor(tone * 0.7) + "," + Math.floor(tone * 0.49) + ")";
+              ctx.fillRect(x + 2, y + 2, 216, plankHeight - 4);
+              ctx.strokeStyle = "rgba(31, 21, 15, 0.34)";
+              ctx.lineWidth = 2;
+              ctx.strokeRect(x + 1, y + 1, 218, plankHeight - 2);
+            }
+            for (var grain = 0; grain < 22; grain += 1) {
+              ctx.strokeStyle = "rgba(42, 27, 18, " + (0.04 + random() * 0.08).toFixed(2) + ")";
+              ctx.lineWidth = 1 + random();
+              ctx.beginPath();
+              var gy = y + 10 + random() * (plankHeight - 20);
+              ctx.moveTo(0, gy);
+              ctx.bezierCurveTo(width * 0.25, gy + random() * 8, width * 0.7, gy - random() * 8, width, gy + random() * 5);
+              ctx.stroke();
+            }
+          }
+        }, 3.2, 2.5);
+      }
+
+      function plasterTexture() {
+        return makeCanvasTexture("plaster", 512, 512, function (ctx, width, height) {
+          var random = seeded(8);
+          ctx.fillStyle = "#e8e3d7";
+          ctx.fillRect(0, 0, width, height);
+          for (var i = 0; i < 11000; i += 1) {
+            var value = random() > 0.5 ? 255 : 105;
+            ctx.fillStyle = "rgba(" + value + "," + value + "," + (value - 4) + "," + (0.012 + random() * 0.018).toFixed(3) + ")";
+            ctx.fillRect(random() * width, random() * height, 1 + random() * 2, 1 + random() * 2);
+          }
+          for (var line = 0; line < 18; line += 1) {
+            ctx.strokeStyle = "rgba(90, 77, 60, 0.018)";
             ctx.beginPath();
-            ctx.moveTo(x, y + h / 12);
-            ctx.lineTo(x + w / 8, y);
-            ctx.lineTo(x + w / 4, y + h / 12);
-            ctx.lineTo(x + w / 8, y + h / 6);
-            ctx.closePath();
+            ctx.moveTo(0, random() * height);
+            ctx.bezierCurveTo(width * 0.3, random() * height, width * 0.7, random() * height, width, random() * height);
             ctx.stroke();
           }
-        }
-      });
-      const latticeMat = new THREE.MeshStandardMaterial({ map: lattice, roughness: 0.84 });
-      for (const side of [-1, 1]) {
-        const panel = new THREE.Mesh(new THREE.PlaneGeometry(3.25, 2.3), latticeMat);
-        panel.position.set(side * 11.67, 2.15, 5.35);
-        panel.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
-        room.add(panel);
+        }, 4, 3);
       }
 
-      const plaqueTexture = makeCanvasTexture((ctx, w, h) => {
-        ctx.clearRect(0, 0, w, h);
-        ctx.fillStyle = "#3f352b";
-        ctx.textAlign = "center";
-        ctx.font = "64px Songti SC, STSong, Noto Serif CJK SC, serif";
-        ctx.fillText("花  鸟  清  趣", w / 2, 84);
-        ctx.fillStyle = "#8e382c";
-        ctx.font = "24px Songti SC, STSong, Noto Serif CJK SC, serif";
-        ctx.fillText("万物有灵 · 诗意栖居", w / 2, 126);
-      }, 768, 160);
-      const plaque = new THREE.Mesh(
-        new THREE.PlaneGeometry(3.5, 0.73),
-        new THREE.MeshBasicMaterial({ map: plaqueTexture, transparent: true, depthWrite: false })
-      );
-      plaque.position.set(0, 3.38, -7.99);
-      room.add(plaque);
-
-      const skylight = new THREE.Mesh(
-        new THREE.PlaneGeometry(6.4, 4.2),
-        new THREE.MeshBasicMaterial({ color: 0xf6f1e7 })
-      );
-      skylight.rotation.x = Math.PI / 2;
-      skylight.position.set(0, 4.33, 1.6);
-      room.add(skylight);
-      for (const x of [-3.2, -1.6, 0, 1.6, 3.2]) {
-        box(room, x === 0 ? 0.12 : 0.08, 0.1, 4.2, x, 4.28, 1.6, dark);
-      }
-      for (const z of [-0.5, 0.7, 1.9, 3.1]) {
-        box(room, 6.4, 0.1, 0.08, 0, 4.28, z, dark);
+      function ceilingTexture() {
+        return makeCanvasTexture("ceiling", 512, 512, function (ctx, width, height) {
+          var random = seeded(42);
+          ctx.fillStyle = "#b8ad98";
+          ctx.fillRect(0, 0, width, height);
+          for (var i = 0; i < 8000; i += 1) {
+            var alpha = 0.015 + random() * 0.025;
+            ctx.fillStyle = "rgba(62, 50, 38, " + alpha.toFixed(3) + ")";
+            ctx.fillRect(random() * width, random() * height, 1, 1 + random() * 3);
+          }
+          ctx.strokeStyle = "rgba(67, 53, 40, 0.1)";
+          ctx.lineWidth = 2;
+          for (var y = 0; y < height; y += 64) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+          }
+        }, 3, 2);
       }
 
-      const ambient = new THREE.HemisphereLight(0xfff5e8, 0x2a241d, 1.32);
-      scene.add(ambient);
-      const sun = new THREE.DirectionalLight(0xffead0, 1.55);
-      sun.position.set(-3, 9, 4);
-      sun.castShadow = true;
-      sun.shadow.mapSize.set(1024, 1024);
-      sun.shadow.camera.left = -13;
-      sun.shadow.camera.right = 13;
-      sun.shadow.camera.top = 10;
-      sun.shadow.camera.bottom = -10;
-      scene.add(sun);
-      box(room, 11.8, 0.07, 0.1, 0, 3.78, -5.9, dark);
-      for (const x of [-4.8, -2.4, 0, 2.4, 4.8]) {
-        const fixture = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.055, 0.075, 0.2, 10),
-          dark
+      var materials = {};
+
+      function setupMaterials() {
+        materials.floor = new THREE.MeshStandardMaterial({
+          map: woodFloorTexture(),
+          color: 0xffffff,
+          roughness: 0.72,
+          metalness: 0.0
+        });
+        materials.plaster = new THREE.MeshStandardMaterial({
+          map: plasterTexture(),
+          color: 0xffffff,
+          roughness: 0.96,
+          metalness: 0.0
+        });
+        materials.ceiling = new THREE.MeshStandardMaterial({
+          map: ceilingTexture(),
+          color: 0xf1ece1,
+          roughness: 0.94,
+          metalness: 0.0
+        });
+        materials.timber = new THREE.MeshStandardMaterial({
+          color: 0x4d3324,
+          roughness: 0.82,
+          metalness: 0.0
+        });
+        materials.timberLight = new THREE.MeshStandardMaterial({
+          color: 0x76543d,
+          roughness: 0.76,
+          metalness: 0.0
+        });
+        materials.stone = new THREE.MeshStandardMaterial({
+          color: 0xaaa69d,
+          roughness: 0.94,
+          metalness: 0.0
+        });
+        materials.ink = new THREE.MeshStandardMaterial({
+          color: 0x282722,
+          roughness: 0.64,
+          metalness: 0.18
+        });
+      }
+
+      function addBox(width, height, depth, x, y, z, material, parent) {
+        var mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+        mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        (parent || room).add(mesh);
+        return mesh;
+      }
+
+      function addCylinder(radiusTop, radiusBottom, height, x, y, z, material, parent, segments) {
+        var mesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments || 16),
+          material
         );
-        fixture.position.set(x, 3.64, -5.86);
-        fixture.rotation.x = 0.62;
-        room.add(fixture);
-        const light = new THREE.SpotLight(0xffe7c8, 1.05, 11, Math.PI / 8.2, 0.62, 1.2);
-        light.position.set(x, 3.55, -5.72);
-        light.target.position.set(x * 0.82, 2.22, -7.96);
-        scene.add(light, light.target);
+        mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        (parent || room).add(mesh);
+        return mesh;
       }
-      const roomFill = new THREE.PointLight(0xffdbad, 0.72, 18, 2);
-      roomFill.position.set(0, 3.35, 2.1);
-      scene.add(roomFill);
-    }
 
-    function normalizeModel(root, targetSize) {
-      root.traverse((object) => {
-        if (!object.isMesh) return;
-        object.castShadow = true;
-        object.receiveShadow = true;
-        const mats = Array.isArray(object.material) ? object.material : [object.material];
-        for (const material of mats) {
-          if (!material) continue;
-          if (material.map) material.map.encoding = THREE.sRGBEncoding;
+      function createLabelTexture(lines, options) {
+        options = options || {};
+        var labelCanvas = document.createElement("canvas");
+        labelCanvas.width = 1024;
+        labelCanvas.height = options.tall ? 512 : 256;
+        var ctx = labelCanvas.getContext("2d");
+        ctx.clearRect(0, 0, labelCanvas.width, labelCanvas.height);
+        if (options.background) {
+          ctx.fillStyle = options.background;
+          ctx.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
         }
-      });
-      root.updateMatrixWorld(true);
-      let bounds = new THREE.Box3().setFromObject(root);
-      const current = bounds.getSize(new THREE.Vector3());
-      root.scale.multiply(new THREE.Vector3(
-        targetSize[0] / Math.max(current.x, 0.0001),
-        targetSize[1] / Math.max(current.y, 0.0001),
-        targetSize[2] / Math.max(current.z, 0.0001)
-      ));
-      root.updateMatrixWorld(true);
-      bounds = new THREE.Box3().setFromObject(root);
-      const center = bounds.getCenter(new THREE.Vector3());
-      root.position.x -= center.x;
-      root.position.z -= center.z;
-      root.position.y -= bounds.min.y;
-      return root;
-    }
+        ctx.textAlign = options.align || "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = options.color || "#2f2a23";
+        var baseSize = options.fontSize || (options.tall ? 92 : 88);
+        ctx.font = (options.weight || "500") + " " + baseSize + "px " + (options.font || '"Kaiti SC","STKaiti","KaiTi",serif');
+        var lineHeight = baseSize * 1.18;
+        var startY = labelCanvas.height / 2 - ((lines.length - 1) * lineHeight) / 2;
+        lines.forEach(function (line, index) {
+          ctx.fillText(line, options.align === "left" ? 48 : labelCanvas.width / 2, startY + index * lineHeight);
+        });
+        if (options.seal) {
+          ctx.fillStyle = "#a34132";
+          ctx.fillRect(labelCanvas.width - 150, 40, 64, 64);
+          ctx.fillStyle = "#f5ead9";
+          ctx.font = '30px "Kaiti SC","STKaiti","KaiTi",serif';
+          ctx.fillText(options.seal, labelCanvas.width - 118, 73);
+        }
+        var texture = new THREE.CanvasTexture(labelCanvas);
+        texture.encoding = THREE.sRGBEncoding;
+        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        return texture;
+      }
 
-    async function loadPart(id) {
-      const loader = new THREE.GLTFLoader();
-      try {
-        const gltf = await loader.loadAsync(`./assets/models/parts/opt/${id}.glb`);
-        const template = normalizeModel(gltf.scene, PART_SPECS[id].size);
-        template.name = `asset:${id}`;
-        return template;
-      } catch (error) {
-        partErrors.push({ id, message: String(error?.message || error) });
+      function addWallTitle() {
+        var texture = createLabelTexture(["花鸟清趣"], {
+          background: "rgba(231, 224, 208, 0)",
+          color: "#2d2922",
+          fontSize: 112,
+          seal: "墨"
+        });
+        var material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        var plaque = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 0.98), material);
+        plaque.position.set(0, 4.58, -5.235);
+        room.add(plaque);
+
+        addBox(0.42, 0.035, 0.04, -1.95, 4.25, -5.19, materials.timber);
+        addBox(0.42, 0.035, 0.04, 1.95, 4.25, -5.19, materials.timber);
+      }
+
+      function addArchitecture() {
+        addBox(15.0, 0.18, 10.8, 0, 0.09, 0, materials.floor);
+        addBox(15.0, 0.13, 10.8, 0, 0.075, 0, materials.stone);
+
+        addBox(15.0, 5.2, 0.26, 0, 2.6, -5.4, materials.plaster);
+        addBox(0.26, 5.2, 10.8, -7.5, 2.6, 0, materials.plaster);
+        addBox(0.26, 5.2, 10.8, 7.5, 2.6, 0, materials.plaster);
+
+        addBox(15.0, 0.16, 1.7, 0, 5.22, -4.55, materials.ceiling);
+        addBox(15.0, 0.16, 3.1, 0, 5.22, 3.85, materials.ceiling);
+        addBox(4.5, 0.16, 6.0, -5.25, 5.22, -0.7, materials.ceiling);
+        addBox(4.5, 0.16, 6.0, 5.25, 5.22, -0.7, materials.ceiling);
+
+        [-3.7, 2.3].forEach(function (z) {
+          addBox(14.8, 0.28, 0.3, 0, 4.9, z, materials.timber);
+        });
+        [-5.15, -2.52, 0.11, 2.74, 5.1].forEach(function (x) {
+          addBox(0.24, 0.23, 10.4, x, 5.01, 0, materials.timber);
+        });
+
+        [-6.7, 6.7].forEach(function (x) {
+          addBox(0.18, 5.2, 0.18, x, 2.6, -5.25, materials.timberLight);
+        });
+        addBox(15.0, 0.2, 0.18, 0, 0.24, -5.23, materials.timber);
+        addBox(0.18, 0.2, 10.6, -7.34, 0.24, 0, materials.timber);
+        addBox(0.18, 0.2, 10.6, 7.34, 0.24, 0, materials.timber);
+
+        addBox(14.6, 0.14, 0.32, 0, 0.13, 5.2, materials.timber);
+        addBox(3.8, 0.14, 0.34, -5.4, 0.13, 4.92, materials.stone);
+        addBox(3.8, 0.14, 0.34, 5.4, 0.13, 4.92, materials.stone);
+
+        addBench(-5.7, 1.08, -0.16);
+        addBench(5.7, 1.08, -0.16);
+
+        addWallTitle();
+        addLighting();
+        addDust();
+      }
+
+      function addBench(x, z, rotation) {
+        var bench = new THREE.Group();
+        bench.position.set(x, 0.18, z);
+        bench.rotation.y = rotation;
+        addBox(1.9, 0.1, 0.42, 0, 0.42, 0, materials.stone, bench);
+        addBox(0.16, 0.4, 0.34, -0.7, 0.21, 0, materials.stone, bench);
+        addBox(0.16, 0.4, 0.34, 0.7, 0.21, 0, materials.stone, bench);
+        bench.traverse(function (child) {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+        room.add(bench);
+      }
+
+      function addLighting() {
+        scene.add(new THREE.HemisphereLight(0xe4e8df, 0x3b2c22, 0.88));
+
+        var softAmbient = new THREE.AmbientLight(0xfff4df, 0.32);
+        scene.add(softAmbient);
+
+        var skylightLight = new THREE.DirectionalLight(0xe8eee8, 1.25);
+        skylightLight.position.set(-1.5, 7.6, 1.2);
+        skylightLight.target.position.set(0, 0, -1.1);
+        skylightLight.castShadow = true;
+        skylightLight.shadow.mapSize.set(1536, 1536);
+        skylightLight.shadow.camera.left = -9;
+        skylightLight.shadow.camera.right = 9;
+        skylightLight.shadow.camera.top = 8;
+        skylightLight.shadow.camera.bottom = -8;
+        skylightLight.shadow.camera.near = 0.5;
+        skylightLight.shadow.camera.far = 22;
+        skylightLight.shadow.bias = -0.0003;
+        scene.add(skylightLight);
+        scene.add(skylightLight.target);
+
+        var skylightGlow = new THREE.SpotLight(0xe9f0eb, 0.78, 15, Math.PI / 4.2, 0.72, 1.3);
+        skylightGlow.position.set(0, 5.55, -0.7);
+        skylightGlow.target.position.set(0, 0.3, -1.2);
+        scene.add(skylightGlow);
+        scene.add(skylightGlow.target);
+
+        PAINTINGS.forEach(function (painting) {
+          var lampY = painting.bottom + painting.height + 0.78;
+          var spot = new THREE.SpotLight(0xffe6bf, 1.18, 9, Math.PI / 7, 0.58, 1.35);
+          spot.position.set(painting.x, lampY, -3.55);
+          spot.target.position.set(painting.x, painting.bottom + painting.height * 0.48, -5.2);
+          scene.add(spot);
+          scene.add(spot.target);
+
+          addCylinder(0.07, 0.095, 0.18, painting.x, lampY, -3.55, materials.ink);
+        });
+
+        var entryFill = new THREE.PointLight(0xffe4c3, 0.36, 9, 1.8);
+        entryFill.position.set(0, 2.3, 3.9);
+        scene.add(entryFill);
+      }
+
+      var dust = null;
+
+      function addDust() {
+        var count = 260;
+        var positions = new Float32Array(count * 3);
+        var random = seeded(93);
+        for (var i = 0; i < count; i += 1) {
+          positions[i * 3] = (random() - 0.5) * 8.2;
+          positions[i * 3 + 1] = 0.7 + random() * 4.2;
+          positions[i * 3 + 2] = -2.7 + random() * 6.2;
+        }
+        var geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        var material = new THREE.PointsMaterial({
+          color: 0xf5e5c6,
+          size: 0.017,
+          transparent: true,
+          opacity: 0.28,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+        dust = new THREE.Points(geometry, material);
+        scene.add(dust);
+      }
+
+      function createPaintingSign(painting) {
+        var texture = createLabelTexture([painting.title, painting.artist + " · " + painting.dynasty], {
+          background: "#ddd5c5",
+          color: "#322d26",
+          fontSize: 56,
+          tall: true,
+          align: "left"
+        });
+        var material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+        var sign = new THREE.Mesh(new THREE.PlaneGeometry(0.82, 0.33), material);
+        sign.position.set(painting.x, painting.bottom - 0.34, -5.218);
+        room.add(sign);
+      }
+
+      function addPaintings() {
+        var frameTemplate = templates["painting-frame"];
+        var frameScaleBase = { width: 1.1, height: 1.6 };
+        var loader = new THREE.TextureLoader();
+
+        PAINTINGS.forEach(function (painting) {
+          var frame = frameTemplate.clone(true);
+          frame.name = "frame:" + painting.id;
+          frame.scale.set(
+            painting.width / frameScaleBase.width,
+            painting.height / frameScaleBase.height,
+            1
+          );
+          frame.position.set(painting.x, painting.bottom, -5.21);
+          room.add(frame);
+          paintingFrames[painting.id] = frame;
+
+          var artMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8d856f,
+            roughness: 0.9,
+            metalness: 0,
+            side: THREE.DoubleSide
+          });
+          var art = new THREE.Mesh(
+            new THREE.PlaneGeometry(painting.artWidth, painting.artHeight),
+            artMaterial
+          );
+          art.position.set(
+            painting.x,
+            painting.bottom + painting.height / 2,
+            -5.134
+          );
+          art.name = "art:" + painting.id;
+          art.userData.exhibitId = painting.id;
+          art.castShadow = false;
+          room.add(art);
+          paintingMeshes.push(art);
+
+          loader.load(
+            "./assets/images/" + painting.id + ".jpg",
+            function (texture) {
+              texture.encoding = THREE.sRGBEncoding;
+              texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+              artMaterial.map = texture;
+              artMaterial.color.setHex(0xffffff);
+              artMaterial.needsUpdate = true;
+            },
+            undefined,
+            function () {
+              console.warn("[花鸟厅] 画作图片加载失败：" + painting.id);
+            }
+          );
+
+          createPaintingSign(painting);
+        });
+      }
+
+      function placeColumn(x, z) {
+        var column = templates.column.clone(true);
+        column.position.set(x, 0.18, z);
+        room.add(column);
+      }
+
+      function placeWindows() {
+        var leftWindowA = templates["lattice-window"].clone(true);
+        leftWindowA.position.set(-7.34, 0.4, 1.15);
+        leftWindowA.rotation.y = Math.PI / 2;
+        room.add(leftWindowA);
+
+        var leftWindowB = leftWindowA.clone(true);
+        leftWindowB.position.z = -2.0;
+        room.add(leftWindowB);
+
+        var rightWindowA = templates["lattice-window"].clone(true);
+        rightWindowA.position.set(7.34, 0.4, 1.15);
+        rightWindowA.rotation.y = -Math.PI / 2;
+        room.add(rightWindowA);
+
+        var rightWindowB = rightWindowA.clone(true);
+        rightWindowB.position.z = -2.0;
+        room.add(rightWindowB);
+      }
+
+      function addSkylight() {
+        var skylight = templates.skylight.clone(true);
+        skylight.position.set(0, 5.03, -0.7);
+        room.add(skylight);
+      }
+
+      function prepareModel(model) {
+        model.traverse(function (object) {
+          if (!object.isMesh) return;
+          object.castShadow = true;
+          object.receiveShadow = true;
+          var meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
+          meshMaterials.forEach(function (material) {
+            if (!material) return;
+            if (material.map) material.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+            material.envMapIntensity = 0.4;
+            material.needsUpdate = true;
+          });
+        });
+        return model;
+      }
+
+      function loadPart(id) {
+        return new Promise(function (resolve, reject) {
+          var loader = new THREE.GLTFLoader();
+          loader.load(
+            PART_URLS[id],
+            function (gltf) {
+              templates[id] = prepareModel(gltf.scene);
+              resolve(templates[id]);
+            },
+            undefined,
+            reject
+          );
+        });
+      }
+
+      function buildHall() {
+        setupMaterials();
+        addArchitecture();
+
+        placeColumn(-6.62, 1.95);
+        placeColumn(6.62, 1.95);
+        placeColumn(-6.62, -2.5);
+        placeColumn(6.62, -2.5);
+        placeWindows();
+        addSkylight();
+        addPaintings();
+
+        playerPosition.set(0, 0, 4.35);
+        applyPlayerCamera(true);
+      }
+
+      function setupPartViewer(id) {
+        document.body.classList.add("part-mode");
+        document.title = PART_INFO[id].name + " · 花鸟厅构件";
+        document.getElementById("part-name").textContent = PART_INFO[id].name;
+        document.getElementById("part-meta").textContent =
+          PART_INFO[id].size + " · " + PART_INFO[id].origin + " · 正面 " + PART_INFO[id].front;
+
+        scene.background = new THREE.Color(0xd6d2c7);
+        scene.fog = new THREE.Fog(0xd6d2c7, 16, 34);
+
+        var groundMaterial = new THREE.MeshStandardMaterial({
+          color: 0xc9c5ba,
+          roughness: 0.96,
+          metalness: 0
+        });
+        var ground = new THREE.Mesh(new THREE.CircleGeometry(18, 64), groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        var ambient = new THREE.HemisphereLight(0xf2eee3, 0x51473d, 0.4);
+        scene.add(ambient);
+
+        var key = new THREE.DirectionalLight(0xfff0d7, 0.95);
+        key.position.set(5.5, 8.5, 7.2);
+        key.castShadow = true;
+        key.shadow.mapSize.set(1536, 1536);
+        key.shadow.camera.left = -8;
+        key.shadow.camera.right = 8;
+        key.shadow.camera.top = 8;
+        key.shadow.camera.bottom = -8;
+        key.shadow.bias = -0.0003;
+        scene.add(key);
+
+        var rim = new THREE.DirectionalLight(0xc7d7d5, 0.34);
+        rim.position.set(-7, 4.8, -6);
+        scene.add(rim);
+
+        isolatedRoot = new THREE.Group();
+        var model = templates[id].clone(true);
+        var bounds = new THREE.Box3().setFromObject(model);
+        var center = bounds.getCenter(new THREE.Vector3());
+        model.position.x -= center.x;
+        model.position.z -= center.z;
+        model.position.y -= bounds.min.y;
+        isolatedRoot.add(model);
+        scene.add(isolatedRoot);
+
+        var size = bounds.getSize(new THREE.Vector3());
+        var maxDimension = Math.max(size.x, size.y, size.z);
+        camera.fov = 44;
+        camera.near = 0.03;
+        camera.far = 100;
+        camera.updateProjectionMatrix();
+        updatePartCamera(maxDimension);
+      }
+
+      function updatePartCamera(maxDimension) {
+        var distance = Math.max(3.2, maxDimension * (partParam === "skylight" ? 1.12 : 1.28));
+        var targetY = partParam === "skylight" ? 0.12 : maxDimension * 0.48;
+        camera.position.set(
+          Math.sin(isolatedAngle) * distance,
+          targetY + Math.sin(isolatedPitch) * distance,
+          Math.cos(isolatedAngle) * distance
+        );
+        camera.lookAt(0, targetY, 0);
+      }
+
+      function partDistance() {
+        if (!isolatedRoot) return 4;
+        var box = new THREE.Box3().setFromObject(isolatedRoot);
+        var size = box.getSize(new THREE.Vector3());
+        var maxDimension = Math.max(size.x, size.y, size.z);
+        return Math.max(3.2, maxDimension * (partParam === "skylight" ? 1.12 : 1.28));
+      }
+
+      function applyPlayerCamera(immediate) {
+        var targetY = 1.68;
+        var targetX = playerPosition.x;
+        var targetZ = playerPosition.z;
+        if (immediate || reducedMotion) {
+          camera.position.set(targetX, targetY, targetZ);
+        } else {
+          camera.position.x += (targetX - camera.position.x) * 0.18;
+          camera.position.y += (targetY - camera.position.y) * 0.18;
+          camera.position.z += (targetZ - camera.position.z) * 0.18;
+        }
+        camera.rotation.y = playerYaw;
+        camera.rotation.x = playerPitch;
+        camera.rotation.z = 0;
+      }
+
+      function resetView() {
+        setPanel(false);
+        playerPosition.set(0, 0, 4.35);
+        playerYaw = 0;
+        playerPitch = 0.025;
+        applyPlayerCamera(true);
+        setActiveExhibit("wuniutu");
+      }
+
+      function setActiveExhibit(id) {
+        activeExhibit = id;
+        document.querySelectorAll(".painting-button").forEach(function (button) {
+          button.classList.toggle("active", button.getAttribute("data-exhibit") === id);
+        });
+      }
+
+      function stepArtwork(delta) {
+        var index = Math.max(0, PAINTINGS.map(function (item) { return item.id; }).indexOf(activeExhibit));
+        index = (index + delta + PAINTINGS.length) % PAINTINGS.length;
+        var painting = PAINTINGS[index];
+        setActiveExhibit(painting.id);
+        if (panelOpen) openPainting(painting.id, false);
+        showToast("已切换至《" + painting.title + "》");
+      }
+
+      function findPainting(id) {
+        for (var i = 0; i < PAINTINGS.length; i += 1) {
+          if (PAINTINGS[i].id === id) return PAINTINGS[i];
+        }
         return null;
       }
-    }
 
-    function addFallback(id, spec) {
-      const colors = {
-        "door-column": 0x6b4a35,
-        "door-leaf": 0x50372a,
-        "door-canopy": 0x34312c,
-        "wall-pillar": 0xaaa49a,
-        "back-wall": 0xe5ddce,
-        "long-table": 0x5a3b27,
-        "bookshelf": 0x493126
-      };
-      const fallback = new THREE.Group();
-      const material = standardMaterial(colors[id] || 0x66584a, 0.88);
-      box(fallback, spec[0], spec[1], spec[2], 0, spec[1] / 2, 0, material);
-      fallback.userData.fallback = true;
-      return fallback;
-    }
+      function openPainting(id) {
+        var painting = findPainting(id);
+        if (!painting) return;
+        setActiveExhibit(id);
+        document.getElementById("panel-kicker").textContent =
+          "花鸟三品 · " + String(PAINTINGS.indexOf(painting) + 1).padStart(2, "0");
+        document.getElementById("panel-title").textContent = painting.title;
+        document.getElementById("panel-artist").textContent = painting.artist + " · " + painting.dynasty;
+        document.getElementById("panel-era").textContent = painting.era;
+        document.getElementById("panel-medium").textContent = painting.medium;
+        document.getElementById("panel-collection").textContent = painting.collection;
+        document.getElementById("panel-intro").textContent = painting.intro;
+        document.getElementById("panel-note").textContent = painting.appreciation;
+        setPanel(true);
+      }
 
-    function placePart(templates, id, position, rotationY = 0) {
-      const source = templates[id] || addFallback(id, PART_SPECS[id].size);
-      const group = source.clone(true);
-      group.position.set(position[0], position[1], position[2]);
-      group.rotation.y = rotationY;
-      group.userData.partId = id;
-      scene.add(group);
-      partObjects[id] = partObjects[id] || [];
-      partObjects[id].push(group);
-      return group;
-    }
+      function setPanel(open) {
+        panelOpen = open;
+        panel.classList.toggle("open", open);
+        panel.setAttribute("aria-hidden", open ? "false" : "true");
+        if (open) {
+          document.getElementById("panel-close").focus({ preventScroll: true });
+        }
+      }
 
-    function placeArchitecture(templates) {
-      placePart(templates, "back-wall", [0, 0, -8.3], 0);
-      placePart(templates, "wall-pillar", [-11.12, 0, -6.25], Math.PI / 2);
-      placePart(templates, "wall-pillar", [11.12, 0, -6.25], -Math.PI / 2);
-      placePart(templates, "door-column", [-3.0, 0, 8.14], Math.PI);
-      placePart(templates, "door-column", [3.0, 0, 8.14], Math.PI);
-      placePart(templates, "door-leaf", [0, 0, 8.04], Math.PI);
-      placePart(templates, "door-canopy", [0, 3.0, 8.22], Math.PI);
-      placePart(templates, "long-table", [8.75, 0, 6.55], Math.PI / 2);
-      placePart(templates, "bookshelf", [-9.35, 0, 6.45], Math.PI / 2);
-      placePart(templates, "bookshelf", [9.35, 0, 6.45], -Math.PI / 2);
-    }
+      function intersectsObstacle(x, z) {
+        if (x < -6.98 || x > 6.98 || z < -4.98 || z > 5.0) return true;
+        var columns = [
+          [-6.62, 1.95],
+          [6.62, 1.95],
+          [-6.62, -2.5],
+          [6.62, -2.5]
+        ];
+        for (var i = 0; i < columns.length; i += 1) {
+          var dx = x - columns[i][0];
+          var dz = z - columns[i][1];
+          if (dx * dx + dz * dz < 0.34 * 0.34) return true;
+        }
+        if (z < 1.55 && z > 0.61) {
+          if ((x > -6.85 && x < -4.55) || (x > 4.55 && x < 6.85)) return true;
+        }
+        return false;
+      }
 
-    function buildPlant(x, z) {
-      const plant = new THREE.Group();
-      const pot = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.34, 0.42, 0.55, 16),
-        standardMaterial(0x6c5745, 0.9)
-      );
-      pot.position.y = 0.275;
-      pot.castShadow = true;
-      plant.add(pot);
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const leaf = new THREE.Mesh(
-          new THREE.SphereGeometry(0.34, 8, 5),
-          new THREE.MeshStandardMaterial({ color: i % 2 ? 0x526a4e : 0x65835b, roughness: 1 })
+      function updateMovement(dt) {
+        if (partMode) return;
+        applyPlayerCamera(false);
+      }
+
+      function raycasterFromEvent(event) {
+        var rect = canvas.getBoundingClientRect();
+        var pointer = new THREE.Vector2(
+          ((event.clientX - rect.left) / rect.width) * 2 - 1,
+          -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
-        leaf.scale.set(0.72, 0.18, 1.7);
-        leaf.rotation.y = angle;
-        leaf.rotation.z = -0.24;
-        leaf.position.set(Math.cos(angle) * 0.3, 0.8 + (i % 3) * 0.12, Math.sin(angle) * 0.3);
-        leaf.castShadow = true;
-        plant.add(leaf);
-      }
-      plant.position.set(x, 0, z);
-      scene.add(plant);
-    }
-
-    function artButtonMarkup(exhibit, index) {
-      return `<button class="work" type="button" data-exhibit="${exhibit.id}" aria-current="${exhibit.id === activeExhibit}">
-        <span class="work-index">${String(index + 1).padStart(2, "0")}</span>
-        <span><span class="work-title">${exhibit.title}</span><span class="work-note">${exhibit.artist} · ${exhibit.dynasty}</span></span>
-      </button>`;
-    }
-
-    function buildWorkNav() {
-      workList.innerHTML = exhibits.map(artButtonMarkup).join("");
-      workList.querySelectorAll("[data-exhibit]").forEach((button) => {
-        button.addEventListener("click", () => focusArtwork(button.dataset.exhibit));
-      });
-    }
-
-    async function addPainting(exhibit, x, index) {
-      let texture;
-      try {
-        texture = await new THREE.TextureLoader().loadAsync(`./${exhibit.image}`);
-        texture.encoding = THREE.sRGBEncoding;
-      } catch {
-        texture = makeCanvasTexture((ctx, w, h) => {
-          ctx.fillStyle = "#e8dfcc";
-          ctx.fillRect(0, 0, w, h);
-          ctx.fillStyle = "#493d31";
-          ctx.textAlign = "center";
-          ctx.font = "54px Songti SC, STSong, serif";
-          ctx.fillText(exhibit.title, w / 2, h / 2);
-        }, 768, 512);
-      }
-      const image = texture.image;
-      const width = index === 1 ? 4.15 : 1.9;
-      const height = 1.68;
-      const canvasWidth = index === 1 ? 1600 : 800;
-      const canvasHeight = Math.round(canvasWidth * height / width);
-      const fittedTexture = makeCanvasTexture((ctx, w, h) => {
-        ctx.fillStyle = "#e8dec8";
-        ctx.fillRect(0, 0, w, h);
-        if (image && image.width && image.height) {
-          const scale = Math.min((w - 24) / image.width, (h - 24) / image.height);
-          const drawWidth = image.width * scale;
-          const drawHeight = image.height * scale;
-          ctx.drawImage(image, (w - drawWidth) / 2, (h - drawHeight) / 2, drawWidth, drawHeight);
-        }
-      }, canvasWidth, canvasHeight);
-      const group = new THREE.Group();
-      group.position.set(x, 2.24, -7.9);
-
-      const frame = new THREE.Mesh(
-        new THREE.BoxGeometry(width + 0.13, height + 0.13, 0.1),
-        standardMaterial(0x3c3027, 0.74)
-      );
-      frame.castShadow = true;
-      frame.userData.exhibitId = exhibit.id;
-      group.add(frame);
-
-      const art = new THREE.Mesh(
-        new THREE.PlaneGeometry(width, height),
-        new THREE.MeshStandardMaterial({ map: fittedTexture, roughness: 0.9 })
-      );
-      art.position.z = 0.058;
-      art.userData.exhibitId = exhibit.id;
-      group.add(art);
-      paintingObjects.push(frame, art);
-      scene.add(group);
-    }
-
-    function updateCamera() {
-      const cosPitch = Math.cos(view.pitch);
-      camera.position.set(
-        view.target.x + Math.sin(view.yaw) * cosPitch * view.distance,
-        view.target.y + Math.sin(view.pitch) * view.distance,
-        view.target.z + Math.cos(view.yaw) * cosPitch * view.distance
-      );
-      camera.lookAt(view.target);
-    }
-
-    function setCurrentExhibit(id, announce = true) {
-      if (!id) return;
-      activeExhibit = id;
-      workList.querySelectorAll("[data-exhibit]").forEach((button) => {
-        button.setAttribute("aria-current", String(button.dataset.exhibit === id));
-      });
-      if (announce) {
-        const exhibit = exhibits.find((item) => item.id === id);
-        if (exhibit) toast(`已聚焦《${exhibit.title}》`);
-      }
-    }
-
-    function focusArtwork(id, openPanel = true) {
-      const index = exhibits.findIndex((item) => item.id === id);
-      if (index < 0) return;
-      const exhibit = exhibits[index];
-      setCurrentExhibit(id, false);
-      if (openPanel) showDetail(index);
-    }
-
-    function focusGalleryWall() {
-      resetView();
-    }
-
-    function resetView() {
-      desired.target.set(0, 2.0, -7.55);
-      desired.yaw = 0;
-      desired.pitch = -0.015;
-      desired.distance = 13.8;
-      hideDetail();
-      setCurrentExhibit(exhibits[1]?.id || exhibits[0]?.id, false);
-    }
-
-    function focusDoorCheck() {
-      resetView();
-    }
-
-    function showDetail(index) {
-      const exhibit = exhibits[index];
-      if (!exhibit) return;
-      detailOpen = true;
-      setCurrentExhibit(exhibit.id, false);
-      detailTitle.textContent = exhibit.title;
-      detailMeta.textContent = `${exhibit.artist} · ${exhibit.dynasty} · ${exhibit.medium}`;
-      detailIntro.textContent = exhibit.intro;
-      detailAppreciation.textContent = exhibit.appreciation;
-      detailIndex.textContent = `${index + 1} / ${exhibits.length}`;
-      detail.classList.add("open");
-      detail.setAttribute("aria-hidden", "false");
-      detail.dataset.exhibit = exhibit.id;
-    }
-
-    function hideDetail() {
-      detailOpen = false;
-      detail.classList.remove("open");
-      detail.setAttribute("aria-hidden", "true");
-    }
-
-    function stepArtwork(delta, openPanel = detailOpen) {
-      if (!exhibits.length) return;
-      let index = exhibits.findIndex((item) => item.id === activeExhibit);
-      if (index < 0) index = 0;
-      index = (index + delta + exhibits.length) % exhibits.length;
-      const exhibit = exhibits[index];
-      focusArtwork(exhibit.id, openPanel);
-      toast(`已切换至《${exhibit.title}》`);
-    }
-
-    function bindInteraction() {
-      let dragging = false;
-      let lastX = 0;
-      let lastY = 0;
-      let moved = 0;
-      const raycaster = new THREE.Raycaster();
-      const pointer = new THREE.Vector2();
-
-      canvas.addEventListener("pointerdown", (event) => {
-        dragging = true;
-        moved = 0;
-        lastX = event.clientX;
-        lastY = event.clientY;
-        canvas.setPointerCapture(event.pointerId);
-      });
-      canvas.addEventListener("pointermove", (event) => {
-        if (!dragging) return;
-        const dx = event.clientX - lastX;
-        const dy = event.clientY - lastY;
-        lastX = event.clientX;
-        lastY = event.clientY;
-        moved += Math.abs(dx) + Math.abs(dy);
-      });
-      canvas.addEventListener("pointerup", (event) => {
-        dragging = false;
-        if (moved > 8) return;
-        const rect = canvas.getBoundingClientRect();
-        pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        var raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(pointer, camera);
-        const hit = raycaster.intersectObjects(paintingObjects, false)[0];
-        if (hit?.object?.userData?.exhibitId) focusArtwork(hit.object.userData.exhibitId, true);
-      });
-      window.addEventListener("keydown", (event) => {
-        if (event.code === "ArrowLeft") stepArtwork(-1);
-        else if (event.code === "ArrowRight") stepArtwork(1);
-        else if (event.code === "KeyE" || event.code === "Enter") {
-          const index = Math.max(0, exhibits.findIndex((item) => item.id === activeExhibit));
-          showDetail(index);
-        } else if (event.code === "Escape" || event.code === "KeyQ") hideDetail();
-        else if (event.code === "KeyR") resetView();
-        else return;
-        event.preventDefault();
-      });
-
-      document.getElementById("reset-btn").addEventListener("click", resetView);
-      document.getElementById("detail-close").addEventListener("click", hideDetail);
-      document.getElementById("detail-prev").addEventListener("click", () => stepArtwork(-1));
-      document.getElementById("detail-next").addEventListener("click", () => stepArtwork(1));
-      cameraButton.addEventListener("click", toggleGesture);
-    }
-
-    async function ensureMediaPipe() {
-      if (window.FilesetResolver && window.HandLandmarker) return;
-      const vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
-      window.FilesetResolver = vision.FilesetResolver;
-      window.HandLandmarker = vision.HandLandmarker;
-      window.MediaPipeVision = vision;
-    }
-
-    async function toggleGesture() {
-      if (gestureRunning) {
-        window.MuseumGesture?.stop();
-        gestureRunning = false;
-        camwrap.hidden = true;
-        cameraButton.textContent = "启用手势";
-        toast("手势控制已关闭");
-        return;
+        return raycaster;
       }
-      if (cameraStarting) return;
-      cameraStarting = true;
-      cameraButton.textContent = "启动中…";
-      camwrap.hidden = false;
-      try {
-        await ensureMediaPipe();
-        if (!window.MuseumGesture) throw new Error("手势模块未加载");
-        await window.MuseumGesture.init(document.getElementById("cam"));
-        gestureRunning = true;
-        gestureTurnArmed = true;
-        gestureLastSwitch = 0;
-        cameraButton.textContent = "关闭手势";
-        camNote.textContent = "手势已启用 · 左右指点切画 · 捏合查看";
-        toast("手势已启用");
-      } catch (error) {
-        gestureRunning = false;
-        camwrap.hidden = true;
-        cameraButton.textContent = "启用手势";
-        const hint = error?.hint || error?.message || "手势启动失败";
-        toast(`${hint}，仍可使用鼠标和键盘`);
-      } finally {
-        cameraStarting = false;
-      }
-    }
 
-    function handleGestureState(state, now) {
-      if (!state) return;
-      if (state.pinchPressed) {
-        if (detailOpen) hideDetail();
-        else {
-          const index = Math.max(0, exhibits.findIndex((item) => item.id === activeExhibit));
-          showDetail(index);
+      function paintingAtEvent(event) {
+        if (partMode) return null;
+        var hits = raycasterFromEvent(event).intersectObjects(paintingMeshes, false);
+        return hits.length ? hits[0].object.userData.exhibitId : null;
+      }
+
+      function onPointerDown(event) {
+        if (partMode) {
+          isDragging = true;
+          didDrag = false;
+          lastPointerX = event.clientX;
+          lastPointerY = event.clientY;
+          canvas.setPointerCapture(event.pointerId);
+          return;
+        }
+        isDragging = true;
+        didDrag = false;
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+        lastPointerX = event.clientX;
+        lastPointerY = event.clientY;
+        canvas.setPointerCapture(event.pointerId);
+      }
+
+      function onPointerMove(event) {
+        if (partMode) {
+          if (isDragging) {
+            var partDx = event.clientX - lastPointerX;
+            var partDy = event.clientY - lastPointerY;
+            isolatedAngle -= partDx * 0.0065;
+            isolatedPitch = clamp(isolatedPitch + partDy * 0.005, -0.18, 1.05);
+            lastPointerX = event.clientX;
+            lastPointerY = event.clientY;
+            updatePartCamera(partDistance());
+          }
+          return;
+        }
+
+        if (isDragging) {
+          if (Math.abs(event.clientX - dragStartX) + Math.abs(event.clientY - dragStartY) > 4) {
+            didDrag = true;
+          }
+          lastPointerX = event.clientX;
+          lastPointerY = event.clientY;
+          return;
+        }
+
+        var id = paintingAtEvent(event);
+        hoveredId = id;
+        reticle.classList.toggle("active", !!id);
+        canvas.classList.toggle("art-hover", !!id);
+      }
+
+      function onPointerUp(event) {
+        if (partMode) {
+          isDragging = false;
+          if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+          return;
+        }
+        var paintingId = paintingAtEvent(event);
+        if (!didDrag && paintingId) {
+          openPainting(paintingId);
+        }
+        isDragging = false;
+        if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      }
+
+      async function ensureMediaPipe() {
+        if (window.FilesetResolver && window.HandLandmarker) return;
+        var vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
+        window.FilesetResolver = vision.FilesetResolver;
+        window.HandLandmarker = vision.HandLandmarker;
+        window.MediaPipeVision = vision;
+      }
+
+      async function toggleGesture() {
+        if (partMode || !window.MuseumGesture) return;
+        if (gestureRunning) {
+          window.MuseumGesture.stop();
+          gestureRunning = false;
+          camwrap.hidden = true;
+          gestureButton.classList.remove("active");
+          gestureButton.setAttribute("aria-label", "开启手势控制");
+          showToast("手势控制已关闭");
+          return;
+        }
+        if (gestureStarting) return;
+        gestureStarting = true;
+        gestureButton.classList.add("active");
+        camwrap.hidden = false;
+        camNote.textContent = "正在启动手势模型…";
+        try {
+          await ensureMediaPipe();
+          await window.MuseumGesture.init(cam);
+          gestureRunning = true;
+          gestureTurnArmed = true;
+          gestureLastSwitch = 0;
+          camNote.textContent = "手势已启用 · 左右指点切画 · 捏合查看";
+          gestureButton.setAttribute("aria-label", "关闭手势控制");
+          showToast("手势已启用");
+        } catch (error) {
+          gestureRunning = false;
+          camwrap.hidden = true;
+          gestureButton.classList.remove("active");
+          gestureButton.setAttribute("aria-label", "开启手势控制");
+          showToast((error && error.hint) || "手势启动失败，请检查摄像头权限");
+        } finally {
+          gestureStarting = false;
         }
       }
 
-      if (Math.abs(state.turn) < 0.16) gestureTurnArmed = true;
-      if (gestureTurnArmed && Math.abs(state.turn) > 0.46 && now - gestureLastSwitch > 700) {
-        stepArtwork(state.turn > 0 ? -1 : 1);
-        gestureTurnArmed = false;
-        gestureLastSwitch = now;
+      function handleGestureState(state, now) {
+        if (partMode || !state) return;
+        if (state.pinchPressed) {
+          if (panelOpen) setPanel(false);
+          else openPainting(activeExhibit);
+        }
+
+        if (Math.abs(state.turn) < 0.16) gestureTurnArmed = true;
+        if (gestureTurnArmed && Math.abs(state.turn) > 0.46 && now - gestureLastSwitch > 700) {
+          stepArtwork(state.turn > 0 ? -1 : 1);
+          gestureTurnArmed = false;
+          gestureLastSwitch = now;
+        }
       }
-    }
 
-    function applyGesture() {
-      if (!gestureRunning || !window.MuseumGesture) return;
-      handleGestureState(window.MuseumGesture.getState(), performance.now());
-    }
-
-    function resize() {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      desired.distance = 13.8;
-    }
-
-    const clock = new THREE.Clock();
-    function animate() {
-      const delta = Math.min(clock.getDelta(), 0.05);
-      applyGesture(delta);
-      const smoothing = Math.min(1, delta * 7);
-      view.target.lerp(desired.target, smoothing);
-      view.yaw += (desired.yaw - view.yaw) * smoothing;
-      view.pitch += (desired.pitch - view.pitch) * smoothing;
-      view.distance += (desired.distance - view.distance) * smoothing;
-      updateCamera();
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
-
-    async function boot() {
-      await loadHallExhibits();
-      if (exhibits.length !== 3) {
-        throw new Error(`花鸟厅展品数据异常：期望 3 件，实际 ${exhibits.length}`);
+      function applyGesture() {
+        if (partMode || !gestureRunning || !window.MuseumGesture) return;
+        handleGestureState(window.MuseumGesture.getState(), performance.now());
       }
-      buildRoom();
-      buildWorkNav();
-      bindInteraction();
 
-      const entries = await Promise.all(PARTS.map(async (id, index) => {
-        const template = await loadPart(id);
-        setLoading(index + 1);
-        return [id, template];
-      }));
-      const templates = Object.fromEntries(entries);
-      placeArchitecture(templates);
-      buildPlant(-9.9, -5.7);
-      buildPlant(9.9, -5.7);
-      await Promise.all(exhibits.map((exhibit, index) => addPainting(exhibit, [-4.375, 0, 4.375][index], index)));
+      function bindEvents() {
+        canvas.addEventListener("pointerdown", onPointerDown);
+        canvas.addEventListener("pointermove", onPointerMove);
+        canvas.addEventListener("pointerup", onPointerUp);
+        canvas.addEventListener("pointercancel", onPointerUp);
+        canvas.addEventListener("pointerleave", function () {
+          if (!isDragging) {
+            reticle.classList.remove("active");
+            canvas.classList.remove("art-hover");
+          }
+        });
 
-      const successCount = PARTS.filter((id) => templates[id]).length;
-      assetStatus.textContent = successCount === PARTS.length
-        ? "七件构件已就绪 · 三幅花鸟画无遮挡"
-        : `已加载 ${successCount} / 7 件构件，其余使用结构占位`;
-      setLoading(PARTS.length, assetStatus.textContent);
-      ready = true;
-      document.body.dataset.ready = "true";
-      document.body.dataset.assetCount = String(successCount);
-      window.HuaniaoGallery = {
-        ready: true,
-        exhibits,
-        parts: Object.keys(PART_SPECS),
-        loadedParts: PARTS.filter((id) => Boolean(templates[id])),
-        errors: partErrors,
-        paintingCount: paintingObjects.length,
-        focusArtwork,
-        focusGalleryWall,
-        focusDoorCheck,
-        resetView,
-        hideDetail,
-        stepArtwork,
-        handleGestureState,
-        getState: () => ({
-          activeExhibit,
-          detailOpen,
-          gestureRunning,
-          camera: camera.position.toArray(),
-          target: view.target.toArray(),
-          yaw: view.yaw,
-          pitch: view.pitch,
-          distance: view.distance
-        })
-      };
-      setTimeout(() => loading.classList.add("done"), 280);
-    }
+        window.addEventListener("keydown", function (event) {
+          if (partMode) return;
+          if (event.code === "Escape" || event.code === "KeyQ") {
+            setPanel(false);
+          } else if (event.code === "ArrowLeft") {
+            stepArtwork(-1);
+          } else if (event.code === "ArrowRight") {
+            stepArtwork(1);
+          } else if (event.code === "KeyE" || event.code === "Enter") {
+            openPainting(activeExhibit);
+          } else if (event.code === "KeyR") {
+            resetView();
+          } else {
+            return;
+          }
+          if (event.code !== "KeyE" && event.code !== "KeyQ" && event.code !== "KeyR") {
+            event.preventDefault();
+          }
+        });
 
-    window.addEventListener("resize", resize);
-    updateCamera();
-    animate();
-    boot().catch((error) => {
-      console.error("[花鸟厅] 初始化失败", error);
-      assetStatus.textContent = "场景初始化失败，请刷新重试";
-      loadingCount.textContent = String(error?.message || error);
-    });
+        document.querySelectorAll(".painting-button").forEach(function (button) {
+          button.addEventListener("click", function () {
+            openPainting(button.getAttribute("data-exhibit"));
+          });
+        });
+
+        document.getElementById("panel-close").addEventListener("click", function () {
+          setPanel(false);
+        });
+        document.getElementById("reset-button").addEventListener("click", resetView);
+        gestureButton.addEventListener("click", toggleGesture);
+
+        window.addEventListener("resize", function () {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight, false);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          if (partMode) updatePartCamera(partDistance());
+        });
+
+        window.addEventListener("blur", function () {
+          isDragging = false;
+        });
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        var dt = Math.min(clock.getDelta(), 0.05);
+        elapsed += dt;
+
+        if (partMode) {
+          if (isolatedRoot && !isDragging && !reducedMotion) {
+            isolatedAngle += dt * 0.18;
+            updatePartCamera(partDistance());
+          }
+        } else {
+          updateMovement(dt);
+          applyGesture();
+          if (dust) {
+            dust.rotation.y = Math.sin(elapsed * 0.06) * 0.03;
+            dust.position.y = Math.sin(elapsed * 0.18) * 0.025;
+          }
+          paintingMeshes.forEach(function (mesh) {
+            var isHovered = mesh.userData.exhibitId === hoveredId;
+            var target = isHovered ? 1.026 : 1;
+            mesh.scale.x += (target - mesh.scale.x) * 0.12;
+            mesh.scale.y += (target - mesh.scale.y) * 0.12;
+          });
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      function markReady() {
+        loading.classList.add("hidden");
+        document.body.dataset.ready = "true";
+        document.body.dataset.assetCount = String(Object.keys(templates).length);
+        window.__HUANIAO_READY__ = true;
+        var galleryApi = {
+          mode: partMode ? "part" : "hall",
+          ready: true,
+          exhibits: PAINTINGS,
+          loadedParts: Object.keys(templates),
+          errors: [],
+          paintingCount: paintingMeshes.length,
+          parts: Object.keys(templates),
+          paintings: PAINTINGS.map(function (painting) { return painting.id; }),
+          reset: resetView,
+          resetView: resetView,
+          openPainting: openPainting,
+          stepArtwork: stepArtwork,
+          toggleGesture: toggleGesture,
+          handleGestureState: handleGestureState,
+          focusArtwork: function (id, openPanel) {
+            if (openPanel === false) setActiveExhibit(id);
+            else openPainting(id);
+          },
+          focusGalleryWall: resetView,
+          focusDoorCheck: resetView,
+          hideDetail: function () { setPanel(false); },
+          getState: function () {
+            return {
+              activeExhibit: activeExhibit,
+              detailOpen: panelOpen,
+              gestureRunning: gestureRunning,
+              camera: camera.position.toArray(),
+              target: playerPosition.toArray(),
+              yaw: playerYaw,
+              pitch: playerPitch,
+              distance: 0
+            };
+          },
+          stats: function () {
+            return {
+              calls: renderer.info.render.calls,
+              triangles: renderer.info.render.triangles,
+              position: { x: playerPosition.x, y: 1.68, z: playerPosition.z },
+              yaw: playerYaw,
+              pitch: playerPitch,
+              camera: camera.position.toArray(),
+              activeExhibit: activeExhibit,
+              panelOpen: panelOpen,
+              gestureRunning: gestureRunning
+            };
+          }
+        };
+        window.HuaniaoGallery = galleryApi;
+      }
+
+      async function boot() {
+        bindEvents();
+        animate();
+
+        try {
+          if (partMode) {
+            document.body.classList.add("part-mode");
+            setProgress(22, "正在读取 " + PART_INFO[partParam].name);
+            await loadPart(partParam);
+            setProgress(78, "正在校验比例与落地原点");
+            setupPartViewer(partParam);
+            setProgress(100, "零件预览就绪");
+          } else {
+            setProgress(12, "正在铺设厅堂地面");
+            setupMaterials();
+            addArchitecture();
+            setProgress(26, "正在接入室内柱网");
+
+            for (var index = 0; index < PART_IDS.length; index += 1) {
+              var id = PART_IDS[index];
+              await loadPart(id);
+              setProgress(30 + (index + 1) * 14, "正在接入 " + PART_INFO[id].name);
+            }
+
+            placeColumn(-6.62, 1.95);
+            placeColumn(6.62, 1.95);
+            placeColumn(-6.62, -2.5);
+            placeColumn(6.62, -2.5);
+            placeWindows();
+            addSkylight();
+            addPaintings();
+
+            playerPosition.set(0, 0, 4.35);
+            applyPlayerCamera(true);
+            setProgress(100, "花鸟厅已就绪");
+          }
+
+          window.setTimeout(markReady, partMode ? 220 : 520);
+        } catch (error) {
+          console.error("[花鸟厅] 加载失败", error);
+          loadingStatus.textContent = "展厅加载失败，请刷新重试";
+          loadingStatus.classList.add("load-error");
+          loadingBar.style.background = "#b95745";
+          document.body.dataset.ready = "error";
+        }
+      }
+
+      boot();
+    })();
   </script>
 </body>
 </html>
