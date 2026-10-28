@@ -61,7 +61,14 @@ if (!page.includes("exhibitionWallMat") || !page.includes("0xf1eadb")) {
 }
 if (/(?:C:|D:)\\\\|\/Users\//.test(page)) problems.push("花鸟页包含绝对资源路径");
 if (page.includes("wenchuang.html")) problems.push("花鸟页错误引用了文创页面");
-if (!page.includes('item.hall === "hall2"')) problems.push("花鸟页没有从 MuseumConfig 限定 hall2 展品");
+if (!page.includes("HALL2_EXHIBIT_IDS")) problems.push("花鸟页没有限定花鸟厅展品 ID");
+if (!page.includes("handleGestureState")) problems.push("花鸟页缺少手势状态测试接口");
+if (!page.includes("stepArtwork")) problems.push("花鸟页缺少画作切换逻辑");
+if (page.includes("canvas.addEventListener(\"wheel\"")) problems.push("花鸟页仍保留滚轮改变视角");
+if (page.includes('desired.yaw -= dx')) problems.push("花鸟页仍保留拖拽旋转");
+if (page.includes('state.forward') || page.includes('state.back')) {
+  problems.push("花鸟页手势仍包含前后移动逻辑");
+}
 
 const moduleSource = page.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
 if (!moduleSource) {
@@ -97,11 +104,13 @@ for (const [id, target] of Object.entries(PARTS)) {
   }
 }
 
-const sandbox = { window: {} };
+const sandbox = {};
 sandbox.window = sandbox;
+sandbox.self = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(read("js/config.js"), sandbox, { filename: "js/config.js" });
-const paintings = (sandbox.MuseumConfig?.exhibits || []).filter((item) => item.hall === "hall2");
+const hall2Ids = ["xieshengzhenqintu", "wuniutu", "molantu"];
+const paintings = (sandbox.MuseumConfig?.exhibits || []).filter((item) => hall2Ids.includes(item.id));
 if (paintings.length !== 3) problems.push(`花鸟厅应有三幅画，实际 ${paintings.length}`);
 for (const painting of paintings) {
   if (!page.includes("exhibit.image")) problems.push("花鸟页没有使用展品图片字段");
@@ -181,7 +190,7 @@ if (!exists("assets/reference/exhibition/current/huaniao-interior-front-elevatio
   problems.push("缺少最新花鸟厅参考图");
 }
 const handoff = read("docs/current/组员5-花鸟厅交接.md");
-if (!handoff.includes("feature/huaniao-browser-captures-5")) {
+if (!handoff.includes("feature/shanshui-interior-followup-3")) {
   problems.push("交接文档分支名未更新");
 }
 if (!handoff.includes("assets/reference/exhibition/current/huaniao-interior-front-elevation-v1.jpg")) {
