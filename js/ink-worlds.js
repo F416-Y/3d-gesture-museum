@@ -33,11 +33,9 @@ window.MuseumInkWorlds = (function () {
    *   status = "placeholder" → 第一阶段不开放，只显示「画境准备中」
    *   apiKeyConfirmed        → 该 key 是否已经组长书面确认（见任务卡 §12.2）
    *
-   * ⚠️ 《富春山居图》→ "shuzhai" 是推测：§12.2 的四个 key 是按展厅命名的
-   *    （qianli / huaniao / renwu / shuzhai），而任务卡第四节把《富春山居图》
-   *    归到 hall1 山水厅，与 "shuzhai"（书斋）对不上。组长确认前保持
-   *    apiKeyConfirmed:false + status:"placeholder"，绝不把玩家送进错误的画境。
-   * 组长交付视频后，把对应项的 status 改成 "auto" 即可。 */
+   * 《富春山居图》最终 key 由组长 2026-10-28 确认为 "shanshui"（山水厅），
+   * 不使用 "shuzhai"；视频文件名同步为 shanshui.mp4。key 已确认，但视频尚未交付，
+   * 因此 status 仍为 "placeholder"。组长交付视频后把 status 改成 "auto" 即可。 */
   var PAINTINGS = [
     {
       key: "qianli", title: "千里江山图", artist: "北宋 · 王希孟",
@@ -46,10 +44,10 @@ window.MuseumInkWorlds = (function () {
       status: "auto", apiKeyConfirmed: true,
     },
     {
-      key: "shuzhai", title: "富春山居图", artist: "元 · 黄公望",
+      key: "shanshui", title: "富春山居图", artist: "元 · 黄公望",
       hall: "hall1", img: "./assets/images/fuchunshanjv.jpg",
-      video: "./videos/paintings/shuzhai.mp4",
-      status: "placeholder", apiKeyConfirmed: false,
+      video: "./videos/paintings/shanshui.mp4",
+      status: "placeholder", apiKeyConfirmed: true,
     },
     {
       key: "renwu", title: "韩熙载夜宴图", artist: "五代 · 顾闳中",
@@ -74,6 +72,7 @@ window.MuseumInkWorlds = (function () {
     transitionDone: false,
     worldKey: null,
     worldReadyKey: null,      // 组长画境回执：已确认打开的 key
+    leaderActive: false,      // 当前画境由组长接口挂载（返回时需要调他的清理回调）
     worldHandshakeTimer: 0,   // 组长画境握手看门狗
     raf: 0,
     stallTimer: 0,
@@ -401,10 +400,11 @@ window.MuseumInkWorlds = (function () {
 
   /* ---------- 组长画境接口握手 ----------
    * 旧实现只要 openPaintingVideo 存在就直接进 world 状态并冻结漫游，接口是个空壳
-   * 时玩家会被永久困住。现在用三重信号兜底：
+   * 时玩家会被永久困住。现在用多重信号兜底：
    *
    * 成功（任一即可）：
-   *   · 返回值 true / 返回 Promise 且 resolve
+   *   · 同步返回 true → 立即判定成功（组长负责此时画境已经挂好，不再等画面探测）
+   *   · 返回 Promise 且 resolve（resolve 值不是 false）
    *   · 组长播放器主动调 MuseumInkWorlds.paintingWorldReady(key)
    *   · 超时探测到画面里出现了新的可见 <video>/<canvas>（组长已把画境挂上）
    * 失败（任一即可）：
@@ -412,8 +412,11 @@ window.MuseumInkWorlds = (function () {
    *   · 组长播放器主动调 MuseumInkWorlds.paintingWorldFailed(key, reason)
    *   · 超时且没有任何新画面 → 显示「画境入口未响应」占位与返回按钮，不会把人锁死
    *
+   * 离开画境（返回四画选择 / 序厅）时调用组长的清理回调 closePaintingVideo(key)，
+   * 见 exitLeaderWorld()；否则组长挂的画境会残留、漫游继续被冻结。
+   *
    * 组长侧最小接法：openPaintingVideo(key) 返回 true/false，或返回一个
-   * 「画境挂载完成」时才 resolve 的 Promise 即可。 */
+   * 「画境挂载完成」时才 resolve 的 Promise；并提供 closePaintingVideo(key)。 */
   function enterLeaderPainting(p, leader) {
     var before = snapshotWorldNodes();
     var result, threw = false;
@@ -430,7 +433,14 @@ window.MuseumInkWorlds = (function () {
       return;
     }
 
+    state.leaderActive = true;
     enterLeaderWorld(p, before);
+
+    // 同步返回 true：接口已明确表示画境就绪，立即判定成功
+    if (result === true) {
+      paintingWorldReady(p.key);
+      return;
+    }
 
     if (result && typeof result.then === "function") {
       result.then(function (ok) {
@@ -510,8 +520,31 @@ window.MuseumInkWorlds = (function () {
     return true;
   }
 
+  /* 离开画境时释放组长挂载的画境（返回四画选择 / 序厅、或切到本地兜底前）。
+   * 组长接口契约（任务卡 §12.2）：closePaintingVideo(key)。
+   * 未提供时兼容 exitPaintingWorld / closePaintingWorld 两个别名；
+   * 都没有就只告警，不阻断返回流程。重复调用安全（leaderActive 先置 false）。 */
+  function exitLeaderWorld() {
+    if (!state.leaderActive) return;
+    state.leaderActive = false;
+    var key = state.worldKey;
+    var leader = window.MuseumPaintingWorlds || window.MuseumInkWorldApi;
+    if (!leader) return;
+    var fn = leader.closePaintingVideo || leader.exitPaintingWorld || leader.closePaintingWorld;
+    if (typeof fn !== "function") {
+      console.warn("[云间入墨] 组长画境接口缺少清理回调 closePaintingVideo(key)，返回后画境可能残留");
+      return;
+    }
+    try {
+      fn.call(leader, key);
+    } catch (err) {
+      console.warn("[云间入墨] 画境清理回调抛错：", err && err.message ? err.message : err);
+    }
+  }
+
   /* ---------- 3. 画境视频（本地兜底播放器） ---------- */
   function openLocalWorld(p) {
+    exitLeaderWorld();                          // 换成本地播放器，先让组长把画境收掉
     clearTimeout(state.worldHandshakeTimer);   // 放弃等待组长接口
     state.layer = "world";
     state.worldKey = p.key;
@@ -550,6 +583,7 @@ window.MuseumInkWorlds = (function () {
   }
 
   function showWorldStub(p, title, text) {
+    exitLeaderWorld();
     clearTimeout(state.worldHandshakeTimer);
     state.layer = "world";
     state.worldKey = p.key;
@@ -568,8 +602,10 @@ window.MuseumInkWorlds = (function () {
   /* ---------- 4. 返回 ---------- */
   function returnToPaintingChooser() {
     if (state.layer !== "world") return;
+    exitLeaderWorld();                       // 让组长把画境收掉，避免残留 / 漫游仍冻结
     clearTimeout(state.worldHandshakeTimer);
     state.worldReadyKey = null;
+    state.worldKey = null;
     try { el.worldVideo.pause(); } catch (err) { /* noop */ }
     hide(el.world);
     el.world.setAttribute("aria-hidden", "true");
@@ -578,12 +614,14 @@ window.MuseumInkWorlds = (function () {
 
   function returnToHall0() {
     if (!state.layer) return;
+    exitLeaderWorld();                       // 同上：返回序厅前释放外部画境
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
     try { el.worldVideo.pause(); } catch (err) { /* noop */ }
     clearTimeout(state.stallTimer);
     clearTimeout(state.fallbackTimer);
     clearTimeout(state.worldHandshakeTimer);
     state.worldReadyKey = null;
+    state.worldKey = null;
     hide(el.videoLayer);
     hide(el.world);
     hidePicker();
@@ -669,8 +707,9 @@ window.MuseumInkWorlds = (function () {
     /* 组长画境播放器回执（可选，但强烈建议接上）：
        · paintingWorldReady(key)           画境已挂上，撤掉握手看门狗
        · paintingWorldFailed(key, reason)  画境打不开 → 显示占位并允许返回
-       即使两者都不接，只要 openPaintingVideo 返回 true/false/Promise，
-       或超时前画面里出现新的可见 video/canvas，流程也不会把玩家锁死。 */
+       openPaintingVideo 同步返回 true 时本站立即判定成功，不再等待画面探测。
+       返回四画选择 / 序厅时，若组长提供 closePaintingVideo(key)（或
+       exitPaintingWorld / closePaintingWorld 别名）会自动调用并释放画境。 */
     paintingWorldReady: paintingWorldReady,
     paintingWorldFailed: paintingWorldFailed,
     getState: function () { return state; },
