@@ -310,17 +310,18 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 月洞门（苏州园林正统做法：落地整圆洞径 3.4m、深色砖衬 + 双面砖雕镶边、
        4m 高墙身拔作门楼、小青瓦压顶，与两侧 3.6m 院墙成起伏；
-       2026-10-05 扩洞：2.6m→3.4m，圆心 1.8m、洞顶 3.5m，净高不低于前大门门洞（3.4m）） ---------- */
+       2026-10-28 调高：圆心 1.82m、半径 1.72m、净高约 3.54m，保证第一视角通行比例） ---------- */
   function moonGate(x, z, ry) {
     var g = new THREE.Group(); g.position.set(x, 1.226, z); g.rotation.y = ry; S.scene.add(g);
-    /* 带整圆洞的墙身两片（canvas alpha 镂空：圆心 1.7m、半径 1.65m，洞底贴地只留 0.05m 门槛） */
+    var moonRadius = 1.72, moonCenterY = 1.82;
+    /* 带整圆洞的墙身两片：门槛贴地，洞顶略抬高避免第一视角压迫。 */
     if (!M.moonWall) {
       var mc = document.createElement('canvas'); mc.width = mc.height = 512;
       var mx = mc.getContext('2d');
       mx.fillStyle = '#ffffff'; mx.fillRect(0, 0, 512, 512);
       mx.fillStyle = '#000000';
       mx.beginPath();
-      mx.ellipse(256, 512 - 1.7 / 4.4 * 512, 1.65 / 4.4 * 512, 1.65 / 4.4 * 512, 0, 0, Math.PI * 2);
+      mx.ellipse(256, 512 - moonCenterY / 4.4 * 512, moonRadius / 4.4 * 512, moonRadius / 4.4 * 512, 0, 0, Math.PI * 2);
       mx.fill();
       M.moonWall = new THREE.MeshStandardMaterial({
         color: 0xe9e0c9, roughness: 0.95,
@@ -334,22 +335,22 @@ window.MuseumExteriorLayout = (function () {
     /* 洞口深色砖衬（整圆一圈，给洞口 0.44m 厚度） */
     var liningMat = M.ink.clone();
     liningMat.side = THREE.DoubleSide;
-    var ring = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.65, 0.44, 64, 1, true), liningMat);
+    var ring = new THREE.Mesh(new THREE.CylinderGeometry(moonRadius, moonRadius, 0.44, 64, 1, true), liningMat);
     ring.rotation.x = Math.PI / 2;
-    ring.position.set(0, 1.7, 0);
+    ring.position.set(0, moonCenterY, 0);
     ring.castShadow = true;
     g.add(ring);
     /* 双面整圆砖雕镶边（遮住镂空切边，一眼读出圆月轮廓） */
-    var trim1 = new THREE.Mesh(new THREE.TorusGeometry(1.71, 0.07, 12, 80), M.ink);
-    trim1.position.set(0, 1.7, 0.23); trim1.castShadow = true; g.add(trim1);
-    var trim2 = new THREE.Mesh(new THREE.TorusGeometry(1.71, 0.07, 12, 80), M.ink);
-    trim2.position.set(0, 1.7, -0.23); trim2.castShadow = true; g.add(trim2);
+    var trim1 = new THREE.Mesh(new THREE.TorusGeometry(moonRadius + 0.06, 0.07, 12, 80), M.ink);
+    trim1.position.set(0, moonCenterY, 0.23); trim1.castShadow = true; g.add(trim1);
+    var trim2 = new THREE.Mesh(new THREE.TorusGeometry(moonRadius + 0.06, 0.07, 12, 80), M.ink);
+    trim2.position.set(0, moonCenterY, -0.23); trim2.castShadow = true; g.add(trim2);
     /* 整块青石门槛：下缘嵌入铺地，两端接门帮，顶缘倒角便于跨过。 */
     var sillShape = new THREE.Shape();
-    sillShape.moveTo(-1.68, -0.025);
-    sillShape.lineTo(1.68, -0.025);
-    sillShape.lineTo(1.68, 0.14);
-    sillShape.lineTo(-1.68, 0.14);
+    sillShape.moveTo(-1.75, -0.025);
+    sillShape.lineTo(1.75, -0.025);
+    sillShape.lineTo(1.75, 0.14);
+    sillShape.lineTo(-1.75, 0.14);
     sillShape.closePath();
     var sillGeo = new THREE.ExtrudeGeometry(sillShape, {
       depth: 0.56, bevelEnabled: true, bevelThickness: 0.025,
@@ -528,7 +529,7 @@ window.MuseumExteriorLayout = (function () {
       var len = sd.ax === 'x' ? w : d;
       var isEntry = (sd.key === entry);
       var isBack = !!(opts && opts.backdoor && sd.key === backKey);   /* 【已停用】全园后门 2026-10-05 撤除，无任何调用点再传 backdoor；分支保留备查 */
-      var doorW = isBack ? 1.8 : 2.6, doorH = isBack ? 2.2 : 2.4;
+      var doorW = isBack ? 1.8 : 2.6, doorH = isBack ? 2.2 : 2.72;
       if (isEntry || isBack) {
         var seg = (len - doorW) / 2;
         if (sd.ax === 'x') {
@@ -559,10 +560,10 @@ window.MuseumExteriorLayout = (function () {
         if (isEntry && opts && opts.closedDoor) {
           /* 闭门展厅：朱砂双扇紧闭（嵌入门洞与墙面齐平），墨黑横档 + 鎏金铺首环；
              并登记门位表（靠近弹窗 / 门口拦阻 / 厅内落点朝向） */
-          var cLW = doorW / 2 - 0.03, i3, lfx, lfz, ring;
+          var cLW = doorW / 2, i3, lfx, lfz, ring;
           for (i3 = -1; i3 <= 1; i3 += 2) {
             if (sd.ax === 'x') {
-              lfx = sd.px + i3 * (cLW / 2 + 0.015); lfz = sd.pz;
+              lfx = sd.px + i3 * cLW / 2; lfz = sd.pz;
               box(cLW, doorH, 0.1, M.door, lfx, wallY0 + doorH / 2, lfz, 0, g);
               box(cLW - 0.14, 0.1, 0.12, M.ink, lfx, wallY0 + 0.5, lfz, 0, g);
               box(cLW - 0.14, 0.1, 0.12, M.ink, lfx, wallY0 + doorH - 0.5, lfz, 0, g);
@@ -570,7 +571,7 @@ window.MuseumExteriorLayout = (function () {
               ring.position.set(sd.px + i3 * 0.2, wallY0 + 1.2, sd.pz + sd.nz * 0.08);
               g.add(ring);
             } else {
-              lfx = sd.px; lfz = sd.pz + i3 * (cLW / 2 + 0.015);
+              lfx = sd.px; lfz = sd.pz + i3 * cLW / 2;
               box(0.1, doorH, cLW, M.door, lfx, wallY0 + doorH / 2, lfz, 0, g);
               box(0.12, 0.1, cLW - 0.14, M.ink, lfx, wallY0 + 0.5, lfz, 0, g);
               box(0.12, 0.1, cLW - 0.14, M.ink, lfx, wallY0 + doorH - 0.5, lfz, 0, g);
@@ -590,7 +591,7 @@ window.MuseumExteriorLayout = (function () {
             syaw: Math.atan2(sd.nx, sd.nz)
           });
         }
-        /* 展厅门洞一律敞口（不装门扇，与序厅小门做法统一）：只留门外石台/踏跺 */
+        /* 展厅门外保留石台/踏跺；正式展厅门扇由 closedDoor 分支封闭。 */
         if (sd.ax === 'x') {
           box(doorW + 0.8, 0.24, 1.0, M.stone, sd.px, 0.36, sd.pz + sd.nz * 0.9, 0, g);
           box(doorW + 0.8, 0.24, 0.6, M.stone, sd.px, 0.12, sd.pz + sd.nz * 1.35, 0, g);
