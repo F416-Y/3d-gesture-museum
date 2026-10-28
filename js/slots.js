@@ -22,14 +22,6 @@ window.MuseumExteriorSlots = {
         }
         return cache[id];
       }
-      function loadExternal(path) {
-        if (!cache[path]) {
-          cache[path] = new Promise(function (resolve) {
-            loader.load(path, function (g) { resolve(g.scene); }, undefined, function () { resolve(null); });
-          });
-        }
-        return cache[path];
-      }
       /* 克隆模板：按 mode('h' 对高度 / 'max' 对最大边) 缩放到 size，
          包围盒底面中心落到 (x,y,z)，可再绕 y 转 ry */
       function instantiate(tpl, o) {
@@ -164,13 +156,6 @@ window.MuseumExteriorSlots = {
       }
       /* 竖幅立轴画心（山水/人物/花鸟各厅墙面挂画用）：远山 + 近坡 + 枯树 + 朱印 */
       function scrollTexV(seed) {
-        /* 纯绘画厅优先使用真实馆藏图；素材未加载时再回退到程序化画心。 */
-        if (window.MuseumGallery && window.MuseumGallery.tex) {
-          var real = typeof seed === 'string' && window.MuseumGallery.texById
-            ? window.MuseumGallery.texById(seed)
-            : window.MuseumGallery.tex(seed);
-          if (real) return real;
-        }
         var cv = document.createElement('canvas'); cv.width = 96; cv.height = 192;
         var ctx = cv.getContext('2d');
         ctx.fillStyle = '#ece3cd'; ctx.fillRect(0, 0, 96, 192);
@@ -414,7 +399,6 @@ window.MuseumExteriorSlots = {
         var faceRy = horiz ? (bz < 0 ? 0 : Math.PI) : (bx < 0 ? Math.PI / 2 : -Math.PI / 2);
         function at(uOff, bOff) { return [h.cx + ux * uOff + bx * bOff, h.cz + uz * uOff + bz * bOff]; }
         var tag = h.tag;
-        var paintingOnly = (tag === '山水' || tag === '花鸟');
         var isBook = (tag === '书斋' || tag === '临摹');
         var seedBase = (Math.floor(Math.abs(h.cx) * 31 + Math.abs(h.cz) * 17) >>> 0);
         var shelfTpl = isBook ? (L.shelf || L.display) : (L.display || L.shelf);
@@ -464,35 +448,9 @@ window.MuseumExteriorSlots = {
           p = at(sig * (len / 2 - 0.42), bOff);
           wallScrollAt(p[0], p[1], Math.atan2(-sig * ux, -sig * uz), seed);
         }
-        function sideArtwork(sig, bOff, id) { sideScroll(sig, bOff, id); }
         function potAt(uOff, bOff, seed) { p = at(uOff, bOff); potted(p[0], p[1], floor, seed); }
         function pedestalAt(uOff, bOff, seed) { p = at(uOff, bOff); pedestalVase(p[0], p[1], floor, seed); }
         function pot2(uOff, bOff, seed) { p = at(uOff, bOff); scrollPot(p[0], p[1], floor, seed); }
-
-        /* ---------- Hush 风格纯绘画厅 ----------
-         * 三个绘画厅只保留墙面作品和洗画灯，不摆货架、雕塑、盆景、长案，
-         * 让观者先看到画，再通过热点/键盘打开鉴赏层看高清图与说明。
-         */
-        if (paintingOnly) {
-          var gallerySeeds = {
-            '山水': [357, 364, 371, 357, 364],
-            '花鸟': [457, 464, 471, 457, 464],
-          }[tag];
-          var backUs = [-len * 0.3, 0, len * 0.3];
-          var si;
-          for (si = 0; si < backUs.length; si++) {
-            backScroll(backUs[si], gallerySeeds[si], dep / 2 - 0.6);
-            p = at(backUs[si], dep / 2 - 0.58);
-            var backLight = new THREE.PointLight(0xffdfae, 0.52, 5.5, 2);
-            backLight.position.set(p[0], 3.55, p[1]); scene.add(backLight);
-          }
-          sideScroll(-1, 0.8, gallerySeeds[3]);
-          sideScroll(1, 0.8, gallerySeeds[4]);
-          /* 低亮度中央导视光，避免空厅完全发黑，但不抢画面 */
-          var galleryFill = new THREE.PointLight(0xf5ead5, 0.28, Math.max(len, dep) * 1.25, 2);
-          galleryFill.position.set(h.cx, 2.7, h.cz); scene.add(galleryFill);
-          return;
-        }
   
         /* ---- 按厅定式 ---- */
         if (tag === '山水') {
@@ -511,23 +469,24 @@ window.MuseumExteriorSlots = {
           sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
           lampPair(2.2, -0.45);
         } else if (tag === '人物') {
-          /* 面向正门时左墙为西方绘画、右墙为中国画；中央再分为西方雕塑 / 中国人物雕塑。 */
-          sideArtwork(-1, 1.8, 'monalisa');
-          sideArtwork(-1, -0.8, 'starrynight');
-          var chineseWall = [
-            ['hanxizai', 4.2], ['qianlijiangshan', 3.0],
-            ['fuchunshanjv', 1.8], ['xishanxinglvtu', 0.6],
-            ['buniantu', -0.6], ['xieshengzhenqintu', -1.8],
-            ['wuniutu', -3.0], ['molantu', -4.2], ['luoshenfu', -5.0]
-          ];
-          for (i = 0; i < chineseWall.length; i++) {
-            sideArtwork(1, chineseWall[i][1], chineseWall[i][0]);
+          sideScroll(-1, 0.8, seedBase + 1); sideScroll(1, 0.8, seedBase + 2);
+          if (L.warrior) {
+            var wpos = [[-len / 4, dep / 2 - 3.3], [len / 4, dep / 2 - 3.3], [-len / 4, dep / 2 - 4.5], [len / 4, dep / 2 - 4.5]];
+            for (i = 0; i < 4; i++) {
+              p = at(wpos[i][0], wpos[i][1]);
+              if (instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('将军俑');
+            }
           }
-          var compareB = dep / 2 - 2.1;
-          p = at(-1.45, compareB);
-          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.9, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('西方雕塑');
-          p = at(1.45, compareB);
-          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('中国人物雕塑');
+          if (L.horse) {
+            p = at(0, dep / 2 - 1.9);
+            var ped = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.8), MT.stoneG);
+            ped.position.set(p[0], floor + 0.375, p[1]);
+            ped.rotation.y = faceRy;
+            ped.castShadow = ped.receiveShadow = true; scene.add(ped);
+            if (instantiate(L.horse, { mode: 'h', size: 1.1, x: p[0], y: floor + 0.75, z: p[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
+          }
+          p = at(0, dep / 2 - 0.6); /* 后墙挂对轴（后门已撤，厅心马踏飞燕可绕行） */
+          backScroll(-1.9, seedBase + 10); backScroll(1.9, seedBase + 11);
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
@@ -568,8 +527,8 @@ window.MuseumExteriorSlots = {
           }
         }
       }
-      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse'), loadExternal('assets/models/venus.glb')]).then(function (fs) {
-        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6], venus: fs[7] };
+      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse')]).then(function (fs) {
+        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
       });
