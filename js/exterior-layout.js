@@ -490,7 +490,7 @@ window.MuseumExteriorLayout = (function () {
     for (i = -1; i <= 1; i++) {
       box(0.16, 0.46, 0.42, M.stone, 0, 0.25, i * (span / 2 - 0.35), 0, g);
     }
-    [12.4, 15.5, 18.6].forEach(function (seatZ) {
+    [11.32, 14.95, 18.58].forEach(function (seatZ) {
       S.seats.push({
         x: x + face * 0.5, z: seatZ, yaw: face > 0 ? -Math.PI / 2 : Math.PI / 2,
         title: '中轴画廊美人靠'
@@ -1149,7 +1149,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 游廊：双列木柱 + 双坡瓦顶 + 坐槛，默认廊宽 2.2m（cw 可加宽），柱距约 3m ----------
      * gapBench：{side:±1, c:沿廊中心坐标, hw:半宽} 在该侧坐槛开一个过人口（檐枋不断）
      * cw：自定义廊宽（画廊式游廊加宽用，保证看画视距） */
-  function corridor(x0, z0, x1, z1, gapBench, cw, roofY, noPosts, postSide) {
+  function corridor(x0, z0, x1, z1, gapBench, cw, roofY, noPosts, postSide, bayCount) {
     var w = cw || 2.2;
     var eaveY = roofY || 3.6, postH = eaveY - 0.14, postY = 0.14 + postH / 2;
     var dx = x1 - x0, dz = z1 - z0;
@@ -1158,7 +1158,7 @@ window.MuseumExteriorLayout = (function () {
     g.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2);
     g.rotation.y = Math.atan2(dx, dz);
     S.scene.add(g);
-    var bays = Math.max(1, Math.round(len / 3)), i, t;
+    var bays = bayCount || Math.max(1, Math.round(len / 3)), i, t;
     /* 廊内地板：青石板满铺通长（不再半草半板） */
     var fl = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.2, len + 0.3), M.plaza);
     fl.rotation.x = -Math.PI / 2; fl.position.y = 0.045; fl.receiveShadow = true;
@@ -1229,8 +1229,9 @@ window.MuseumExteriorLayout = (function () {
       ctx.fillStyle = '#a83a2a'; ctx.fillRect(s2 * 0.12, s2 * 0.24, s2 * 0.075, s2 * 0.075);
     }, 1, 1);
   }
-  function hangingScroll(x, z, faceDir, seed, k, ryAbs) {
+  function hangingScroll(x, z, faceDir, seed, k, ryAbs, lift) {
     var g = new THREE.Group(); g.position.set(x, 0, z);
+    g.position.y = lift || 0;
     g.rotation.y = (ryAbs !== undefined) ? ryAbs : (faceDir > 0 ? Math.PI / 2 : -Math.PI / 2);
     if (k) g.scale.setScalar(k);
     S.scene.add(g);
@@ -1252,8 +1253,9 @@ window.MuseumExteriorLayout = (function () {
     box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
     box(0.15, wallTop - 0.12, len, M.paper, x, wallTop / 2, zc);
     box(0.22, 0.14, len + 0.1, M.ink, x, wallTop, zc);
-    var zs = [12.4, 15.5, 18.6], i;
-    for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0));
+    /* 三幅画分别落在三开间中心，左右到柱边的距离一致。 */
+    var zs = [11.32, 14.95, 18.58], i;
+    for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0), undefined, undefined, 0.35);
   }
 
   /* 横向半壁廊墙（东长廊用，画面朝南）：同 galleryWall 做法，沿 x 展开 */
@@ -1402,12 +1404,12 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
     /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
-    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, -1);
-    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, 1);
+    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
+    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
     galleryWall(-8.9, 1, 3.58);
     galleryWall(8.9, -1, 3.58);
-    gallerySeat(-5.7, 15.5, -1, 8.4);
-    gallerySeat(5.7, 15.5, 1, 8.4);
+    gallerySeat(-5.7, 14.95, -1, 8.4);
+    gallerySeat(5.7, 14.95, 1, 8.4);
   }
 
   /* ---------- 中轴拱桥：序厅方向跨中心湖，桥长约 16m、宽约 2.2m ---------- */
