@@ -311,6 +311,8 @@
   justify-content: center;
   gap: 34px;
   padding: 48px 32px 36px;
+  animation: none;
+  opacity: 1;
   background:
     radial-gradient(ellipse at 18% 12%, rgba(28, 26, 23, 0.14), transparent 56%),
     radial-gradient(ellipse at 84% 86%, rgba(46, 61, 71, 0.16), transparent 60%),

@@ -347,10 +347,11 @@ window.MuseumInkWorlds = (function () {
     clearTimeout(state.stallTimer);
     clearTimeout(state.fallbackTimer);
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
+    // 先让不透明的四画层盖住 3D 园区，再收起视频层，避免结束瞬间露出一帧园区。
+    showPaintingPicker();
     hide(el.videoLayer);
     el.videoLayer.classList.remove("is-opening");
     el.videoLayer.setAttribute("aria-hidden", "true");
-    showPaintingPicker();
   }
 
   /* ---------- 2. 四画选择 ---------- */
