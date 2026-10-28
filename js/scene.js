@@ -1618,8 +1618,8 @@ window.MuseumScene = (function () {
     frameEdge(t, h + t * 2, -w / 2 - t / 2, 0);         /* 左边 */
     frameEdge(t, h + t * 2, w / 2 + t / 2, 0);          /* 右边 */
 
-    // 说明牌（画下）
-    addSign(parent, pos.x, pos.y - h / 2 - 0.4, pos.z, ex.title + " · " + ex.dynasty);
+    // 说明牌（画下）：传 pos.ry，让牌子与画面同轴；位置略往画内收，避免压到画框下沿
+    addSign(parent, pos.x, pos.y - h / 2 - 0.42, pos.z, ex.title + " · " + ex.dynasty, pos.ry || 0);
 
     // 射灯：必须显式设置 target 并把 target 加入场景图。
     // three.js 的 SpotLight 不设 target 时会一直照向世界原点 (0,0,0)——
@@ -1641,17 +1641,34 @@ window.MuseumScene = (function () {
   }
 
   /* 说明牌 */
-  function addSign(parent, x, y, z, text) {
+  /* 展品说明牌：牌子 + 支杆 + 底座，整组随 ry 与画面同轴。
+     原实现没有 rotation.y，牌子永远朝 +z，朝东/朝西的墙上一律歪出画面；
+     牌面又和墙同一 z 值，杆子直接切进墙里。 */
+  function addSign(parent, x, y, z, text, ry) {
     text = String(text == null ? "" : text);
+    var r = ry || 0;
+    var g = new _g.Group();
+    g.position.set(x, y, z);
+    g.rotation.y = r;
+    parent.add(g);
+
+    /* 牌面沿画面法线前推 0.06，避免与墙面 z-fighting */
     var sign = new _g.Mesh(
       new _g.PlaneGeometry(1.15, 0.62),
       canvasMat(drawSign(text.split(" · ")[0], text.split(" · ")[1] || ""), { side: _g.DoubleSide })
     );
-    sign.position.set(x, y, z);
-    parent.add(sign);
-    var pole = new _g.Mesh(new _g.CylinderGeometry(0.025, 0.025, 0.4, 6), mat(0x3f3a35));
-    pole.position.set(x, y - 0.5, z);
-    parent.add(pole);
+    sign.position.set(0, 0, 0.06);
+    g.add(sign);
+
+    /* 支杆与底座也在这条法线上，不再嵌墙 */
+    var pole = new _g.Mesh(new _g.CylinderGeometry(0.025, 0.025, 0.5, 8), mat(0x3f3a35));
+    pole.position.set(0, -0.55, 0.06);
+    pole.castShadow = true;
+    g.add(pole);
+    var foot = new _g.Mesh(new _g.CylinderGeometry(0.12, 0.15, 0.045, 10), mat(0x3f3a35));
+    foot.position.set(0, -0.82, 0.06);
+    foot.castShadow = true;
+    g.add(foot);
   }
 
   /* 西侧连廊（文明对话厅） */
