@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>云墨美术馆 · 手势交互数字博物馆</title>
-<meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
+<title>云间入墨——中国传统绘画数字美术馆</title>
+<meta name="description" content="云间入墨——中国传统绘画数字美术馆。以手势交互漫游园区、进入画境并欣赏中国传统绘画。">
 <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/intro.css">
   <link rel="stylesheet" href="./css/ink-worlds.css">
 <!--
   ============================================================
-  云墨美术馆 CloudInk Art Museum
+  云间入墨——中国传统绘画数字美术馆
   前端 3D 手势交互博物馆 · 美术鉴赏 × 软件工程
   ------------------------------------------------------------
   脚本加载顺序（依赖顺序，不可调换）：
@@ -33,10 +33,10 @@
   <canvas id="introCanvas"></canvas>
   <div id="introTitle">
     <span class="intro-kicker">云间入墨 · DIGITAL MUSEUM</span>
-    <h1>云墨美术馆</h1>
-    <p>一场从笔墨开始的漫游</p>
+    <h1>云间入墨</h1>
+    <p>中国传统绘画数字美术馆 · 手势入境</p>
   </div>
-  <div id="introMark" aria-label="云墨美术馆标志">
+  <div id="introMark" aria-label="云间入墨标志">
     <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
       <path class="mark-pool" d="M14 13c8-5 28-5 36 1 3 3 2 13 2 21 0 10-2 15-8 17-8 3-24 3-30-2-5-4-5-13-5-21 0-8 1-13 5-16Z" />
       <path class="mark-cut" d="M25 18c-4 4-6 9-6 15 0 8 4 13 12 15 7 1 12-2 14-8-5 3-11 3-15 0-5-3-6-8-6-13 0-4 1-7 4-9Z" />
@@ -69,7 +69,7 @@
   <!-- ===== 顶部标题（朱砂印章式签名元素） ===== -->
   <header id="topbar" class="topbar hidden">
     <div class="brand">
-      <span class="brand-seal" aria-label="云墨美术馆标志">
+      <span class="brand-seal" aria-label="云间入墨标志">
         <svg viewBox="0 0 64 64" role="img" aria-hidden="true">
           <path class="brand-mark-pool" d="M14 13c8-5 28-5 36 1 3 3 2 13 2 21 0 10-2 15-8 17-8 3-24 3-30-2-5-4-5-13-5-21 0-8 1-13 5-16Z" />
           <path class="brand-mark-cut" d="M25 18c-4 4-6 9-6 15 0 8 4 13 12 15 7 1 12-2 14-8-5 3-11 3-15 0-5-3-6-8-6-13 0-4 1-7 4-9Z" />
@@ -78,8 +78,8 @@
         </svg>
       </span>
       <div class="brand-text">
-        <h1>云墨美术馆</h1>
-        <p>CloudInk Art Museum · 手势交互数字博物馆</p>
+        <h1>云间入墨</h1>
+        <p><span>中国传统绘画数字美术馆</span><i>·</i><strong>手势交互</strong></p>
       </div>
     </div>
     <div id="hall-label" class="hall-label">前庭 · 园区</div>
@@ -87,14 +87,18 @@
 
   <!-- ===== 左下：操作说明 ===== -->
   <aside id="help" class="help hidden">
-    <h3>手势操作</h3>
+    <div class="help-heading">
+      <h3>手势导览</h3>
+      <span>GESTURE GUIDE</span>
+    </div>
+    <p class="help-lead">伸手漫游，靠近后再确认</p>
     <ul>
-      <li><b>张开手掌</b>　向前漫游</li>
-      <li><b>握拳</b>　　　向后退</li>
-      <li><b>食指左右</b>　转向</li>
-      <li><b>捏合两指 · 三指张开</b>　查看 / 关闭展品</li>
+      <li><span class="help-gesture"><i>01</i><b>张开手掌</b></span><span>向前漫游</span></li>
+      <li><span class="help-gesture"><i>02</i><b>握拳</b></span><span>向后退</span></li>
+      <li><span class="help-gesture"><i>03</i><b>食指左右</b></span><span>转向</span></li>
+      <li><span class="help-gesture"><i>04</i><b>捏合 · 三指张开</b></span><span>查看 / 关闭</span></li>
     </ul>
-    <p class="help-key">键盘备选：W/S 前进后退 · A/D 转向 · E 查看 · Q 关闭 · R 重置视角 · V 全景 · T 第三人称 · 左键拖动转向</p>
+    <p class="help-key"><b>键盘备选</b> W/S 前进后退 · A/D 转向 · E 查看 · Q 关闭 · R 重置 · V 全景 · T 第三人称</p>
   </aside>
 
   <!-- ===== 右下：工具栏 ===== -->
