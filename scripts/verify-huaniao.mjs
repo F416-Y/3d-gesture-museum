@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 组员5花鸟厅静态验收。
- * 检查独立页面、三幅画、七件 GLB 的必要结构和本地引用，不启动浏览器。
+ * 花鸟厅与山水厅共用同一场景壳，只替换三幅画作和对应文案。
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -14,15 +14,8 @@ const exists = (file) => fs.existsSync(path.join(ROOT, file));
 const problems = [];
 const warnings = [];
 
-const PARTS = {
-  "door-column": [1.0, 4.5, 0.8],
-  "door-leaf": [2.0, 3.0, 0.18],
-  "door-canopy": [6.2, 1.7, 1.6],
-  "wall-pillar": [0.72, 2.6, 0.72],
-  "back-wall": [14.0, 3.6, 0.55],
-  "long-table": [2.4, 1.0, 0.75],
-  bookshelf: [1.55, 2.0, 0.55],
-};
+const SHARED_PARTS = ["column", "lattice-window", "skylight", "painting-frame"];
+const PAINTING_IDS = ["xieshengzhenqintu", "wuniutu", "molantu"];
 
 function readGlbStructure(file) {
   const data = fs.readFileSync(path.join(ROOT, file));
@@ -48,45 +41,49 @@ function readGlbStructure(file) {
 }
 
 const page = read("public/huaniao.html");
-if (!/<canvas\s+id="scene"/.test(page)) problems.push("花鸟页缺少三维画布 #scene");
+if (!/<canvas\s+id="gallery"/.test(page)) problems.push("花鸟页缺少三维画布 #gallery");
 if (!page.includes('data-ready="false"')) problems.push("花鸟页缺少加载状态标记");
-if (!page.includes("MuseumGesture")) problems.push("花鸟页没有接入手势模块");
 if (!page.includes("./js/vendor/three.min.js")) problems.push("花鸟页没有使用本地 Three.js");
 if (!page.includes("./js/vendor/GLTFLoader.js")) problems.push("花鸟页没有使用本地 GLTFLoader");
 if (!page.includes("./js/vendor/mediapipe/vision_bundle.js")) problems.push("花鸟页没有使用本地 MediaPipe");
 if (!page.includes("window.HuaniaoGallery")) problems.push("花鸟页缺少自动验收接口");
-if (!page.includes("双扇门 · 闭合")) problems.push("花鸟页缺少门扇闭合状态");
-if (!page.includes("exhibitionWallMat") || !page.includes("0xf1eadb")) {
-  problems.push("画作后方缺少暖白粉墙展板");
-}
+if (!page.includes("花鸟清趣")) problems.push("花鸟页缺少厅名");
+if (!page.includes("花鸟厅 · 北墙")) problems.push("花鸟页缺少展厅位置标识");
 if (/(?:C:|D:)\\\\|\/Users\//.test(page)) problems.push("花鸟页包含绝对资源路径");
 if (page.includes("wenchuang.html")) problems.push("花鸟页错误引用了文创页面");
-if (!page.includes("HALL2_EXHIBIT_IDS")) problems.push("花鸟页没有限定花鸟厅展品 ID");
 if (!page.includes("handleGestureState")) problems.push("花鸟页缺少手势状态测试接口");
 if (!page.includes("stepArtwork")) problems.push("花鸟页缺少画作切换逻辑");
 if (page.includes("canvas.addEventListener(\"wheel\"")) problems.push("花鸟页仍保留滚轮改变视角");
-if (page.includes('desired.yaw -= dx')) problems.push("花鸟页仍保留拖拽旋转");
-if (page.includes('state.forward') || page.includes('state.back')) {
-  problems.push("花鸟页手势仍包含前后移动逻辑");
+if (page.includes("KeyW") || page.includes("KeyA") || page.includes("KeyS") || page.includes("KeyD")) {
+  problems.push("花鸟页仍包含 WASD 漫游逻辑");
+}
+if (page.includes('desired.yaw -= dx') || page.includes('state.turn) desired.yaw')) {
+  problems.push("花鸟页仍保留自由旋转或手势转向");
 }
 
-const moduleSource = page.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
-if (!moduleSource) {
-  problems.push("花鸟页缺少主模块脚本");
+const hrefs = [...page.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
+for (const href of hrefs) {
+  if (href.startsWith("data:")) continue;
+  if (href !== "./index.html") problems.push(`花鸟页存在跨展厅链接：${href}`);
+}
+
+const scripts = [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
+const mainScript = scripts.sort((a, b) => b.length - a.length)[0];
+if (!mainScript) {
+  problems.push("花鸟页缺少主脚本");
 } else {
   try {
-    new Function(moduleSource);
+    new Function(mainScript);
   } catch (error) {
-    problems.push(`花鸟页模块语法错误：${error.message}`);
+    problems.push(`花鸟页脚本语法错误：${error.message}`);
   }
 }
 
-for (const [id, target] of Object.entries(PARTS)) {
+for (const id of SHARED_PARTS) {
   const file = `assets/models/parts/opt/${id}.glb`;
-  if (!page.includes(`"${id}"`) && id !== "bookshelf") problems.push(`花鸟页未声明零件 ${id}`);
-  if (id === "bookshelf" && !page.includes("bookshelf")) problems.push("花鸟页未声明书架");
+  if (!page.includes(`"${id}"`)) problems.push(`花鸟页未声明共享构件 ${id}`);
   if (!exists(file)) {
-    problems.push(`缺少零件文件 ${file}`);
+    problems.push(`缺少共享构件 ${file}`);
     continue;
   }
   try {
@@ -94,10 +91,9 @@ for (const [id, target] of Object.entries(PARTS)) {
     if (!structure.meshes) problems.push(`${id} 没有 mesh`);
     if (!structure.triangles) problems.push(`${id} 没有三角面`);
     if (!structure.materials) warnings.push(`${id} 没有材质`);
-    if (structure.triangles > 100000) warnings.push(`${id} 三角面 ${structure.triangles}，需继续关注网页性能`);
     console.log(
-      `  ${id.padEnd(13)} ${String(structure.triangles).padStart(6)} tris · ` +
-      `${structure.materials} mat · ${structure.textures} tex · target ${target.join("×")}m`
+      `  ${id.padEnd(15)} ${String(structure.triangles).padStart(6)} tris · ` +
+      `${structure.materials} mat · ${structure.textures} tex`,
     );
   } catch (error) {
     problems.push(`${file} 解析失败：${error.message}`);
@@ -109,100 +105,62 @@ sandbox.window = sandbox;
 sandbox.self = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(read("js/config.js"), sandbox, { filename: "js/config.js" });
-const hall2Ids = ["xieshengzhenqintu", "wuniutu", "molantu"];
-const paintings = (sandbox.MuseumConfig?.exhibits || []).filter((item) => hall2Ids.includes(item.id));
+const paintings = (sandbox.MuseumConfig?.exhibits || []).filter((item) => PAINTING_IDS.includes(item.id));
 if (paintings.length !== 3) problems.push(`花鸟厅应有三幅画，实际 ${paintings.length}`);
-for (const painting of paintings) {
-  if (!page.includes("exhibit.image")) problems.push("花鸟页没有使用展品图片字段");
-  if (!exists(painting.image)) problems.push(`展品图片缺失：${painting.image}`);
+for (const id of PAINTING_IDS) {
+  if (!paintings.some((painting) => painting.id === id)) problems.push(`花鸟页缺少画作 ${id}`);
+  if (!page.includes(id)) problems.push(`页面未接入画作 ${id}`);
+  if (!exists(`assets/images/${id}.jpg`)) problems.push(`展品图片缺失：assets/images/${id}.jpg`);
 }
-
-const doorWidth = PARTS["door-leaf"][0];
-const doorOpening = 2.05;
-if (doorWidth > doorOpening - 0.02) {
-  problems.push(`门扇宽 ${doorWidth}m 无法放入 ${doorOpening}m 门洞`);
-}
-if (!page.includes(`box(room, ${doorOpening}`)) {
-  problems.push("页面门洞尺寸与门扇验收值不一致");
-}
-const backWallCoverage = PARTS["back-wall"][0] + 2 * 4.85;
-if (backWallCoverage < 23.7 - 0.01) {
-  problems.push(`后墙收口不足：${backWallCoverage}m < 23.7m`);
-}
-
-/* 平面遮挡核算：书架和长案移入侧后场，主展墙画作保持完整视线。 */
-const tableTop = PARTS["long-table"][1];
-if (tableTop >= 2.24 - 1.68 / 2) {
-  problems.push("长案顶面高度侵入中央画作下沿");
-}
-if (!page.includes('"long-table", [8.75, 0, 6.55]')) {
-  problems.push("长案没有移出中央观看通道");
-}
-if (!page.includes('"bookshelf", [-9.35, 0, 6.45]')) {
-  problems.push("书架没有移到侧后场");
-}
-if (!page.includes("const width = index === 1 ? 4.15 : 1.9")) {
-  problems.push("三幅画没有按最新参考图区分长卷与两侧画幅");
-}
-if (!page.includes("0, 3.38, -7.99")) {
-  problems.push("花鸟清趣标题未放到主展墙中轴");
+if (!page.includes('"./assets/images/" + painting.id + ".jpg"')) {
+  problems.push("花鸟页没有使用三幅花鸟画的实际图片路径");
 }
 
 const shots = [
-  "组员5-01-door-column-360度.png",
-  "组员5-02-door-leaf-360度.png",
-  "组员5-03-door-canopy-360度.png",
-  "组员5-04-wall-pillar-360度.png",
-  "组员5-05-back-wall-360度.png",
-  "组员5-06-long-table-360度.png",
-  "组员5-07-bookshelf-360度.png",
   "组员5-08-花鸟厅入口机位.png",
   "组员5-09-花鸟厅画作无遮挡.png",
-  "组员5-10-门关闭检查.png",
   "组员5-11-花鸟厅移动端.png",
 ];
 for (const shot of shots) {
   if (!exists(`docs/current/组员5-截图/${shot}`)) problems.push(`缺少验收图：${shot}`);
 }
-if (shots.length !== 11) problems.push("验收图数量不是 11 张");
-for (const shot of shots.slice(7, 10)) {
+for (const shot of shots.slice(0, 2)) {
   const file = path.join(ROOT, "docs/current/组员5-截图", shot);
   if (!fs.existsSync(file)) continue;
   const image = fs.readFileSync(file);
   const width = image.readUInt32BE(16);
   const height = image.readUInt32BE(20);
   if (width !== 1600 || height !== 900) {
-    problems.push(`浏览器实拍尺寸异常：${shot} 为 ${width}×${height}`);
+    problems.push(`浏览器截图尺寸异常：${shot} 为 ${width}×${height}`);
   }
 }
-const mobileShot = path.join(ROOT, "docs/current/组员5-截图", shots[10]);
+const mobileShot = path.join(ROOT, "docs/current/组员5-截图", shots[2]);
 if (fs.existsSync(mobileShot)) {
   const image = fs.readFileSync(mobileShot);
   const width = image.readUInt32BE(16);
   const height = image.readUInt32BE(20);
   if (width !== 390 || height !== 844) {
-    problems.push(`移动端实拍尺寸异常：${shots[10]} 为 ${width}×${height}`);
+    problems.push(`移动端截图尺寸异常：${width}×${height}`);
   }
 }
-if (!exists("scripts/capture-huaniao-browser.mjs")) problems.push("缺少浏览器实拍脚本");
-if (!exists(".github/workflows/huaniao-screenshots.yml")) problems.push("缺少浏览器实拍工作流");
+
 if (!exists("assets/reference/exhibition/current/huaniao-interior-front-elevation-v1.jpg")) {
-  problems.push("缺少最新花鸟厅参考图");
+  problems.push("缺少花鸟厅当前参考图");
 }
 const handoff = read("docs/current/组员5-花鸟厅交接.md");
-if (!handoff.includes("feature/huaniao-interior-5")) {
+if (!handoff.includes("feature/huaniao-visual-parity-5")) {
   problems.push("交接文档分支名未更新");
 }
 if (!handoff.includes("assets/reference/exhibition/current/huaniao-interior-front-elevation-v1.jpg")) {
-  problems.push("交接文档未引用最新参考图");
+  problems.push("交接文档未引用当前参考图");
 }
 
 console.log("");
-console.log(`花鸟厅静态验收：${Object.keys(PARTS).length} 件零件 · ${paintings.length} 幅画`);
-console.log(`  页面：public/huaniao.html`);
+console.log(`花鸟厅静态验收：${SHARED_PARTS.length} 件共享构件 · ${paintings.length} 幅画`);
+console.log("  场景：与山水厅共用固定机位、墙面、木地板、梁架、门窗和手势交互");
 for (const warning of warnings) console.log(`  ! ${warning}`);
 if (problems.length) {
   for (const problem of problems) console.error(`  x ${problem}`);
   process.exit(1);
 }
-console.log("OK 花鸟厅页面结构、七件 GLB、三幅画与本地资源引用完整");
+console.log("OK 花鸟厅视觉同构、固定交互、三幅画与资源引用完整");

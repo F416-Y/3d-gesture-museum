@@ -103,8 +103,53 @@ async function main() {
       workButtons: document.querySelectorAll("[data-exhibit]").length,
       paintingMeshes: window.HuaniaoGallery.paintingCount,
     }));
-    if (state.assetCount !== 7 || state.exhibitCount !== 3 || state.workButtons !== 3 || state.paintingMeshes !== 6 || state.errors.length) {
+    if (state.assetCount !== 4 || state.loadedParts.length !== 4 || state.exhibitCount !== 3 || state.workButtons !== 3 || state.paintingMeshes !== 3 || state.errors.length) {
       throw new Error(`花鸟厅资源未全部加载：${JSON.stringify(state)}`);
+    }
+
+    const initial = await page.evaluate(() => window.HuaniaoGallery.getState());
+    await page.mouse.move(800, 430);
+    await page.mouse.down();
+    await page.mouse.move(1040, 360, { steps: 8 });
+    await page.mouse.up();
+    await page.keyboard.down("w");
+    await page.keyboard.down("a");
+    await page.waitForTimeout(400);
+    await page.keyboard.up("w");
+    await page.keyboard.up("a");
+    const fixed = await page.evaluate(() => window.HuaniaoGallery.getState());
+    if (
+      initial.camera.join(",") !== fixed.camera.join(",") ||
+      initial.yaw !== fixed.yaw ||
+      initial.pitch !== fixed.pitch
+    ) {
+      throw new Error(`花鸟厅固定机位失效：${JSON.stringify({ initial, fixed })}`);
+    }
+    await page.keyboard.press("ArrowRight");
+    const switched = await page.evaluate(() => window.HuaniaoGallery.getState());
+    if (switched.activeExhibit === initial.activeExhibit) throw new Error("方向键未切换花鸟画");
+    await page.keyboard.press("e");
+    if (!(await page.evaluate(() => window.HuaniaoGallery.getState().detailOpen))) {
+      throw new Error("E 未打开花鸟画说明");
+    }
+    await page.keyboard.press("q");
+    if (await page.evaluate(() => window.HuaniaoGallery.getState().detailOpen)) {
+      throw new Error("Q 未关闭花鸟画说明");
+    }
+    const gestureState = await page.evaluate(() => {
+      const before = window.HuaniaoGallery.getState().activeExhibit;
+      window.HuaniaoGallery.handleGestureState({ turn: 0.8, pinchPressed: false }, performance.now() + 1000);
+      const afterTurn = window.HuaniaoGallery.getState();
+      window.HuaniaoGallery.handleGestureState({ turn: 0, pinchPressed: true }, performance.now() + 2000);
+      const afterPinch = window.HuaniaoGallery.getState();
+      window.HuaniaoGallery.handleGestureState({ turn: 0, pinchPressed: true }, performance.now() + 3000);
+      const afterClose = window.HuaniaoGallery.getState();
+      return { before, afterTurn, afterPinch, afterClose };
+    });
+    if (gestureState.before === gestureState.afterTurn.activeExhibit ||
+        !gestureState.afterPinch.detailOpen ||
+        gestureState.afterClose.detailOpen) {
+      throw new Error("花鸟厅手势映射未达预期");
     }
 
     const shots = [
@@ -115,10 +160,6 @@ async function main() {
       {
         file: "组员5-09-花鸟厅画作无遮挡.png",
         prepare: () => window.HuaniaoGallery.focusGalleryWall(),
-      },
-      {
-        file: "组员5-10-门关闭检查.png",
-        prepare: () => window.HuaniaoGallery.focusDoorCheck(),
       },
     ];
 
