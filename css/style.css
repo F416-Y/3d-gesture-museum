@@ -434,6 +434,19 @@ button { font-family: inherit; cursor: pointer; }
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* ===== 画廊坐凳交互提示 ===== */
+.seat-prompt {
+  position: fixed; left: 50%; bottom: 76px; z-index: var(--z-toast);
+  transform: translateX(-50%); display: none;
+  padding: 9px 18px; color: var(--paper);
+  background: rgba(28, 26, 23, 0.78);
+  border: 1px solid rgba(245, 241, 232, 0.42);
+  box-shadow: 0 8px 22px rgba(20, 16, 12, 0.25);
+  font-size: 13px; letter-spacing: 0.12em; white-space: nowrap;
+  pointer-events: none;
+}
+.seat-prompt.show { display: block; }
+
 /* ===== 响应式 ===== */
 @media (max-width: 760px) {
   .brand-text p, .hall-label { display: none; }

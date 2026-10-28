@@ -200,5 +200,10 @@ window.MuseumPlayer = (function () {
       yaw = y || 0;
       pitch = 0;   // 传送后平视
     },
+    setSeated: function (active) {
+      eyeHeight = active ? 1.12 : 1.7;
+      eyeY = terrainAt(pos.x, pos.z) + eyeHeight;
+      pos.y = eyeY;
+    },
   };
 })();

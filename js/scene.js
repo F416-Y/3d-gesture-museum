@@ -22,6 +22,7 @@ window.MuseumScene = (function () {
   var scene = null;
   var camera = null;
   var spotMeshes = [];          // 展品热点 mesh（exhibit.js 拾取用）
+  var seats = [];               // 可坐观画点（main.js 交互用）
   var obstacles = [];           // 碰撞体（player.js 用）
   var animWindowDoors = [];     // 微风摆动的窗扇门（buildPartWindowWall 注册）
   var hallRegions = {};         // 展厅区域判定（player.js 用）
@@ -2987,6 +2988,8 @@ window.MuseumScene = (function () {
       if (useProtoLayout) {
         window.MuseumExteriorLayout.addLights(scene);
         window.MuseumExteriorLayout.build(scene);
+        seats.length = 0;
+        Array.prototype.push.apply(seats, window.MuseumExteriorLayout.seats || []);
         /* 真模型接线：读原型的 slots 登记表，把代码件换成 assets/models/parts/opt/ 里的 GLB
            （门楼/石狮/青铜鼎/太湖石/景观石/树/竹…；任何一件失败就保留代码件） */
         if (window.MuseumExteriorSlots) window.MuseumExteriorSlots.install(scene);
@@ -3070,6 +3073,7 @@ window.MuseumScene = (function () {
     },
     obstacles: obstacles,
     hallDoors: (window.MuseumExteriorLayout && window.MuseumExteriorLayout.hallDoors) || [],
+    seats: seats,
     spotMeshes: spotMeshes,
     hallRegions: hallRegions,
     getHallAt: function (x, z) {
