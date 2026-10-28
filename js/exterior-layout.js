@@ -310,10 +310,10 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 月洞门（苏州园林正统做法：落地整圆洞径 3.4m、深色砖衬 + 双面砖雕镶边、
        4m 高墙身拔作门楼、小青瓦压顶，与两侧 3.6m 院墙成起伏；
-       2026-10-28 调高：圆心 1.9m、半径 1.9m、净高约 3.8m，保证正视角完整通行） ---------- */
+       2026-10-28 定稿：圆心 1.82m、半径 1.72m、净高约 3.54m；背后展厅门另行抬高） ---------- */
   function moonGate(x, z, ry) {
     var g = new THREE.Group(); g.position.set(x, 1.226, z); g.rotation.y = ry; S.scene.add(g);
-    var moonRadius = 1.9, moonCenterY = 1.9;
+    var moonRadius = 1.72, moonCenterY = 1.82;
     /* 带整圆洞的墙身两片：门槛贴地，洞顶略抬高避免第一视角压迫。 */
     if (!M.moonWall) {
       var mc = document.createElement('canvas'); mc.width = mc.height = 512;
@@ -347,10 +347,10 @@ window.MuseumExteriorLayout = (function () {
     trim2.position.set(0, moonCenterY, -0.23); trim2.castShadow = true; g.add(trim2);
     /* 整块青石门槛：下缘嵌入铺地，两端接门帮，顶缘倒角便于跨过。 */
     var sillShape = new THREE.Shape();
-    sillShape.moveTo(-1.93, -0.025);
-    sillShape.lineTo(1.93, -0.025);
-    sillShape.lineTo(1.93, 0.14);
-    sillShape.lineTo(-1.93, 0.14);
+    sillShape.moveTo(-1.75, -0.025);
+    sillShape.lineTo(1.75, -0.025);
+    sillShape.lineTo(1.75, 0.14);
+    sillShape.lineTo(-1.75, 0.14);
     sillShape.closePath();
     var sillGeo = new THREE.ExtrudeGeometry(sillShape, {
       depth: 0.56, bevelEnabled: true, bevelThickness: 0.025,
@@ -667,10 +667,11 @@ window.MuseumExteriorLayout = (function () {
       if (opts && opts.closedDoor) {
         /* 正式展厅大门：双扇闭合，门洞只作为弹窗触发位置，不能直接穿入。 */
         for (i2 = -1; i2 <= 1; i2 += 2) {
-          leaf = box(LW, 2.72, 0.08, M.door, i2 * (LW / 2 + 0.015), 1.36, -0.05, 0, g);
+          var closedDoorH = 3.1;
+          leaf = box(LW, closedDoorH, 0.08, M.door, i2 * (LW / 2 + 0.015), closedDoorH / 2, -0.05, 0, g);
           leaf.castShadow = false;
           box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 0.5, -0.11, 0, g);
-          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), 2.22, -0.11, 0, g);
+          box(LW - 0.14, 0.1, 0.12, M.ink, i2 * (LW / 2 + 0.015), closedDoorH - 0.5, -0.11, 0, g);
         }
         var doorNx = side === 'E' ? 1 : side === 'W' ? -1 : 0;
         var doorNz = side === 'S' ? 1 : side === 'N' ? -1 : 0;
@@ -1132,7 +1133,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 游廊：双列木柱 + 双坡瓦顶 + 坐槛，默认廊宽 2.2m（cw 可加宽），柱距约 3m ----------
      * gapBench：{side:±1, c:沿廊中心坐标, hw:半宽} 在该侧坐槛开一个过人口（檐枋不断）
      * cw：自定义廊宽（画廊式游廊加宽用，保证看画视距） */
-  function corridor(x0, z0, x1, z1, gapBench, cw, roofY) {
+  function corridor(x0, z0, x1, z1, gapBench, cw, roofY, noPosts) {
     var w = cw || 2.2;
     var eaveY = roofY || 3.6, postH = eaveY - 0.14, postY = 0.14 + postH / 2;
     var dx = x1 - x0, dz = z1 - z0;
@@ -1148,10 +1149,12 @@ window.MuseumExteriorLayout = (function () {
     g.add(fl);
     for (i = 0; i <= bays; i++) {
       t = -len / 2 + len * i / bays;
-      cyl(0.14, 0.17, 0.14, 8, M.stone, -w / 2 + 0.2, 0.07, t, g);
-      cyl(0.14, 0.17, 0.14, 8, M.stone,  w / 2 - 0.2, 0.07, t, g);
-      cyl(0.09, 0.11, postH, 8, M.wood, -w / 2 + 0.2, postY, t, g);
-      cyl(0.09, 0.11, postH, 8, M.wood,  w / 2 - 0.2, postY, t, g);
+      if (!noPosts) {
+        cyl(0.14, 0.17, 0.14, 8, M.stone, -w / 2 + 0.2, 0.07, t, g);
+        cyl(0.14, 0.17, 0.14, 8, M.stone,  w / 2 - 0.2, 0.07, t, g);
+        cyl(0.09, 0.11, postH, 8, M.wood, -w / 2 + 0.2, postY, t, g);
+        cyl(0.09, 0.11, postH, 8, M.wood,  w / 2 - 0.2, postY, t, g);
+      }
     }
     /* 坐槛（美人靠矮凳）与檐枋；gapBench 一侧断出 1.9m 过人口 */
     var bi, sideX, segs, si, b0, b1;
@@ -1232,7 +1235,7 @@ window.MuseumExteriorLayout = (function () {
     box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
     box(0.15, wallTop - 0.12, len, M.paper, x, wallTop / 2, zc);
     box(0.22, 0.14, len + 0.1, M.ink, x, wallTop, zc);
-    var zs = [11.6, 14.2, 16.8, 19.4], i;
+    var zs = [12.4, 15.5, 18.6], i;
     for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0));
   }
 
@@ -1382,8 +1385,8 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
     /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
-    corridor(-7, 9.5, -7, 20.4, undefined, 3.8, 3.6);
-    corridor(7, 9.5, 7, 20.4, undefined, 3.8, 3.6);
+    corridor(-7, 9.5, -7, 20.4, undefined, 3.8, 3.6, true);
+    corridor(7, 9.5, 7, 20.4, undefined, 3.8, 3.6, true);
     galleryWall(-8.9, 1, 3.58);
     galleryWall(8.9, -1, 3.58);
   }
