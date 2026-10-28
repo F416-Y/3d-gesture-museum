@@ -5,7 +5,7 @@
     </style>
   </defs>
   <rect width="1500" height="980" class="bg"/>
-  <text x="70" y="55" class="title">云墨美术馆 · 展厅院落放大示意图</text>
+  <text x="70" y="55" class="title">云间入墨 · 展厅院落放大示意图</text>
   <text x="70" y="83" class="sub">仅调整院落整体外观比例；展厅坐标、模型零件和入口方向保持不变</text>
   <g transform="translate(55,120)">
     <rect width="430" height="360" rx="16" class="panel"/><text x="22" y="38" class="label">山水院 · 17.5 × 15 m</text>

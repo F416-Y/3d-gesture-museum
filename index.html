@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>云墨美术馆 · 手势交互数字博物馆</title>
+<title>云间入墨 · 手势交互数字博物馆</title>
 <meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
 <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/intro.css">
 <!--
   ============================================================
-  云墨美术馆 CloudInk Art Museum
+  云间入墨 CloudInk Art Museum
   前端 3D 手势交互博物馆 · 美术鉴赏 × 软件工程
   ------------------------------------------------------------
   脚本加载顺序（依赖顺序，不可调换）：
@@ -30,7 +30,7 @@
 <div id="intro">
   <canvas id="introCanvas"></canvas>
   <div id="introTitle">
-    <h1>云墨美术馆</h1>
+    <h1>云间入墨</h1>
   </div>
   <div id="introPanel">
     <label>基色 <input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
@@ -53,9 +53,9 @@
   <!-- ===== 顶部标题（朱砂印章式签名元素） ===== -->
   <header id="topbar" class="topbar hidden">
     <div class="brand">
-      <span class="brand-seal">云墨</span>
+      <span class="brand-seal">云间<br>入墨</span>
       <div class="brand-text">
-        <h1>云墨美术馆</h1>
+        <h1>云间入墨</h1>
         <p>CloudInk Art Museum · 手势交互数字博物馆</p>
       </div>
     </div>
@@ -120,7 +120,7 @@
         window.MediaPipeVision = vision;
         return true;
       } catch (err) {
-        console.warn("[云墨美术馆] MediaPipe 加载失败，将降级为键盘操作：", err);
+        console.warn("[云间入墨] MediaPipe 加载失败，将降级为键盘操作：", err);
         return false;
       } finally {
         window.dispatchEvent(new Event("mediapipe-ready"));
