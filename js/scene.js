@@ -2683,25 +2683,16 @@ window.MuseumScene = (function () {
    * 签名保持不变，六厅自动全部升级 */
   function buildPartHallWalls(g, W, D, WH, TH, wallMat, doorSide, doorCenter, doorW, doorH) {
     var a = W / 2, b = D / 2;
-    var win = function (u, sill, w, h) { return { kind: "window", u: u, w: w, h: h, sill: sill }; };
     var door = function (u) { return { kind: "door", u: u, w: doorW, h: doorH, sill: 0 }; };
 
-    /* 北墙：挂画的主墙，只开高窗，不打断画面 */
-    var north = [win(-a * 0.45, 1.9, 1.2, 1.3), win(a * 0.45, 1.9, 1.2, 1.3)];
-    /* 南墙 */
-    var south = [];
-    if (doorSide === "s") {
-      south.push(door(doorCenter));
-      [-1, 1].forEach(function (s) {
-        var u = doorCenter + s * (doorW / 2 + 1.6);
-        if (Math.abs(u) < a - 1.3) south.push(win(u, 1.9, 1.1, 1.3));
-      });
-    } else {
-      south.push(win(-a * 0.5, 1.9, 1.2, 1.3), win(a * 0.5, 1.9, 1.2, 1.3));
-    }
-    /* 东西墙：开门的那面开门，另一面开中窗（借景） */
-    var west = doorSide === "w" ? [door(doorCenter)] : [win(0, 1.9, 1.3, 1.4)];
-    var east = doorSide === "e" ? [door(doorCenter)] : [win(0, 1.9, 1.3, 1.4)];
+    /* 用户要求删掉所有墙面窗框：这些窗在 buildPartWallRun 里会生成
+       一圈带砖纹的白色方框，和挂画叠在一起把人挡掉一半。
+       四面墙现在只留门洞，不再开窗。 */
+    var north = [], south = [], west = [], east = [];
+    if (doorSide === "s") south.push(door(doorCenter));
+    if (doorSide === "n") north.push(door(doorCenter));
+    if (doorSide === "w") west.push(door(doorCenter));
+    if (doorSide === "e") east.push(door(doorCenter));
 
     buildPartWallRun(g, { cx: 0, cz: -b, len: W, h: WH, th: TH, ry: 0, openings: north, name: "wall-N", outward: -1 });
     buildPartWallRun(g, { cx: 0, cz: b, len: W, h: WH, th: TH, ry: 0, openings: south, name: "wall-S", outward: 1 });
