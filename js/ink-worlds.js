@@ -453,12 +453,20 @@ window.MuseumInkWorlds = (function () {
     }
   }
 
-  /* 进入组长画境的等待态，并启动握手看门狗 */
+  /* 进入组长画境的等待态，并启动握手看门狗。
+   * 只显示底部返回操作条（.is-leader 让整层透明），组长的画面仍露在下面；
+   * 否则玩家进了组长的画境却没有返回入口。 */
   function enterLeaderWorld(p, before) {
     state.layer = "world";
     state.worldKey = p.key;
     state.worldReadyKey = null;
     clearTimeout(state.worldHandshakeTimer);
+    show(el.world);
+    el.world.classList.add("is-leader");
+    el.world.setAttribute("aria-hidden", "false");
+    el.worldVideo.classList.add("is-hidden");
+    el.worldStub.classList.add("is-hidden");
+    el.worldNote.hidden = true;
     state.worldHandshakeTimer = setTimeout(function () {
       if (state.layer !== "world" || state.worldKey !== p.key || state.worldReadyKey === p.key) return;
       // 接口没回执，但画面里已经多了组长的可见 video/canvas → 视为打开成功
@@ -550,6 +558,7 @@ window.MuseumInkWorlds = (function () {
     state.worldKey = p.key;
     state.worldReadyKey = p.key;
     show(el.world);
+    el.world.classList.remove("is-leader");
     el.world.setAttribute("aria-hidden", "false");
     el.worldStub.classList.add("is-hidden");
     el.worldVideo.classList.remove("is-hidden");
@@ -588,6 +597,7 @@ window.MuseumInkWorlds = (function () {
     state.layer = "world";
     state.worldKey = p.key;
     show(el.world);
+    el.world.classList.remove("is-leader");
     el.world.setAttribute("aria-hidden", "false");
     try { el.worldVideo.pause(); } catch (err) { /* noop */ }
     el.worldVideo.classList.add("is-hidden");

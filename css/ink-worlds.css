@@ -464,6 +464,16 @@
   justify-content: center;
 }
 
+/* 组长接口挂载的画境：整层透明，只露出底部返回操作条，不遮挡组长自己的画面 */
+.ink-world.is-leader {
+  background: transparent;
+  pointer-events: none;
+}
+.ink-world.is-leader .ink-world-actions,
+.ink-world.is-leader .ink-world-note {
+  pointer-events: auto;
+}
+
 .ink-world-video {
   width: 100%;
   height: 100%;
