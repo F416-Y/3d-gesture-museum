@@ -52,6 +52,14 @@
     <label><span>墨点</span><input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
   </div>
   <div id="introHint">拖动以转动 · 按住让墨色散开</div>
+  <div id="inkCursor" aria-hidden="true">
+    <svg viewBox="0 0 44 44">
+      <path class="brush-handle" d="M7 37 27 17" />
+      <path class="brush-tip" d="m25 15 8-8 4 4-8 8-3 1Z" />
+      <path class="brush-band" d="m26 14 4 4" />
+      <path class="brush-ink" d="M34 31c2 2 1 5-1 6-2 1-4 0-5-2 2 1 4 0 6-4Z" />
+    </svg>
+  </div>
   <div id="introBR">
     <button id="introFull" aria-label="全屏切换">全屏</button>
     <button id="introEnter" aria-label="进入博物馆">进入博物馆 →</button>
