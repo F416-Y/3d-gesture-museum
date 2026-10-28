@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <rect width="1600" height="1000" fill="#f5f3ee"/>
+  <style>
+    text { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; fill: #252525; }
+    .title { font-size: 30px; font-weight: 700; }
+    .note { font-size: 20px; }
+    .dim { font-size: 22px; font-weight: 700; }
+    .small { font-size: 18px; }
+    .axis { stroke: #9b2c25; stroke-width: 2; stroke-dasharray: 8 7; }
+    .dimline { stroke: #333; stroke-width: 2; marker-start: url(#arrow); marker-end: url(#arrow); }
+    .ext { stroke: #777; stroke-width: 1.5; stroke-dasharray: 4 4; }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M 10 0 L 0 5 L 10 10 z" fill="#333"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="62" class="title">中心湖 + 拱桥｜工程尺寸核对图</text>
+  <text x="70" y="98" class="note">依据 exterior-layout.js 当前坐标；不含周围建筑、树木、山体和装饰景观</text>
+
+  <!-- top plan -->
+  <text x="90" y="155" class="title">A. 平面坐标图（俯视）</text>
+  <g transform="translate(400,540)">
+    <!-- lake, approximate actual outline from irregularPond radius variation -->
+    <ellipse cx="0" cy="0" rx="320" ry="160" fill="#314b52" stroke="#768277" stroke-width="14"/>
+    <ellipse cx="0" cy="0" rx="300" ry="145" fill="#223b43" stroke="#9ba18f" stroke-width="3"/>
+    <!-- center axes -->
+    <line x1="-365" y1="0" x2="365" y2="0" class="axis"/>
+    <line x1="0" y1="-205" x2="0" y2="205" class="axis"/>
+    <text x="330" y="-12" class="small" fill="#9b2c25">+X 东</text>
+    <text x="12" y="-180" class="small" fill="#9b2c25">+Z 北</text>
+    <text x="12" y="25" class="small">湖心 (0, -2.2)</text>
+    <!-- bridge north-south -->
+    <rect x="-22" y="-150" width="44" height="300" rx="12" fill="#d1d0c8" stroke="#77766e" stroke-width="4"/>
+    <path d="M-22 -150 Q0 -122 22 -150" fill="none" stroke="#77766e" stroke-width="4"/>
+    <path d="M-22 150 Q0 122 22 150" fill="none" stroke="#77766e" stroke-width="4"/>
+    <text x="34" y="-10" class="small">桥中心 (0, -2.2)</text>
+    <text x="40" y="-121" class="small">北桥头 (0, 5.3)</text>
+    <text x="40" y="142" class="small">南桥头 (0, -9.7)</text>
+    <!-- lake width dim -->
+    <line x1="-320" y1="220" x2="320" y2="220" class="dimline"/>
+    <line x1="-320" y1="165" x2="-320" y2="245" class="ext"/>
+    <line x1="320" y1="165" x2="320" y2="245" class="ext"/>
+    <text x="-82" y="255" class="dim">湖宽约 32m（X）</text>
+    <!-- lake depth dim -->
+    <line x1="390" y1="-160" x2="390" y2="160" class="dimline"/>
+    <line x1="315" y1="-160" x2="415" y2="-160" class="ext"/>
+    <line x1="315" y1="160" x2="415" y2="160" class="ext"/>
+    <text x="410" y="12" class="dim" transform="rotate(90 410 12)">湖深约 16m（Z）</text>
+    <!-- bridge length dim -->
+    <line x1="-70" y1="-150" x2="-70" y2="150" class="dimline"/>
+    <line x1="-80" y1="-150" x2="-30" y2="-150" class="ext"/>
+    <line x1="-80" y1="150" x2="-30" y2="150" class="ext"/>
+    <text x="-112" y="18" class="dim" transform="rotate(-90 -112 18)">桥长约 15m</text>
+    <!-- bridge width dim -->
+    <line x1="-22" y1="180" x2="22" y2="180" class="dimline"/>
+    <text x="-49" y="214" class="small">2.2m</text>
+  </g>
+
+  <!-- side elevation -->
+  <text x="900" y="155" class="title">B. 侧立面 / 标高</text>
+  <g transform="translate(900,260)">
+    <line x1="0" y1="350" x2="570" y2="350" stroke="#777" stroke-width="2"/>
+    <rect x="70" y="340" width="430" height="10" fill="#223b43"/>
+    <path d="M70 340 Q285 65 500 340" fill="none" stroke="#aaa9a2" stroke-width="42"/>
+    <path d="M70 340 Q285 65 500 340" fill="none" stroke="#d1d0c8" stroke-width="32"/>
+    <path d="M105 340 Q285 105 465 340" fill="none" stroke="#223b43" stroke-width="20"/>
+    <line x1="40" y1="350" x2="40" y2="65" class="dimline"/>
+    <line x1="40" y1="350" x2="75" y2="350" class="ext"/>
+    <line x1="40" y1="65" x2="75" y2="65" class="ext"/>
+    <text x="0" y="225" class="dim" transform="rotate(-90 0 225)">最大桥高约 2.6m</text>
+    <line x1="70" y1="405" x2="500" y2="405" class="dimline"/>
+    <line x1="70" y1="350" x2="70" y2="425" class="ext"/>
+    <line x1="500" y1="350" x2="500" y2="425" class="ext"/>
+    <text x="190" y="455" class="dim">桥长约 15m</text>
+    <text x="65" y="390" class="small">水面标高 y=0.06m</text>
+    <text x="65" y="485" class="small">桥底按 fitted.min.y 对齐至水面上方约 0.06m</text>
+  </g>
+
+  <text x="70" y="925" class="note">坐标约定：湖心 X=0，Z=-2.2；桥沿世界 Z 轴南北跨越湖面。湖岸轮廓为代码中的轻微不规则半径，不是规则椭圆。</text>
+  <text x="70" y="960" class="note">注意：代码注释“湖面约16×8m”与函数实际半径参数不一致，本图按实际生成几何约32×16m标注。</text>
+</svg>

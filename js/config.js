@@ -42,9 +42,10 @@ window.MuseumConfig = {
   gesture: {
     forwardOpen: 0.95,     // 判定「张开」：5 指归一化距离均大于该值（调大=更难误触前进）
     forwardFrames: 4,      // 张掌需连续保持的帧数才启动前进（过滤手势切换的过渡帧）
-    backFrames: 3,         // 握拳需连续保持的帧数才启动后退
-    fingerCurl: 0.6,       // 手指卷曲阈值：指尖到自己指根的距离÷掌宽，小于=蜷曲（握拳判定），大于=伸展（捏合要求中/环/小三指张开）
-    thumbFist: 0.85,       // 握拳附加条件：拇指尖到腕距离÷掌宽须小于该值（竖起大拇指≈1.0+，排除点赞被误判握拳后退）
+    backFrames: 2,         // 握拳需连续保持的帧数才启动后退（3 帧实测偶发反应不过来，降到 2 提速）
+    fingerCurl: 0.72,      // 手指卷曲阈值·握拳用：指尖到指根距离÷掌宽，小于=蜷曲（四指都要满足；0.6 偏严，小指/无名指稍松就判不出）
+    pinchOpenCurl: 0.6,    // 手指伸展阈值·捏合用：捏合要求中/环/小三指大于该值。与 fingerCurl 解耦，调握拳不再牵动捏合
+    thumbFist: 0.92,       // 握拳附加条件：拇指尖到腕距离÷掌宽须小于该值（竖起大拇指≈1.0+，排除点赞被误判握拳后退；0.85 对「拇指搭在拳头上」的自然握法偏严）
     pinchOn: 0.25,         // 捏合进入阈值：两指尖归一化距离小于该值判定为捏合（调大=更容易触发）
     pinchOff: 0.35,        // 捏合退出阈值：大于该值才算松开（与 pinchOn 形成迟滞防抖，必须 > pinchOn）
     turnDead: 0.7,         // 转向死区：指尖-腕横向偏移÷手掌宽度，小于该值不转（调大=更钝）
@@ -63,7 +64,7 @@ window.MuseumConfig = {
    * ============================================================ */
   exhibits: [
     {
-      id: "qianlijiangshan", type: "painting", hall: "hall1",
+      id: "qianlijiangshan", type: "painting", image: "assets/images/qianlijiangshan.jpg", hall: "hall3",
       title: "千里江山图",
       artist: "王希孟", dynasty: "北宋", era: "约 1113 年",
       medium: "绢本设色 · 纵 51.5cm × 横 1191.5cm",
@@ -72,7 +73,7 @@ window.MuseumConfig = {
       appreciation: "全卷最惊人的地方，是年轻的王希孟对空间与色彩的统驭能力。青绿设色以石青、石绿反复罩染，在山体明暗转换处形成浓丽而不浮躁的光泽；长卷随视线渐次展开，近景屋舍、中景林木与远景群山层层推远，让观者像沿江远游。它既是青绿山水的集大成之作，也把北宋人对理想江山秩序与壮阔气象的想象凝固在绢素之上。",
     },
     {
-      id: "fuchunshanjv", type: "painting", hall: "hall1",
+      id: "fuchunshanjv", type: "painting", image: "assets/images/fuchunshanjv.jpg", hall: "hall3",
       title: "富春山居图",
       artist: "黄公望", dynasty: "元代", era: "1350 年",
       medium: "纸本水墨 · 纵 33cm × 横 636.9cm（无用师卷）",
@@ -81,7 +82,7 @@ window.MuseumConfig = {
       appreciation: "黄公望并不追求繁琐的实景描摹，而是以干笔皴擦、淡墨积染写出山峦的呼吸与江水的空阔。山石轮廓松散，林木点染率意，画面在平远铺陈中不断转换节奏，呈现文人所推崇的平淡天真。尤其可贵的是，长卷没有强烈戏剧冲突，却能让观者顺着坡岸、沙渚和远山慢慢进入一种安静的时间感，因此被视为中国文人山水画的典范。",
     },
     {
-      id: "xishanxinglvtu", type: "painting", hall: "hall1",
+      id: "xishanxinglvtu", type: "painting", image: "assets/images/xishanxinglvtu.jpg", hall: "hall3",
       title: "溪山行旅图",
       artist: "范宽", dynasty: "北宋", era: "约 11 世纪初",
       medium: "绢本水墨 · 纵 206.3cm × 横 103.3cm",
@@ -90,7 +91,7 @@ window.MuseumConfig = {
       appreciation: "范宽把主峰置于画面中央，几乎占去大半幅空间，让观者第一眼便感到山峰压顶般的重量。山石以密集的雨点皴反复积累，墨色由淡到浓，塑造出坚硬而浑厚的岩体；飞瀑、密林与细小的人物又将宏大尺度反衬出来。近看笔触繁密，远观却秩序井然，这种由局部真实汇成整体崇高的方式，正是北宋山水最成熟的视觉语言。",
     },
     {
-      id: "xieshengzhenqintu", type: "painting", hall: "hall2",
+      id: "xieshengzhenqintu", type: "painting", image: "assets/images/xieshengzhenqintu.jpg", hall: "hall3",
       title: "写生珍禽图",
       artist: "黄筌", dynasty: "五代", era: "约 10 世纪",
       medium: "绢本设色 · 纵 41.5cm × 横 70.8cm",
@@ -99,7 +100,7 @@ window.MuseumConfig = {
       appreciation: "这卷作品最值得看的是观察的耐性。黄筌根据不同动物的体态与习性安排朝向、动作和位置，羽毛、甲壳、足爪与触须都被交代得清清楚楚，却仍保持画面的明净节奏。精微而不板滞，富丽而不甜俗，所谓黄家富贵在这里不是装饰趣味，而是建立在写生能力与技法控制上的自信。它也为后世理解五代花鸟画的写实高度提供了直观样本。",
     },
     {
-      id: "wuniutu", type: "painting", hall: "hall2",
+      id: "wuniutu", type: "painting", image: "assets/images/wuniutu.jpg", hall: "hall3",
       title: "五牛图",
       artist: "韩滉", dynasty: "唐", era: "约 8 世纪",
       medium: "纸本设色 · 纵 20.8cm × 横 139.8cm",
@@ -108,7 +109,7 @@ window.MuseumConfig = {
       appreciation: "画中没有背景，五头牛却并不显得孤立，因为韩滉用姿态、眼神和身体朝向建立了一条连续的观看节奏。线条粗重像书法中的篆籀，转折处又有柔软韧性，既写出牛的筋骨与体量，也写出皮毛的温度。尤其末尾回望的牛，使静止长卷产生回环往复的时间感。它把日常牲畜提升为庄重而亲近的绘画主题，是唐代绘画由人物、鞍马扩展到生活观察的重要证据。",
     },
     {
-      id: "molantu", type: "painting", hall: "hall2",
+      id: "molantu", type: "painting", image: "assets/images/molantu.jpg", hall: "hall3",
       title: "墨兰图",
       artist: "郑思肖", dynasty: "宋末元初", era: "约 13 世纪",
       medium: "纸本水墨 · 纵 25.7cm × 横 42.4cm",
@@ -117,7 +118,7 @@ window.MuseumConfig = {
       appreciation: "郑思肖画兰而不画土，让根系裸露悬空，这个看似简省的构图选择，实际包含极强烈的政治与情感指向。兰叶以中锋写出，劲挺而富有弹性，墨色枯润变化不多，却通过穿插、俯仰和留白形成清冷气息。画面越简，象征越集中，兰因此不再只是植物，而成为遗民守节与精神归属的化身。理解这一点，才能真正读出文人画以少胜多、借物言志的力量。",
     },
     {
-      id: "hanxizai", type: "painting", hall: "hall3",
+      id: "hanxizai", type: "painting", image: "assets/images/hanxizai.jpg", hall: "hall3",
       title: "韩熙载夜宴图",
       artist: "顾闳中", dynasty: "五代 · 南唐", era: "约 10 世纪",
       medium: "绢本设色 · 纵 28.7cm × 横 335.5cm",
@@ -126,7 +127,7 @@ window.MuseumConfig = {
       appreciation: "此卷最耐人寻味的是宴会越热闹，主人越显得孤独。顾闳中通过屏风、床榻和器物把长卷分割成数个场景，又让人物在段落之间自然连续。衣纹、器物和乐舞姿态描绘精细，但真正高明之处在神情：韩熙载始终没有完全融入欢乐，眉宇间保留清醒与忧惧。绘画因此不只是记录一场夜宴，也成为对人物处境和内心状态的深度阅读，展示五代人物画在叙事与心理刻画上的成熟。",
     },
     {
-      id: "luoshenfu", type: "painting", hall: "hall3",
+      id: "luoshenfu", type: "painting", image: "assets/images/luoshenfu.jpg", hall: "hall3",
       title: "洛神赋图",
       artist: "顾恺之", dynasty: "东晋（宋摹本）", era: "原作约 4 世纪",
       medium: "绢本设色 · 纵 27.1cm × 横 572.8cm",
@@ -135,7 +136,7 @@ window.MuseumConfig = {
       appreciation: "顾恺之提出以形写神，这幅长卷最动人的地方正是神情的流转。洛神的衣带、云气和回眸在画面中反复出现，使她在水面与山峦之间若即若离；曹植则从惊喜、依恋到失落，被安排在不同段落中连续观看。早期山水还没有独立的比例体系，山石树木像舞台道具般围合人物，却反而强化了神话叙事的梦幻感。它让文学、图像与情感共同展开，是中国叙事绘画的重要源头。",
     },
     {
-      id: "buniantu", type: "painting", hall: "hall3",
+      id: "buniantu", type: "painting", image: "assets/images/buniantu.jpg", hall: "hall3",
       title: "步辇图",
       artist: "阎立本", dynasty: "唐", era: "约 7 世纪",
       medium: "绢本设色 · 纵 38.5cm × 横 129.6cm",
@@ -252,7 +253,7 @@ window.MuseumConfig = {
       appreciation: "这幅画最耐看的地方是「不确定」。达·芬奇没有画出明确的微笑，而是用层层罩染把笑意含在眼角与嘴角之间，观者的视线一动，表情就跟着变——他画的不是一个人，而是「看一个人时我们自己的心理」。背景同样如此：远山被画得比近处更蓝更淡，这是最早的空气透视实践之一。把它放进本馆人物厅的三幅长卷旁边看，对照会更清楚：中国画用线条与留白写「神」，故事靠人物之间的位置关系；《蒙娜丽莎》用明暗与空气写「心」，故事收在一个人脸上。两种传统都在回答同一个问题——怎么让一张脸承载一整个世界。",
     },
     {
-      id: "starrynight", type: "painting", hall: "hall1",
+      id: "starrynight", type: "painting", hall: "hall3",
       title: "星月夜",
       artist: "文森特·梵高", dynasty: "后印象派", era: "1889 年",
       medium: "布面油画 · 73.7 × 92.1cm",

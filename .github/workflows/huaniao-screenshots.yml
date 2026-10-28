@@ -1,0 +1,45 @@
+name: Huaniao Browser Screenshots
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - public/huaniao.html
+      - assets/models/parts/opt/*.glb
+      - assets/reference/exhibition/current/**
+      - scripts/capture-huaniao-browser.mjs
+      - scripts/verify-huaniao.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: 安装项目依赖
+        run: npm ci
+      - name: 安装中文字体
+        run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+      - name: 构建生产页面
+        run: npm run build
+      - name: 浏览器实拍花鸟厅
+        run: node scripts/capture-huaniao-browser.mjs
+        env:
+          PLAYWRIGHT_CHANNEL: chrome
+      - name: 上传实拍截图
+        uses: actions/upload-artifact@v4
+        with:
+          name: huaniao-browser-captures
+          path: |
+            docs/current/组员5-截图/组员5-08-花鸟厅入口机位.png
+            docs/current/组员5-截图/组员5-09-花鸟厅画作无遮挡.png
+            docs/current/组员5-截图/组员5-10-门关闭检查.png
+            docs/current/组员5-截图/组员5-11-花鸟厅移动端.png
+          if-no-files-found: error

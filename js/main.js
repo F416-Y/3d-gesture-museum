@@ -30,6 +30,9 @@ window.MuseumMain = (function () {
 
   var keys = {};
   var lastPinchPick = 0;   // 上次捏合拾取的时间戳（冷却防抖）
+  // 对齐 Kimi 原型：未锁定指针时，也支持按住左键拖动转向。
+  var dragLook = { active: false, x: 0, y: 0, moved: false };
+  var suppressClickAfterDrag = false;
 
   /* ---------- 初始化 ---------- */
   function init() {
@@ -91,10 +94,13 @@ window.MuseumMain = (function () {
       interiorExitPrompt.z = interiorSpawn[1];
     }
     MuseumExhibit.init();
+    /* 穿画流程：入口按钮 / 视频层 / 四画选择（组员1） */
+    if (window.MuseumInkWorlds) MuseumInkWorlds.init();
 
     // 回调接线
     MuseumPlayer.setOnHallChange(function (hallId) {
       MuseumUI.setHall(hallId);
+      if (window.MuseumInkWorlds) MuseumInkWorlds.setHall(hallId);
     });
     if (window.MuseumInteriorOnly) MuseumUI.setHall(window.MuseumInteriorHall || "hall4");
     MuseumExhibit.setOnFocusChange(function (exhibitId) {
@@ -123,6 +129,8 @@ window.MuseumMain = (function () {
   /* ---------- 事件绑定 ---------- */
   function bindEvents() {
     window.addEventListener("keydown", function (e) {
+      // 穿画视频 / 四画选择打开时，游戏快捷键全部让位给弹层
+      if (window.MuseumInkWorlds && MuseumInkWorlds.isBlocking()) return;
       keys[e.code] = true;
       if (e.code === "KeyE") { e.preventDefault(); MuseumExhibit.pick(); }
       // Q / Esc：关闭展品弹窗（看完信息后退出）
@@ -147,7 +155,12 @@ window.MuseumMain = (function () {
 
      // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
+      if (window.MuseumInkWorlds && MuseumInkWorlds.isBlocking()) return; // 穿画/四画选择时不吃鼠标
       if (panorama.on) return;                      // 全景模式下与键盘/E 键一致，不做拾取
+      if (suppressClickAfterDrag) {
+        suppressClickAfterDrag = false;
+        return;
+      }
       if (document.pointerLockElement === renderer.domElement) {
         MuseumExhibit.pick();
         return;
@@ -164,7 +177,35 @@ window.MuseumMain = (function () {
       if (document.pointerLockElement === renderer.domElement) {
         MuseumPlayer.look(e.movementX || 0, e.movementY || 0);
       }
+      if (dragLook.active && document.pointerLockElement !== renderer.domElement && !panorama.on) {
+        var dx = (e.clientX || 0) - dragLook.x;
+        var dy = (e.clientY || 0) - dragLook.y;
+        if (dx || dy) dragLook.moved = true;
+        MuseumPlayer.look(dx, dy);
+        dragLook.x = e.clientX || 0;
+        dragLook.y = e.clientY || 0;
+      }
     });
+
+    // Kimi 原型的左键拖动视角：不抢指针锁定，适合先观察模型和核对桥湖方向。
+    renderer.domElement.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || panorama.on || document.pointerLockElement === renderer.domElement) return;
+      dragLook.active = true;
+      dragLook.x = e.clientX;
+      dragLook.y = e.clientY;
+      dragLook.moved = false;
+      if (renderer.domElement.setPointerCapture) renderer.domElement.setPointerCapture(e.pointerId);
+    });
+    function endDragLook(e) {
+      if (!dragLook.active) return;
+      if (dragLook.moved) suppressClickAfterDrag = true;
+      dragLook.active = false;
+      if (e && renderer.domElement.releasePointerCapture && renderer.domElement.hasPointerCapture && renderer.domElement.hasPointerCapture(e.pointerId)) {
+        renderer.domElement.releasePointerCapture(e.pointerId);
+      }
+    }
+    renderer.domElement.addEventListener("pointerup", endDragLook);
+    renderer.domElement.addEventListener("pointercancel", endDragLook);
 
     MuseumUI.setHandlers({
       onCameraToggle: function () { toggleCamera(!cameraOn); },
@@ -374,12 +415,14 @@ window.MuseumMain = (function () {
       fpsFrames = 0; fpsStamp = nowMs;
     }
 
+    var inkBlocking = !!(window.MuseumInkWorlds && MuseumInkWorlds.isBlocking());
     var gs = MuseumGesture.getState();
-    var input = composeInput(gs);
+    var input = inkBlocking ? NEUTRAL_INPUT : composeInput(gs);
 
     // 捏合：弹窗打开时关闭弹窗，否则拾取当前展品（等价于按 E）。
     // 边沿触发 + 600ms 冷却防连开连关；全景模式下不拾取（与点击一致），但仍可关弹窗
-    if (gs.pinchPressed && nowMs - lastPinchPick > 600) {
+    // 穿画 / 四画选择层打开时，捏合由 ink-worlds.js 自己消费，这里不响应
+    if (!inkBlocking && gs.pinchPressed && nowMs - lastPinchPick > 600) {
       lastPinchPick = nowMs;
       if (MuseumUI.isPanelOpen()) {
         MuseumUI.hidePanel();
@@ -388,7 +431,10 @@ window.MuseumMain = (function () {
       }
     }
 
-    if (panorama.on) {
+    if (inkBlocking) {
+      // 冻结漫游：键盘/手势都不驱动位移，画面停在原地看着弹层
+      MuseumPlayer.update(dt, NEUTRAL_INPUT, camera);
+    } else if (panorama.on) {
       // 冻结漫游位移（人站在原地看着，退出后回到原处），再覆写相机姿态
       MuseumPlayer.update(dt, NEUTRAL_INPUT, camera);
       updatePanorama(dt, input);
@@ -396,7 +442,7 @@ window.MuseumMain = (function () {
       MuseumPlayer.update(dt, input, camera);
       if (window.MuseumAvatar) MuseumAvatar.update(camera, dt);
     }
-    updateHallDoorPrompt();
+    if (!inkBlocking) updateHallDoorPrompt();
     MuseumExhibit.update();
     MuseumScene.update();
     if (window.MuseumLighting) window.MuseumLighting.update(dt);   /* 昼夜平滑过渡 */

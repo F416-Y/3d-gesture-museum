@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-10-22T13:37:52.604Z",
+  "shots": [
+    {
+      "image": "10b-rear-exterior",
+      "meanLum": 0,
+      "colors": 0,
+      "darkPct": 0,
+      "midPct": 0,
+      "lightPct": 0,
+      "whiteTopPct": 0,
+      "whiteBottomPct": 0,
+      "flags": [],
+      "note": "园区北侧背面外观",
+      "bytes": 76985
+    }
+  ],
+  "pageErrors": [
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to resolve module specifier \"vue\". Relative references must start with either \"/\", \"./\", or \"../\".",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+}

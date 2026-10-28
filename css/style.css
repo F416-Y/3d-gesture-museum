@@ -273,6 +273,53 @@ button { font-family: inherit; cursor: pointer; }
 .hall-prompt-card .p-hall-cancel { color: var(--text-on-light-soft); border-color: rgba(74, 69, 64, 0.32); }
 .hall-prompt-card .p-hall-cancel:hover { color: var(--ink); background: rgba(74, 69, 64, 0.08); }
 
+/* ===== 弹窗内 · 左画右介绍 两栏（组员5） ===== */
+.panel-card .p-body { display: flex; gap: 24px; align-items: stretch; margin-top: 18px; }
+.panel-card .p-art { flex: 0 0 46%; }
+.panel-card .p-art { position: relative; }
+.panel-card .p-art-img {
+  display: block; width: 100%; height: 100%; min-height: 300px;
+  object-fit: contain; background: var(--paper-deep);
+  border: 1px solid var(--gold);
+}
+.panel-card .p-art-nav {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 8px;
+  pointer-events: none;
+}
+.panel-card .p-art-nav button {
+  width: 34px; height: 54px;
+  color: var(--paper); background: rgba(38, 30, 23, 0.62);
+  border: 1px solid rgba(245, 241, 232, 0.75);
+  border-radius: 2px;
+  font: 30px/1 var(--serif);
+  cursor: pointer; pointer-events: auto;
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.panel-card .p-art-nav button:hover {
+  background: var(--cinnabar); transform: scale(1.05);
+}
+.panel-card .p-art-count {
+  align-self: flex-end; margin-bottom: 10px;
+  padding: 4px 9px;
+  color: var(--paper); background: rgba(38, 30, 23, 0.68);
+  font-size: 12px; letter-spacing: 0.08em;
+}
+.panel-card .p-art-ph {
+  height: 100%; min-height: 300px;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(176,52,42,0.05) 0 12px, transparent 12px 24px),
+    var(--paper-deep);
+  border: 2px solid var(--cinnabar);
+}
+.panel-card .p-art-ph span {
+  writing-mode: vertical-rl; font-family: var(--serif);
+  font-size: 22px; letter-spacing: 0.4em; color: var(--cinnabar);
+}
+.panel-card .p-info { flex: 1 1 auto; min-width: 0; }
+
 /* ===== 弹窗内 · 收藏 + 评论区（组员5） ===== */
 .panel-card .p-social {
   margin-top: 20px;
@@ -404,4 +451,12 @@ button { font-family: inherit; cursor: pointer; }
   .panel-card .p-cmt-send { flex: 1 1 auto; margin-top: 6px; padding: 8px 0; }
   .panel-card .p-fav-btn { padding: 7px 14px; }
   .panel-card .p-cmt-rows li { flex-wrap: wrap; }
+}
+
+/* ===== 弹窗两栏 · 窄屏回退（组员5） ===== */
+@media (max-width: 760px) {
+  .panel-card .p-body { flex-direction: column; gap: 16px; }
+  .panel-card .p-art { flex: 1 1 auto; }
+  .panel-card .p-art-img { min-height: 220px; }
+  .panel-card .p-art-ph { min-height: 220px; }
 }
