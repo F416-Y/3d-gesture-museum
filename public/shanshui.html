@@ -62,7 +62,7 @@
       height: 100%;
       display: block;
       touch-action: none;
-      cursor: grab;
+      cursor: default;
     }
 
     #gallery.dragging {
@@ -326,6 +326,62 @@
       display: block;
       color: rgba(242, 237, 222, 0.76);
       font-weight: 400;
+    }
+
+    .camwrap {
+      position: absolute;
+      right: max(28px, env(safe-area-inset-right));
+      bottom: max(28px, env(safe-area-inset-bottom));
+      width: 188px;
+      overflow: hidden;
+      border: 1px solid rgba(234, 226, 207, 0.24);
+      background: rgba(18, 19, 17, 0.86);
+      box-shadow: 0 14px 38px rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+    }
+
+    .camwrap[hidden] {
+      display: none;
+    }
+
+    #cam {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      transform: scaleX(-1);
+      background: #111;
+    }
+
+    .camwrap p {
+      margin: 0;
+      padding: 8px 10px;
+      color: rgba(240, 237, 226, 0.58);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+      line-height: 1.55;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      top: 96px;
+      max-width: min(480px, calc(100vw - 48px));
+      padding: 9px 14px;
+      transform: translate(-50%, -8px);
+      border: 1px solid rgba(235, 230, 214, 0.18);
+      background: rgba(20, 21, 19, 0.9);
+      color: rgba(240, 237, 226, 0.82);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
     }
 
     .art-panel {
@@ -675,6 +731,16 @@
         display: none;
       }
 
+      .camwrap {
+        right: 18px;
+        bottom: 84px;
+        width: 144px;
+      }
+
+      .toast {
+        top: 76px;
+      }
+
       .touch-nav {
         position: absolute;
         right: 18px;
@@ -745,8 +811,8 @@
     </header>
 
     <nav class="top-actions" aria-label="展厅工具与返回入口">
-      <button class="icon-button" id="overview-button" type="button" title="切换厅堂全景" aria-label="切换厅堂全景">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/><circle cx="12" cy="12" r="3"/></svg>
+      <button class="icon-button" id="gesture-button" type="button" title="开启或关闭手势控制" aria-label="开启或关闭手势控制">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4.5a2 2 0 0 0-4 0v7"/><path d="M10.5 7V5.5a2 2 0 1 0-4 0V13"/><path d="M6.5 9V7.5a2 2 0 1 0-4 0v7.2a6.3 6.3 0 0 0 6.3 6.3h2.4a6.8 6.8 0 0 0 6.8-6.8v-3.7a2 2 0 0 0-4 0v2.7"/><path d="M14.5 13V9.5a2 2 0 0 1 4 0V14"/></svg>
       </button>
       <button class="icon-button" id="reset-button" type="button" title="回到入口视角" aria-label="回到入口视角">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
@@ -785,14 +851,12 @@
       15.0 × 10.8 m
     </div>
 
-    <div class="touch-nav" aria-label="漫游控制">
-      <button class="icon-button" type="button" data-move="1" title="向前" aria-label="向前">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>
-      </button>
-      <button class="icon-button" type="button" data-move="-1" title="后退" aria-label="后退">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-      </button>
+    <div class="camwrap" id="camwrap" hidden>
+      <video id="cam" autoplay muted playsinline></video>
+      <p id="cam-note">手势已启用 · 左右指点切画 · 捏合查看</p>
     </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
 
   <aside class="art-panel" id="art-panel" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="panel-title">
@@ -833,6 +897,8 @@
 
   <script src="./js/vendor/three.min.js"></script>
   <script src="./js/vendor/GLTFLoader.js"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/gesture.js"></script>
   <script>
     (function () {
       "use strict";
@@ -911,6 +977,11 @@
       var loadingStatus = document.getElementById("loading-status");
       var reticle = document.getElementById("reticle");
       var panel = document.getElementById("art-panel");
+      var gestureButton = document.getElementById("gesture-button");
+      var camwrap = document.getElementById("camwrap");
+      var cam = document.getElementById("cam");
+      var camNote = document.getElementById("cam-note");
+      var toastEl = document.getElementById("toast");
       var partParam = new URLSearchParams(window.location.search).get("part");
       var partMode = PART_IDS.indexOf(partParam) !== -1;
       var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -959,18 +1030,14 @@
       var lastPointerY = 0;
       var activeExhibit = "qianlijiangshan";
       var panelOpen = false;
-      var overview = false;
-      var overviewAngle = -0.6;
-      var overviewRadius = 17.6;
-      var overviewHeight = 8.4;
-      var overviewTarget = new THREE.Vector3(0, 2.25, -2.2);
-      var moveTarget = null;
       var playerPosition = new THREE.Vector3(0, 0, 4.35);
       var playerYaw = 0;
       var playerPitch = 0.025;
-      var moveVelocity = new THREE.Vector3();
-      var keys = Object.create(null);
-      var touchMove = 0;
+      var gestureRunning = false;
+      var gestureStarting = false;
+      var gestureTurnArmed = true;
+      var gestureLastSwitch = 0;
+      var toastTimer = 0;
       var isolatedRoot = null;
       var isolatedAngle = 0.7;
       var isolatedPitch = 0.34;
@@ -983,6 +1050,16 @@
       function setProgress(percent, label) {
         loadingBar.style.width = clamp(percent, 4, 100) + "%";
         if (label) loadingStatus.textContent = label;
+      }
+
+      function showToast(message) {
+        if (!toastEl) return;
+        window.clearTimeout(toastTimer);
+        toastEl.textContent = message;
+        toastEl.classList.add("show");
+        toastTimer = window.setTimeout(function () {
+          toastEl.classList.remove("show");
+        }, 2200);
       }
 
       function makeCanvasTexture(key, width, height, draw, repeatX, repeatY) {
@@ -1566,27 +1643,12 @@
       }
 
       function resetView() {
-        overview = false;
-        moveTarget = null;
         setPanel(false);
-        document.getElementById("overview-button").classList.remove("active");
         playerPosition.set(0, 0, 4.35);
         playerYaw = 0;
         playerPitch = 0.025;
-        moveVelocity.set(0, 0, 0);
+        applyPlayerCamera(true);
         setActiveExhibit("qianlijiangshan");
-      }
-
-      function setOverview(on) {
-        overview = on;
-        moveTarget = null;
-        moveVelocity.set(0, 0, 0);
-        document.getElementById("overview-button").classList.toggle("active", on);
-        if (!on) {
-          playerPosition.set(0, 0, 4.35);
-          playerYaw = 0;
-          playerPitch = 0.025;
-        }
       }
 
       function setActiveExhibit(id) {
@@ -1596,6 +1658,15 @@
         });
       }
 
+      function stepArtwork(delta) {
+        var index = Math.max(0, PAINTINGS.map(function (item) { return item.id; }).indexOf(activeExhibit));
+        index = (index + delta + PAINTINGS.length) % PAINTINGS.length;
+        var painting = PAINTINGS[index];
+        setActiveExhibit(painting.id);
+        if (panelOpen) openPainting(painting.id, false);
+        showToast("已切换至《" + painting.title + "》");
+      }
+
       function findPainting(id) {
         for (var i = 0; i < PAINTINGS.length; i += 1) {
           if (PAINTINGS[i].id === id) return PAINTINGS[i];
@@ -1603,7 +1674,7 @@
         return null;
       }
 
-      function openPainting(id, focus) {
+      function openPainting(id) {
         var painting = findPainting(id);
         if (!painting) return;
         setActiveExhibit(id);
@@ -1617,17 +1688,6 @@
         document.getElementById("panel-intro").textContent = painting.intro;
         document.getElementById("panel-note").textContent = painting.appreciation;
         setPanel(true);
-        if (focus) {
-          overview = false;
-          document.getElementById("overview-button").classList.remove("active");
-          var targetDistance = 4.2;
-          var targetHeight = painting.bottom + painting.height / 2;
-          moveTarget = {
-            position: new THREE.Vector3(painting.x, 0, -5.2 + targetDistance),
-            yaw: 0,
-            pitch: Math.atan2(targetHeight - 1.68, targetDistance) * 0.78
-          };
-        }
       }
 
       function setPanel(open) {
@@ -1659,61 +1719,8 @@
       }
 
       function updateMovement(dt) {
-        if (partMode || overview) return;
-
-        if (moveTarget) {
-          playerPosition.lerp(moveTarget.position, reducedMotion ? 1 : Math.min(1, dt * 4.6));
-          playerYaw += (moveTarget.yaw - playerYaw) * Math.min(1, dt * 5.2);
-          playerPitch += (moveTarget.pitch - playerPitch) * Math.min(1, dt * 5.2);
-          if (playerPosition.distanceTo(moveTarget.position) < 0.035) {
-            playerPosition.copy(moveTarget.position);
-            moveTarget = null;
-          }
-        } else {
-          var forward = 0;
-          var strafe = 0;
-          if (keys.KeyW || keys.ArrowUp || touchMove > 0) forward += 1;
-          if (keys.KeyS || keys.ArrowDown || touchMove < 0) forward -= 1;
-          if (keys.KeyA || keys.ArrowLeft) strafe -= 1;
-          if (keys.KeyD || keys.ArrowRight) strafe += 1;
-
-          var length = Math.hypot(forward, strafe) || 1;
-          var speed = keys.ShiftLeft || keys.ShiftRight ? 3.6 : 2.3;
-          var desiredX = (
-            -Math.sin(playerYaw) * forward +
-            Math.cos(playerYaw) * strafe
-          ) / length * speed;
-          var desiredZ = (
-            -Math.cos(playerYaw) * forward -
-            Math.sin(playerYaw) * strafe
-          ) / length * speed;
-          if (!forward && !strafe) {
-            desiredX = 0;
-            desiredZ = 0;
-          }
-
-          moveVelocity.x += (desiredX - moveVelocity.x) * Math.min(1, dt * 9);
-          moveVelocity.z += (desiredZ - moveVelocity.z) * Math.min(1, dt * 9);
-
-          var nextX = playerPosition.x + moveVelocity.x * dt;
-          var nextZ = playerPosition.z + moveVelocity.z * dt;
-          if (!intersectsObstacle(nextX, playerPosition.z)) playerPosition.x = nextX;
-          else moveVelocity.x = 0;
-          if (!intersectsObstacle(playerPosition.x, nextZ)) playerPosition.z = nextZ;
-          else moveVelocity.z = 0;
-        }
+        if (partMode) return;
         applyPlayerCamera(false);
-      }
-
-      function updateOverview(dt) {
-        if (!overview) return;
-        if (!isDragging) overviewAngle += dt * 0.055;
-        camera.position.set(
-          Math.sin(overviewAngle) * overviewRadius,
-          overviewHeight,
-          Math.cos(overviewAngle) * overviewRadius
-        );
-        camera.lookAt(overviewTarget);
       }
 
       function raycasterFromEvent(event) {
@@ -1728,7 +1735,7 @@
       }
 
       function paintingAtEvent(event) {
-        if (partMode || overview) return null;
+        if (partMode) return null;
         var hits = raycasterFromEvent(event).intersectObjects(paintingMeshes, false);
         return hits.length ? hits[0].object.userData.exhibitId : null;
       }
@@ -1742,19 +1749,12 @@
           canvas.setPointerCapture(event.pointerId);
           return;
         }
-        var paintingId = paintingAtEvent(event);
-        if (paintingId) {
-          isDragging = false;
-          didDrag = false;
-          return;
-        }
         isDragging = true;
         didDrag = false;
         dragStartX = event.clientX;
         dragStartY = event.clientY;
         lastPointerX = event.clientX;
         lastPointerY = event.clientY;
-        canvas.classList.add("dragging");
         canvas.setPointerCapture(event.pointerId);
       }
 
@@ -1773,17 +1773,8 @@
         }
 
         if (isDragging) {
-          var dx = event.clientX - lastPointerX;
-          var dy = event.clientY - lastPointerY;
           if (Math.abs(event.clientX - dragStartX) + Math.abs(event.clientY - dragStartY) > 4) {
             didDrag = true;
-          }
-          if (overview) {
-            overviewAngle -= dx * 0.0045;
-            overviewHeight = clamp(overviewHeight + dy * 0.018, 5.0, 12.5);
-          } else {
-            playerYaw -= dx * 0.0032;
-            playerPitch = clamp(playerPitch - dy * 0.0027, -0.65, 0.82);
           }
           lastPointerX = event.clientX;
           lastPointerY = event.clientY;
@@ -1804,11 +1795,74 @@
         }
         var paintingId = paintingAtEvent(event);
         if (!didDrag && paintingId) {
-          openPainting(paintingId, true);
+          openPainting(paintingId);
         }
         isDragging = false;
-        canvas.classList.remove("dragging");
         if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      }
+
+      async function ensureMediaPipe() {
+        if (window.FilesetResolver && window.HandLandmarker) return;
+        var vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
+        window.FilesetResolver = vision.FilesetResolver;
+        window.HandLandmarker = vision.HandLandmarker;
+        window.MediaPipeVision = vision;
+      }
+
+      async function toggleGesture() {
+        if (partMode || !window.MuseumGesture) return;
+        if (gestureRunning) {
+          window.MuseumGesture.stop();
+          gestureRunning = false;
+          camwrap.hidden = true;
+          gestureButton.classList.remove("active");
+          gestureButton.setAttribute("aria-label", "开启手势控制");
+          showToast("手势控制已关闭");
+          return;
+        }
+        if (gestureStarting) return;
+        gestureStarting = true;
+        gestureButton.classList.add("active");
+        camwrap.hidden = false;
+        camNote.textContent = "正在启动手势模型…";
+        try {
+          await ensureMediaPipe();
+          await window.MuseumGesture.init(cam);
+          gestureRunning = true;
+          gestureTurnArmed = true;
+          gestureLastSwitch = 0;
+          camNote.textContent = "手势已启用 · 左右指点切画 · 捏合查看";
+          gestureButton.setAttribute("aria-label", "关闭手势控制");
+          showToast("手势已启用");
+        } catch (error) {
+          gestureRunning = false;
+          camwrap.hidden = true;
+          gestureButton.classList.remove("active");
+          gestureButton.setAttribute("aria-label", "开启手势控制");
+          showToast((error && error.hint) || "手势启动失败，请检查摄像头权限");
+        } finally {
+          gestureStarting = false;
+        }
+      }
+
+      function handleGestureState(state, now) {
+        if (partMode || !state) return;
+        if (state.pinchPressed) {
+          if (panelOpen) setPanel(false);
+          else openPainting(activeExhibit);
+        }
+
+        if (Math.abs(state.turn) < 0.16) gestureTurnArmed = true;
+        if (gestureTurnArmed && Math.abs(state.turn) > 0.46 && now - gestureLastSwitch > 700) {
+          stepArtwork(state.turn > 0 ? -1 : 1);
+          gestureTurnArmed = false;
+          gestureLastSwitch = now;
+        }
+      }
+
+      function applyGesture() {
+        if (partMode || !gestureRunning || !window.MuseumGesture) return;
+        handleGestureState(window.MuseumGesture.getState(), performance.now());
       }
 
       function bindEvents() {
@@ -1823,38 +1877,29 @@
           }
         });
 
-        window.addEventListener("wheel", function (event) {
-          if (partMode || overview || panelOpen) return;
-          var direction = event.deltaY < 0 ? 1 : -1;
-          touchMove = direction;
-          window.clearTimeout(window.__shanshuiWheelTimer);
-          window.__shanshuiWheelTimer = window.setTimeout(function () {
-            touchMove = 0;
-          }, 95);
-        }, { passive: true });
-
         window.addEventListener("keydown", function (event) {
-          keys[event.code] = true;
-          if (event.code === "Escape") {
-            if (panelOpen) setPanel(false);
-            else if (overview) setOverview(false);
+          if (partMode) return;
+          if (event.code === "Escape" || event.code === "KeyQ") {
+            setPanel(false);
+          } else if (event.code === "ArrowLeft") {
+            stepArtwork(-1);
+          } else if (event.code === "ArrowRight") {
+            stepArtwork(1);
+          } else if (event.code === "KeyE" || event.code === "Enter") {
+            openPainting(activeExhibit);
+          } else if (event.code === "KeyR") {
+            resetView();
+          } else {
+            return;
           }
-          if (event.code === "KeyR" && !partMode) resetView();
-          if (event.code === "KeyV" && !partMode) setOverview(!overview);
-          if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].indexOf(event.code) !== -1) {
+          if (event.code !== "KeyE" && event.code !== "KeyQ" && event.code !== "KeyR") {
             event.preventDefault();
           }
-        });
-        window.addEventListener("keyup", function (event) {
-          keys[event.code] = false;
         });
 
         document.querySelectorAll(".painting-button").forEach(function (button) {
           button.addEventListener("click", function () {
-            openPainting(button.getAttribute("data-exhibit"), true);
-          });
-          button.addEventListener("pointerenter", function () {
-            if (!partMode) setActiveExhibit(button.getAttribute("data-exhibit"));
+            openPainting(button.getAttribute("data-exhibit"));
           });
         });
 
@@ -1862,26 +1907,7 @@
           setPanel(false);
         });
         document.getElementById("reset-button").addEventListener("click", resetView);
-        document.getElementById("overview-button").addEventListener("click", function () {
-          setOverview(!overview);
-        });
-
-        document.querySelectorAll("[data-move]").forEach(function (button) {
-          function stopMove(event) {
-            event.preventDefault();
-            touchMove = 0;
-          }
-          button.addEventListener("pointerdown", function (event) {
-            event.preventDefault();
-            touchMove = Number(button.getAttribute("data-move"));
-            button.setPointerCapture(event.pointerId);
-          });
-          button.addEventListener("pointerup", stopMove);
-          button.addEventListener("pointercancel", stopMove);
-          button.addEventListener("lostpointercapture", function () {
-            touchMove = 0;
-          });
-        });
+        gestureButton.addEventListener("click", toggleGesture);
 
         window.addEventListener("resize", function () {
           camera.aspect = window.innerWidth / window.innerHeight;
@@ -1892,9 +1918,7 @@
         });
 
         window.addEventListener("blur", function () {
-          keys = Object.create(null);
           isDragging = false;
-          canvas.classList.remove("dragging");
         });
       }
 
@@ -1910,7 +1934,7 @@
           }
         } else {
           updateMovement(dt);
-          updateOverview(dt);
+          applyGesture();
           if (dust) {
             dust.rotation.y = Math.sin(elapsed * 0.06) * 0.03;
             dust.position.y = Math.sin(elapsed * 0.18) * 0.025;
@@ -1935,13 +1959,21 @@
           parts: Object.keys(templates),
           paintings: PAINTINGS.map(function (painting) { return painting.id; }),
           reset: resetView,
-          overview: setOverview,
           openPainting: openPainting,
+          stepArtwork: stepArtwork,
+          toggleGesture: toggleGesture,
+          handleGestureState: handleGestureState,
           stats: function () {
             return {
               calls: renderer.info.render.calls,
               triangles: renderer.info.render.triangles,
-              position: { x: playerPosition.x, y: 1.68, z: playerPosition.z }
+              position: { x: playerPosition.x, y: 1.68, z: playerPosition.z },
+              yaw: playerYaw,
+              pitch: playerPitch,
+              camera: camera.position.toArray(),
+              activeExhibit: activeExhibit,
+              panelOpen: panelOpen,
+              gestureRunning: gestureRunning
             };
           }
         };
