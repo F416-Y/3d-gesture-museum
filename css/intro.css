@@ -24,13 +24,16 @@
     text-shadow: 0 1px 0 rgba(255, 252, 244, 0.65), 0 0 22px rgba(28, 26, 23, 0.12);
   }
   #introTitle p { margin: 14px 0 0; color: rgba(28, 26, 23, 0.56); font-size: 13px; letter-spacing: 6px; }
-  #introSeal {
-    position: absolute; top: 45px; left: 48px; display: grid; gap: 0; width: 46px; height: 58px;
-    color: #f5eee0; background: #a33d31; border: 2px solid rgba(245, 238, 224, 0.7);
-    box-shadow: 0 5px 16px rgba(91, 49, 38, 0.18); transform: rotate(-5deg); text-align: center;
-    font-size: 18px; line-height: 27px; padding-top: 2px;
+  #introMark {
+    position: absolute; top: 42px; left: 46px; width: 52px; height: 60px; color: #292923;
+    opacity: 0.9; transform: rotate(-4deg); filter: drop-shadow(0 4px 8px rgba(72, 52, 39, 0.12));
   }
-  #introSeal span { display: block; }
+  #introMark svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  #introMark path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  #introMark .mark-arch { stroke: currentColor; stroke-width: 2.2; }
+  #introMark .mark-roof { stroke: #a33d31; stroke-width: 2.8; }
+  #introMark .mark-line { stroke: currentColor; stroke-width: 1.7; }
+  #introMark .mark-dot { fill: #a33d31; }
   #introNote {
     position: absolute; left: 48px; top: 50%; display: flex; flex-direction: column; align-items: center; gap: 9px;
     transform: translateY(-25%); color: rgba(52, 49, 44, 0.52); font-size: 12px; letter-spacing: 3px;
@@ -80,7 +83,7 @@
     #introTitle { top: 32px; }
     #introTitle h1 { font-size: 24px; letter-spacing: 8px; }
     #introTitle p { font-size: 11px; letter-spacing: 4px; }
-    #introSeal, #introNote { left: 20px; }
+    #introMark, #introNote { left: 20px; }
     #introHint { left: 20px; bottom: 24px; }
     #introPanel { gap: 10px; padding: 8px 12px; font-size: 12px; }
     #introPanel input[type="range"] { width: 100px; }
