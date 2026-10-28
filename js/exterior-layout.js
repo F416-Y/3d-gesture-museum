@@ -13,6 +13,7 @@ window.MuseumExteriorLayout = (function () {
   var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], lion: [], ding: [], hall: [] }, anims: [] };
   var M = {};
   var WATERS = [];
+  var HALL_DOORS = [];
 
   /* ---------- 色板 ---------- */
   var PAPER  = 0xEFE9DC;  // 宣纸米白
