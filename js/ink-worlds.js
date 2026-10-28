@@ -280,6 +280,13 @@ window.MuseumInkWorlds = (function () {
     if (state.layer) return;
     if (document.exitPointerLock) document.exitPointerLock();
 
+    // 记录圆形入口的屏幕坐标，让全屏墨晕从用户点击的位置长出来。
+    var gateRect = el.gate.getBoundingClientRect();
+    var gateX = gateRect.left + gateRect.width / 2;
+    var gateY = gateRect.top + gateRect.height / 2;
+    el.videoLayer.style.setProperty("--ink-origin-x", gateX + "px");
+    el.videoLayer.style.setProperty("--ink-origin-y", gateY + "px");
+
     state.layer = "video";
     state.transitionDone = false;
     state.pickerIndex = 0;      // 每次从序厅重新入画，焦点回到第一幅
@@ -288,7 +295,12 @@ window.MuseumInkWorlds = (function () {
     el.fallback.classList.add("is-hidden");
     el.transitionVideo.classList.remove("is-hidden");
     el.skip.classList.remove("is-hidden");
+    el.videoLayer.classList.remove("is-opening");
     show(el.videoLayer);
+    // 等待一帧再加动画，确保 clip-path 从圆圈的零半径开始。
+    requestAnimationFrame(function () {
+      if (state.layer === "video") el.videoLayer.classList.add("is-opening");
+    });
 
     var v = el.transitionVideo;
     try {
@@ -323,6 +335,7 @@ window.MuseumInkWorlds = (function () {
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
     el.transitionVideo.classList.add("is-hidden");
     el.fallback.classList.remove("is-hidden");
+    el.videoLayer.classList.add("is-opening");
     clearTimeout(state.fallbackTimer);
     state.fallbackTimer = setTimeout(finishTransition, INK_FALLBACK_MS);
   }
@@ -334,6 +347,7 @@ window.MuseumInkWorlds = (function () {
     clearTimeout(state.fallbackTimer);
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
     hide(el.videoLayer);
+    el.videoLayer.classList.remove("is-opening");
     el.videoLayer.setAttribute("aria-hidden", "true");
     showPaintingPicker();
   }
