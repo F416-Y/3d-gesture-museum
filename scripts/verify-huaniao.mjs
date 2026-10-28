@@ -190,7 +190,7 @@ if (!exists("assets/reference/exhibition/current/huaniao-interior-front-elevatio
   problems.push("缺少最新花鸟厅参考图");
 }
 const handoff = read("docs/current/组员5-花鸟厅交接.md");
-if (!handoff.includes("feature/shanshui-interior-followup-3")) {
+if (!handoff.includes("feature/huaniao-interior-5")) {
   problems.push("交接文档分支名未更新");
 }
 if (!handoff.includes("assets/reference/exhibition/current/huaniao-interior-front-elevation-v1.jpg")) {
