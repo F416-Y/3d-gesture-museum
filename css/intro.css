@@ -87,11 +87,6 @@
   #intro::after {
     content: ""; position: absolute; inset: 18px; border: 1px solid rgba(71, 57, 44, 0.14); pointer-events: none;
   }
-  #intro::before {
-    content: ""; position: absolute; left: 50%; top: 50%; width: min(42vw, 540px); height: min(42vw, 540px);
-    transform: translate(-50%, -42%); border: 1px solid rgba(140, 59, 46, 0.13); border-radius: 50%;
-    box-shadow: 0 0 0 14px rgba(140, 59, 46, 0.025), 0 0 0 15px rgba(140, 59, 46, 0.08); pointer-events: none;
-  }
   @media (max-width: 900px) {
     #introTitle { top: 32px; }
     #introTitle h1 { font-size: 24px; letter-spacing: 8px; }
