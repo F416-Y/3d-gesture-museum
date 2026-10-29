@@ -16,6 +16,7 @@ window.MuseumUI = (function () {
   var el = {};
   var social = { favorited: false, favLoading: false, comments: [] };
   var currentExhibit = null;
+  var modelViewerCleanup = null;
   var handlers = {
     onCameraToggle: null,
     onReset: null,
@@ -157,7 +158,12 @@ window.MuseumUI = (function () {
     social.favLoading = false;
     social.comments = [];
 
-    var artVisual = ex.image
+    var artVisual = ex.model
+      ? '<div class="p-model-viewer" data-model-url="' + esc(ex.model) + '">' +
+          '<canvas class="p-model-canvas" aria-label="' + esc(ex.title) + ' 360度模型预览"></canvas>' +
+          '<div class="p-model-hint">拖动旋转 · 滚轮缩放 · 自动巡览</div>' +
+        '</div>'
+      : ex.image
       ? '<img class="p-art-img" src="' + ex.image + '" alt="' + esc(ex.title) + ' 画作" />'
       : '<div class="p-art-ph"><span>' + esc(ex.title) + '</span></div>';
     var artCol = '<div class="p-art">' + artVisual + paintingNav(ex) + '</div>';
@@ -182,6 +188,7 @@ window.MuseumUI = (function () {
 
     el.panel.classList.add("open");
     el.panel.setAttribute("aria-hidden", "false");
+    if (ex.model) initModelViewer(ex.model);
 
     var favBtn = document.getElementById("p-fav-btn");
     if (favBtn) favBtn.addEventListener("click", function () { toggleFav(ex); });
@@ -195,6 +202,72 @@ window.MuseumUI = (function () {
     bindPaintingNavigation(ex);
 
     refreshSocial(ex);
+  }
+
+  /* ---------- 模型展品预览：完整展示 + 自动旋转 + 鼠标 360° 拖动 ---------- */
+  function initModelViewer(url) {
+    if (!window.THREE || !THREE.GLTFLoader) return;
+    var canvas = document.querySelector(".p-model-canvas");
+    if (!canvas) return;
+    var host = canvas.parentElement;
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 0);
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
+    camera.position.set(0, 1.1, 4.2);
+    scene.add(new THREE.HemisphereLight(0xfff7e8, 0x28313a, 2.1));
+    var key = new THREE.DirectionalLight(0xffffff, 2.8);
+    key.position.set(3, 5, 4); scene.add(key);
+    var fill = new THREE.DirectionalLight(0xd9e8ff, 1.25);
+    fill.position.set(-4, 2, -2); scene.add(fill);
+    var root = new THREE.Group(); scene.add(root);
+    var yaw = 0, pitch = 0.04, distance = 4.2, dragging = false, lastX = 0, lastY = 0;
+    var frame = 0, disposed = false;
+    function resize() {
+      var w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
+      renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+    function frameModel(model) {
+      var box = new THREE.Box3().setFromObject(model);
+      var size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+      var scale = 2.35 / Math.max(size.x, size.y, size.z, 0.01);
+      model.scale.setScalar(scale);
+      model.position.set(-center.x * scale, -box.min.y * scale - 0.18, -center.z * scale);
+    }
+    function render() {
+      if (disposed) return;
+      if (!dragging) yaw += 0.0035;
+      root.rotation.y = yaw; root.rotation.x = pitch;
+      camera.position.set(0, 1.05, distance); camera.lookAt(0, 0.95, 0);
+      renderer.render(scene, camera); frame = requestAnimationFrame(render);
+    }
+    function down(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId); }
+    function move(e) {
+      if (!dragging) return;
+      yaw += (e.clientX - lastX) * 0.012;
+      pitch = Math.max(-0.55, Math.min(0.55, pitch + (e.clientY - lastY) * 0.008));
+      lastX = e.clientX; lastY = e.clientY;
+    }
+    function up(e) { dragging = false; if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId); }
+    function wheel(e) { e.preventDefault(); distance = Math.max(2.4, Math.min(6.5, distance + e.deltaY * 0.003)); }
+    canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move);
+    canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
+    canvas.addEventListener("wheel", wheel, { passive: false }); window.addEventListener("resize", resize);
+    resize();
+    new THREE.GLTFLoader().load(url, function (gltf) {
+      if (disposed) return;
+      var model = gltf.scene;
+      model.traverse(function (node) { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
+      frameModel(model); root.add(model);
+    }, undefined, function () { if (!disposed && host) host.classList.add("is-error"); });
+    render();
+    modelViewerCleanup = function () {
+      disposed = true; cancelAnimationFrame(frame); window.removeEventListener("resize", resize);
+      canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move);
+      canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", up);
+      canvas.removeEventListener("wheel", wheel); renderer.dispose(); modelViewerCleanup = null;
+    };
   }
 
   function paintingNeighbors(ex) {
@@ -368,6 +441,7 @@ window.MuseumUI = (function () {
 
   function hidePanel() {
     if (!el.panel) return;
+    if (modelViewerCleanup) modelViewerCleanup();
     el.panel.classList.remove("open");
     el.panel.setAttribute("aria-hidden", "true");
     currentExhibit = null;
