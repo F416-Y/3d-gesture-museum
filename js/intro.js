@@ -932,6 +932,13 @@
         enterBtn.disabled = false;
         enterBtn.setAttribute('aria-disabled', 'false');
         setStatus('园境已开 · 可入馆');
+        pointer.ui = false;
+        if (pointer.inside && inkCursor) {
+          var currentTarget = document.elementFromPoint(pointer.x, pointer.y);
+          var showCursor = !isUiTarget(currentTarget) && !brushCoversControls();
+          inkCursor.classList.toggle('visible', showCursor);
+          pointer.ui = !showCursor;
+        }
       }
     }
     if (!handSeen && !reducedMotion) spin += dt * 0.25;
