@@ -224,24 +224,26 @@ window.MuseumUI = (function () {
     fill.position.set(-4, 2, -2); scene.add(fill);
     var root = new THREE.Group(); scene.add(root);
     var yaw = 0, pitch = 0.04, distance = 5.2, dragging = false, lastX = 0, lastY = 0;
-    var modelRadius = 0, fitDistance = 5.2, zoomFactor = 1;
+    var fitHalfWidth = 0, fitHalfHeight = 0, fitDistance = 5.2, zoomFactor = 1;
     var resizeObserver = null;
     var frame = 0, disposed = false;
 
     function calculateFitDistance() {
-      if (modelRadius <= 0) return 5.2;
+      if (fitHalfWidth <= 0 || fitHalfHeight <= 0) return 5.2;
       var verticalHalfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
       var horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * Math.max(camera.aspect, 0.01));
-      var limitingHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
-      // 包围球适配对旋转、俯仰都成立，留 18% 安全边距，避免耳部和四足贴边。
-      return modelRadius / Math.max(Math.sin(limitingHalfFov), 0.01) * 1.18;
+      var verticalDistance = fitHalfHeight / Math.max(Math.tan(verticalHalfFov), 0.01);
+      var horizontalDistance = fitHalfWidth / Math.max(Math.tan(horizontalHalfFov), 0.01);
+      // 同时适配横向和纵向视锥，留 18% 安全边距，避免耳部和四足贴边。
+      return Math.max(verticalDistance, horizontalDistance) * 1.18;
     }
 
     function applyZoom() {
       fitDistance = calculateFitDistance();
       distance = fitDistance * zoomFactor;
       host.dataset.fitDistance = fitDistance.toFixed(3);
-      host.dataset.fitRadius = modelRadius.toFixed(3);
+      host.dataset.fitHalfWidth = fitHalfWidth.toFixed(3);
+      host.dataset.fitHalfHeight = fitHalfHeight.toFixed(3);
       host.dataset.cameraFov = camera.fov.toFixed(3);
       host.dataset.cameraAspect = camera.aspect.toFixed(6);
       host.dataset.zoom = zoomFactor.toFixed(3);
@@ -265,7 +267,15 @@ window.MuseumUI = (function () {
       model.position.y -= fittedCenter.y;
       model.position.z -= fittedCenter.z;
       model.updateMatrixWorld(true);
-      modelRadius = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere()).radius;
+      var finalBox = new THREE.Box3().setFromObject(model);
+      var finalSize = finalBox.getSize(new THREE.Vector3());
+      var planarRadius = Math.sqrt(finalSize.x * finalSize.x + finalSize.z * finalSize.z) / 2;
+      var pitchLimit = 0.55;
+      fitHalfWidth = Math.max(planarRadius, 0.01);
+      fitHalfHeight = Math.max(
+        (finalSize.y / 2) * Math.cos(pitchLimit) + planarRadius * Math.sin(pitchLimit),
+        0.01
+      );
       zoomFactor = 1;
       applyZoom();
       host.dataset.modelReady = "true";

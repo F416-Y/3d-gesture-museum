@@ -99,7 +99,8 @@ async function readViewerState(page) {
     return {
       modelReady: host.dataset.modelReady,
       fitDistance: Number(host.dataset.fitDistance),
-      fitRadius: Number(host.dataset.fitRadius),
+      fitHalfWidth: Number(host.dataset.fitHalfWidth),
+      fitHalfHeight: Number(host.dataset.fitHalfHeight),
       cameraFov: Number(host.dataset.cameraFov),
       cameraAspect: Number(host.dataset.cameraAspect),
       zoom: Number(host.dataset.zoom),
@@ -154,13 +155,19 @@ async function main() {
     const initial = await readViewerState(page);
     assert(initial && !initial.isError, "后母戊鼎模型加载失败");
     assert(initial.canvasWidth > 0 && initial.canvasHeight > 0, "模型画布尺寸无效");
-    assert(initial.fitRadius > 0 && initial.fitDistance > 0, "模型包围球或取景距离无效");
+    assert(
+      initial.fitHalfWidth > 0 && initial.fitHalfHeight > 0 && initial.fitDistance > 0,
+      "模型包围盒或取景距离无效",
+    );
     assert(initial.hint.includes("拖动旋转") && initial.hint.includes("滚轮缩放"), "模型交互提示缺失");
 
     const verticalHalfFov = (initial.cameraFov * Math.PI) / 180 / 2;
     const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * initial.cameraAspect);
     const expectedDistance =
-      (initial.fitRadius / Math.sin(Math.min(verticalHalfFov, horizontalHalfFov))) * 1.18;
+      Math.max(
+        initial.fitHalfHeight / Math.tan(verticalHalfFov),
+        initial.fitHalfWidth / Math.tan(horizontalHalfFov),
+      ) * 1.18;
     assert(
       Math.abs(initial.fitDistance - expectedDistance) < 0.02,
       `自动取景距离不正确：${JSON.stringify({ expectedDistance, actual: initial.fitDistance })}`,
