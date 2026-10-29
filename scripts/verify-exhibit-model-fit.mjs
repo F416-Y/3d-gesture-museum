@@ -30,10 +30,44 @@ const MIME = {
   ".mp4": "video/mp4",
 };
 
+const TEST_PAGE = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>展品模型自动取景验收</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="panel" class="panel" role="dialog" aria-modal="true" aria-hidden="true">
+    <button id="panel-close" type="button" class="panel-close" aria-label="关闭">×</button>
+    <div id="panel-body" class="panel-body"></div>
+  </div>
+  <script src="/js/vendor/three.min.js"><\/script>
+  <script src="/js/vendor/GLTFLoader.js"><\/script>
+  <script src="/js/config.js"><\/script>
+  <script src="/js/ui.js"><\/script>
+  <script>
+    window.MuseumUI.init();
+    const exhibit = window.MuseumConfig.exhibits.find((item) => item.id === "houmuwuding");
+    if (!exhibit) throw new Error("找不到后母戊鼎展品数据");
+    window.MuseumUI.showExhibit(exhibit);
+  <\/script>
+</body>
+</html>`;
+
 function startServer() {
   const server = http.createServer((req, res) => {
     const pathname = decodeURIComponent((req.url || "/").split("?")[0]);
     const relative = pathname.replace(/^\/+/, "") || "index.html";
+    if (relative === "__model-viewer-test.html") {
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      });
+      res.end(TEST_PAGE);
+      return;
+    }
     const file = path.join(DIST, relative);
     if (!file.startsWith(DIST) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -106,22 +140,14 @@ async function main() {
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(String(error?.message || error)));
 
-    await page.goto(`http://127.0.0.1:${port}/`, {
+    await page.goto(`http://127.0.0.1:${port}/__model-viewer-test.html`, {
       waitUntil: "domcontentloaded",
-      timeout: 120000,
-    });
-    await page.waitForSelector("#stage canvas", { timeout: 60000 });
-    await page.evaluate(() => {
-      const intro = document.getElementById("intro");
-      if (intro) intro.style.display = "none";
-      const exhibit = window.MuseumConfig.exhibits.find((item) => item.id === "houmuwuding");
-      if (!exhibit) throw new Error("找不到后母戊鼎展品数据");
-      window.MuseumUI.showExhibit(exhibit);
+      timeout: 30000,
     });
     await page.waitForFunction(
       () => document.querySelector(".p-model-viewer")?.dataset.modelReady === "true",
       null,
-      { timeout: 60000 },
+      { timeout: 30000 },
     );
     await page.waitForTimeout(800);
 
