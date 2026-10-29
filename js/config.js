@@ -33,7 +33,7 @@ window.MuseumConfig = {
   player: {
     eyeHeight: 1.7,        // 视点高度（米）
     radius: 0.5,           // 碰撞体半径
-    speed: 2.4,            // 前进速度（米/秒）
+    speed: 3.5,            // 前进速度（米/秒）
     turnSpeed: 1.9,        // 转向速度（弧度/秒）
         startPos: [0, 0, 38],  // 出生点（前庭中轴，位于 hall0 序厅之外，避免出生即判「序厅」）
   },
