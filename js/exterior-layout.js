@@ -1601,10 +1601,13 @@ window.MuseumExteriorLayout = (function () {
     }, undefined, function () { buildCentralArchBridge(); });
   }
 
-  /* ---------- 中心庭（中心湖约 16×8m，中心坐标 0,-2.2） ---------- */
+  /* ---------- 中心庭（改为穿园小溪，桥位仍在 0,-2.2） ---------- */
   function buildZhongxinCourt() {
-    /* 中央庭院只保留一块特别大的水池；删除亭子、池中建筑、草坪内景与内部连廊。 */
-    irregularPond(0, -2.2, 16.0, 8.0, 55);
+    /* 小溪中心段：西北 → 东南穿过中心庭院，桥下净跨按溪宽控制。 */
+    windingStream([
+      [-13.5, 10.5], [-9.0, 6.8], [-4.2, 2.0], [0.0, -2.2],
+      [5.2, -6.7], [10.4, -10.8], [15.5, -14.0]
+    ], 3.2, 55);
     loadCentralArchBridge();
     return;
     /* 周边碎石广场 */
@@ -1925,6 +1928,49 @@ window.MuseumExteriorLayout = (function () {
       s = (s * 1664525 + 1013904223) >>> 0;
       lotus(cx + ((s % 100) / 100 - 0.5) * rx * 1.1,
             cz + ((s % 97) / 97 - 0.5) * rz * 1.1, 0.22 + (s % 50) / 500);
+    }
+  }
+
+  /* ---------- 穿园小溪：可控宽度的连续水道，桥下溪宽约 3.2m ---------- */
+  function windingStream(points, width, seed) {
+    var i, j, half = width / 2, bank = half + 0.62;
+    var waterLeft = [], waterRight = [], bedLeft = [], bedRight = [];
+    function offsetPoint(index, distance) {
+      var p = points[index];
+      var prev = points[Math.max(0, index - 1)], next = points[Math.min(points.length - 1, index + 1)];
+      var dx = next[0] - prev[0], dz = next[1] - prev[1], len = Math.sqrt(dx * dx + dz * dz) || 1;
+      return [p[0] - dz / len * distance, p[1] + dx / len * distance];
+    }
+    for (i = 0; i < points.length; i++) {
+      waterLeft.push(offsetPoint(i, half)); waterRight.push(offsetPoint(i, -half));
+      bedLeft.push(offsetPoint(i, bank)); bedRight.push(offsetPoint(i, -bank));
+    }
+    function shapeFrom(left, right) {
+      var shape = new THREE.Shape();
+      shape.moveTo(left[0][0], -left[0][1]);
+      for (j = 1; j < left.length; j++) shape.lineTo(left[j][0], -left[j][1]);
+      for (j = right.length - 1; j >= 0; j--) shape.lineTo(right[j][0], -right[j][1]);
+      shape.closePath();
+      return shape;
+    }
+    var bed = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(bedLeft, bedRight)), M.ink);
+    bed.rotation.x = -Math.PI / 2; bed.position.y = -0.14; bed.receiveShadow = true; S.scene.add(bed);
+    var water = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(waterLeft, waterRight)), M.water);
+    water.rotation.x = -Math.PI / 2; water.position.y = 0.06; water.receiveShadow = true; S.scene.add(water);
+    var s = seed >>> 0;
+    for (i = 0; i < points.length - 1; i++) {
+      var a = points[i], b = points[i + 1], dx = b[0] - a[0], dz = b[1] - a[1];
+      var len = Math.sqrt(dx * dx + dz * dz) || 1, nx = -dz / len, nz = dx / len;
+      var count = Math.max(2, Math.round(len / 1.6));
+      for (j = 0; j <= count; j++) {
+        var t = j / count, cx = a[0] + dx * t, cz = a[1] + dz * t;
+        s = (s * 1664525 + 1013904223) >>> 0;
+        var side = (j + i) % 2 ? 1 : -1, jitter = ((s % 100) / 100 - 0.5) * 0.18;
+        var stone = new THREE.Mesh(blobGeo(0.16 + (s % 100) / 100 * 0.12, 0.22, 0.42, seed + i * 19 + j), M.rock);
+        stone.position.set(cx + nx * (bank + jitter) * side, 0.12, cz + nz * (bank + jitter) * side);
+        stone.rotation.y = Math.atan2(dz, dx) + (s % 100) / 100; stone.castShadow = stone.receiveShadow = true;
+        S.scene.add(stone);
+      }
     }
   }
 
