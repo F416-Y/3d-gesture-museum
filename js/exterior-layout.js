@@ -1447,7 +1447,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 中轴真实拱桥：优先加载单桥 GLB，失败回退程序桥 ---------- */
   function loadCentralArchBridge() {
     if (!THREE.GLTFLoader) { buildCentralArchBridge(); return; }
-    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/rodin_bridge_single.glb', function (gltf) {
+    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/central-arch-bridge.glb', function (gltf) {
       var bridge = gltf.scene; bridge.name = 'rodin-central-arch-bridge'; bridge.updateMatrixWorld(true);
       var raw = new THREE.Box3().setFromObject(bridge), rawSize = raw.getSize(new THREE.Vector3());
       if (!Math.max(rawSize.x, rawSize.z)) { buildCentralArchBridge(); return; }
