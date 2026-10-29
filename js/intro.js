@@ -25,6 +25,7 @@
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
   var statusEl = document.getElementById('introStatus');
+  var inkCursor = document.getElementById('inkCursor'), inkRevealBrush = document.getElementById('inkRevealBrush'), lastTrail = 0;
   function setStatus(s) { statusEl.textContent = s; }
 
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
@@ -49,6 +50,25 @@
     return new THREE.CanvasTexture(c);
   }
   var glowTex = makeGlow();
+  function makeInkDot() {
+    var c = document.createElement('canvas'); c.width = c.height = 96;
+    var x = c.getContext('2d'), i, a, rr, ang;
+    x.clearRect(0, 0, 96, 96);
+    for (i = 0; i < 13; i++) {
+      a = Math.random() * Math.PI * 2; rr = 20 + Math.random() * 22;
+      x.beginPath();
+      x.arc(48 + Math.cos(a) * (Math.random() * 7), 48 + Math.sin(a) * (Math.random() * 7), rr, 0, Math.PI * 2);
+      x.fillStyle = 'rgba(35, 43, 48, ' + (0.025 + Math.random() * 0.055) + ')'; x.fill();
+    }
+    var g = x.createRadialGradient(48, 48, 3, 48, 48, 42);
+    g.addColorStop(0, 'rgba(30, 37, 42, 0.92)');
+    g.addColorStop(0.46, 'rgba(43, 52, 58, 0.62)');
+    g.addColorStop(0.78, 'rgba(75, 82, 82, 0.2)');
+    g.addColorStop(1, 'rgba(75, 82, 82, 0)');
+    x.fillStyle = g; x.fillRect(4, 4, 88, 88);
+    return new THREE.CanvasTexture(c);
+  }
+  var inkDotTex = makeInkDot();
 
   /* ---------- 淡墨远点背景（替深空星尘：暖灰墨点，纸面纵深） ---------- */
   var SN = 2800, sp = new Float32Array(SN * 3), sc = new Float32Array(SN * 3);
@@ -110,7 +130,7 @@
   var cloud = new THREE.Group();
   /* 墨点核心：普通混合，叠处更浓，正是积墨效果 */
   cloud.add(new THREE.Points(geo, new THREE.PointsMaterial({
-    size: 0.055, map: glowTex, vertexColors: true, transparent: true, opacity: 0.8,
+    size: 0.075, map: inkDotTex, vertexColors: true, transparent: true, opacity: 0.82,
     depthWrite: false, blending: THREE.NormalBlending
   })));
   /* 晕墨层：大一号淡墨，作洇开的边缘 */
@@ -352,6 +372,19 @@
     return normalizePts(out, 4.4);
   }
 
+  function makeInkBlob() {
+    var out = new Float32Array(MAXN * 3), j, a, b, c, rr, wobble;
+    for (j = 0; j < MAXN; j++) {
+      a = Math.random() * Math.PI * 2; b = Math.acos(2 * Math.random() - 1); c = Math.random();
+      rr = Math.pow(c, 0.42) * (1.15 + Math.sin(j * 0.071) * 0.12);
+      wobble = 1 + 0.1 * Math.sin(a * 5 + b * 3 + j * 0.013);
+      out[j * 3] = Math.sin(b) * Math.cos(a) * rr * wobble;
+      out[j * 3 + 1] = Math.cos(b) * rr * 0.76;
+      out[j * 3 + 2] = Math.sin(b) * Math.sin(a) * rr * wobble;
+    }
+    return out;
+  }
+
   /* ---------- 预设模型：本馆零件库（门楼已撤）+ 压轴全园鸟瞰 ---------- */
   var PRESETS = [
     { id: 'bronze-ding', fb: fbDing },
@@ -376,34 +409,35 @@
     }
   }
   function loadPreset(P) {
-    if (store[P.id]) { if (PRESETS[cur] === P) applyPreset(P); return; }
+    if (store[P.id]) { if (PRESETS[cur] === P && revealReady) applyPreset(P); return; }
     if (P.id === '__museum') {
       setStatus('正在生成全园粒子沙盘…');
       setTimeout(function () {
         var pts = null;
         try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
         store[P.id] = pts || fbGate();
-        if (PRESETS[cur] === P) applyPreset(P);
+        if (PRESETS[cur] === P && revealReady) applyPreset(P);
         setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '全园粒子沙盘就绪 · 移动鼠标旋转');
       }, 30);
       return;
     }
-    if (!loader) { store[P.id] = P.fb(); if (PRESETS[cur] === P) applyPreset(P); return; }
+    if (!loader) { store[P.id] = P.fb(); if (PRESETS[cur] === P && revealReady) applyPreset(P); return; }
     loader.load('assets/models/parts/' + P.id + '.glb', function (g) {
       var pts = null;
       try { pts = sampleObject(g.scene, MAXN); } catch (e) { pts = null; }
       store[P.id] = pts || P.fb();
-      if (PRESETS[cur] === P) applyPreset(P);
+      if (PRESETS[cur] === P && revealReady) applyPreset(P);
     }, undefined, function () {
       store[P.id] = P.fb();
-      if (PRESETS[cur] === P) applyPreset(P);
+      if (PRESETS[cur] === P && revealReady) applyPreset(P);
     });
   }
-  base.set(fbDing());
+  var revealReady = false, revealDone = false, revealClock = 0;
+  base.set(makeInkBlob());
   for (var pli = 0; pli < PRESETS.length - 1; pli++) loadPreset(PRESETS[pli]);   /* 压轴不预载，播到时现采 */
 
   /* ---------- 交互状态 ---------- */
-  var spread = 1, spreadT = 1;
+  var spread = 0.72, spreadT = 0.72;
   var rotX = 0, rotY = 0, rotXT = 0, rotYT = 0, spin = 0;
   var handSeen = false;
   var density = 9000;
@@ -421,10 +455,20 @@
 
   /* ---------- 鼠标 / 触摸回退 ---------- */
   overlay.addEventListener('pointermove', function (e) {
+    if (inkCursor) {
+      inkCursor.style.left = e.clientX + 'px'; inkCursor.style.top = e.clientY + 'px'; inkCursor.classList.add('visible');
+      if (e.timeStamp - lastTrail > 36 && e.target === canvas) {
+        var drop = document.createElement('span'); drop.className = 'ink-trail';
+        drop.style.left = (e.clientX - 4 + Math.random() * 8) + 'px'; drop.style.top = (e.clientY + 4 + Math.random() * 8) + 'px';
+        drop.style.width = drop.style.height = (4 + Math.random() * 7) + 'px';
+        overlay.appendChild(drop); setTimeout(function () { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 680); lastTrail = e.timeStamp;
+      }
+    }
     if (handSeen || e.target !== canvas) return;
     rotYT = (0.5 - e.clientX / window.innerWidth) * Math.PI * 2.2;
     rotXT = (e.clientY / window.innerHeight - 0.5) * Math.PI * 1.1;
   });
+  overlay.addEventListener('pointerleave', function () { if (inkCursor) inkCursor.classList.remove('visible'); });
   overlay.addEventListener('pointerdown', function (e) {
     if (e.target === canvas && !handSeen) spreadT = 1.8;
   });
@@ -489,7 +533,28 @@
     var rdt = clock.getDelta();
     var dt = Math.min(rdt, 0.05), t = clock.elapsedTime;
     /* 自动巡展：每个展品停留约 4.4s，压轴全园沙盘停留 8.5s，然后循环（按真实时间走，低帧率不拖慢） */
-    if (autoOn) {
+    if (!revealDone) {
+      revealClock += rdt;
+      var brushIn = revealClock - 0.7;
+      if (brushIn > 0 && brushIn < 2.65) {
+        var revealP = Math.min(1, brushIn / 1.95), revealAngle = revealP * Math.PI * 4.2;
+        var revealCX = window.innerWidth * 0.5, revealCY = window.innerHeight * 0.55;
+        var revealR = Math.min(190, window.innerWidth * 0.16) * (0.72 + 0.28 * Math.sin(revealP * Math.PI));
+        inkRevealBrush.style.opacity = '1';
+        inkRevealBrush.style.left = (revealCX + Math.cos(revealAngle) * revealR) + 'px';
+        inkRevealBrush.style.top = (revealCY + Math.sin(revealAngle) * revealR) + 'px';
+        inkRevealBrush.style.transform = 'translate(-50%, -50%) rotate(' + (revealAngle + Math.PI * 0.25) + 'rad)';
+      } else if (revealClock >= 2.65) {
+        revealReady = true;
+        revealDone = true;
+        inkRevealBrush.style.opacity = '0';
+        applyPreset(PRESETS[cur]);
+        spread = 0.08;
+        spreadT = 1;
+        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '移动毛笔或鼠标，旋转观看墨中之形');
+      }
+    }
+    if (revealDone && autoOn) {
       autoT += rdt;
       var autoDur = (autoIdx === PRESETS.length - 1) ? 8.5 : 4.4;
       if (autoT >= autoDur) {
@@ -514,7 +579,8 @@
       pos[i3 + 2] = base[i3 + 2] * br;
       /* 墨分五色：浓淡偏移为主，微呼吸，积墨处自深 */
       var li2 = 0.3 + hueOff[k] * 0.9 + 0.05 * Math.sin(t * 2.2 + phase[k] * 2);
-      tmpC.setHSL((hueBase + hueOff[k] * 0.15 + 2) % 1, 0.42, Math.max(0.12, Math.min(0.55, li2)));
+      /* 墨分五色：低饱和冷灰蓝，不再是整齐的同色蓝点。 */
+      tmpC.setHSL((hueBase + hueOff[k] * 0.04 + 2) % 1, 0.12 + Math.abs(hueOff[k]) * 0.22, Math.max(0.1, Math.min(0.48, li2)));
       col[i3] = tmpC.r; col[i3 + 1] = tmpC.g; col[i3 + 2] = tmpC.b;
     }
     geo.attributes.position.needsUpdate = true;

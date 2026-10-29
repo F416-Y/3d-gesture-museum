@@ -139,6 +139,60 @@
   align-items: center;
   justify-content: center;
   background: #0b0908;
+  --ink-origin-x: 50vw;
+  --ink-origin-y: 50vh;
+  clip-path: circle(0 at var(--ink-origin-x) var(--ink-origin-y));
+  overflow: hidden;
+}
+
+/* 点击入口后，先从入口圆心扩散一层不规则墨晕，再露出穿画视频。 */
+.ink-video-layer.is-opening {
+  animation: ink-layer-open 1.35s cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+.ink-video-layer.is-opening::before,
+.ink-video-layer.is-opening::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: var(--ink-origin-x);
+  top: var(--ink-origin-y);
+  width: 18vmax;
+  height: 18vmax;
+  border-radius: 44% 56% 52% 48%;
+  transform: translate(-50%, -50%) scale(0.08) rotate(-18deg);
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  background:
+    radial-gradient(ellipse at 42% 38%, rgba(8, 8, 7, 0.96) 0 22%, rgba(31, 29, 25, 0.76) 43%, transparent 70%),
+    radial-gradient(ellipse at 67% 62%, rgba(11, 10, 9, 0.74), transparent 66%);
+  filter: blur(5px);
+  animation: ink-bloom 1.35s cubic-bezier(0.18, 0.72, 0.18, 1) both;
+}
+
+.ink-video-layer.is-opening::after {
+  z-index: 3;
+  width: 9vmax;
+  height: 9vmax;
+  opacity: 0.72;
+  filter: blur(2px);
+  animation-delay: 90ms;
+  animation-duration: 1.15s;
+  background:
+    radial-gradient(ellipse at 36% 40%, rgba(245, 241, 232, 0.42) 0 10%, transparent 37%),
+    radial-gradient(ellipse at 62% 58%, rgba(6, 6, 5, 0.9), transparent 68%);
+}
+
+@keyframes ink-layer-open {
+  0% { clip-path: circle(0 at var(--ink-origin-x) var(--ink-origin-y)); }
+  66% { clip-path: circle(62vmax at var(--ink-origin-x) var(--ink-origin-y)); }
+  100% { clip-path: circle(145vmax at var(--ink-origin-x) var(--ink-origin-y)); }
+}
+
+@keyframes ink-bloom {
+  0% { opacity: 0.98; transform: translate(-50%, -50%) scale(0.08) rotate(-18deg); }
+  42% { opacity: 0.84; transform: translate(-50%, -50%) scale(3.8) rotate(18deg); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(15) rotate(52deg); }
 }
 
 .ink-transition-video {
@@ -257,6 +311,8 @@
   justify-content: center;
   gap: 34px;
   padding: 48px 32px 36px;
+  animation: none;
+  opacity: 1;
   background:
     radial-gradient(ellipse at 18% 12%, rgba(28, 26, 23, 0.14), transparent 56%),
     radial-gradient(ellipse at 84% 86%, rgba(46, 61, 71, 0.16), transparent 60%),

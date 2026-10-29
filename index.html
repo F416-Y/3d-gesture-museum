@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>云间入墨 · 手势交互数字博物馆</title>
-<meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
+<title>云间入墨——中国传统绘画数字美术馆</title>
+<meta name="description" content="云间入墨——中国传统绘画数字美术馆。以手势交互漫游园区、进入画境并欣赏中国传统绘画。">
 <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/intro.css">
   <link rel="stylesheet" href="./css/ink-worlds.css">
 <!--
   ============================================================
-  云间入墨 CloudInk Art Museum
+  云间入墨——中国传统绘画数字美术馆
   前端 3D 手势交互博物馆 · 美术鉴赏 × 软件工程
   ------------------------------------------------------------
   脚本加载顺序（依赖顺序，不可调换）：
@@ -32,15 +32,24 @@
 <div id="intro">
   <canvas id="introCanvas"></canvas>
   <div id="introTitle">
+    <span class="intro-kicker">云间入墨 · DIGITAL MUSEUM</span>
     <h1>云间入墨</h1>
+    <p>中国传统绘画数字美术馆 · 手势入境</p>
+  </div>
+  <div id="introMark" aria-label="云间入墨标志">
+    <img src="./assets/ui/yunjian-logo.png" alt="" />
+  </div>
+  <div id="introNote" aria-hidden="true">
+    <span>山水</span><i></i><span>花鸟</span><i></i><span>人物</span><i></i><span>书斋</span><i></i><span>文创</span>
   </div>
   <div id="introPanel">
-    <label>基色 <input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
-    <label>密度 <input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
+    <label><span>墨色</span><input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
+    <label><span>墨点</span><input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
   </div>
-  <div id="introCamWrap" aria-label="摄像头实时画面，可拖动右下角调整大小">
-    <video id="introVideo" autoplay muted playsinline></video>
-    <div id="introCamTag">摄像头 · 手势追踪（右下角拖拽调大小）</div>
+  <div id="introHint">拖动以转动 · 按住让墨色散开</div>
+  <div id="inkRevealBrush" aria-hidden="true"><img src="./assets/ui/brush-cursor.svg" alt="" /></div>
+  <div id="inkCursor" aria-hidden="true">
+    <img src="./assets/ui/brush-cursor.svg" alt="" />
   </div>
   <div id="introBR">
     <button id="introFull" aria-label="全屏切换">全屏</button>
@@ -55,10 +64,12 @@
   <!-- ===== 顶部标题（朱砂印章式签名元素） ===== -->
   <header id="topbar" class="topbar hidden">
     <div class="brand">
-      <span class="brand-seal">云间<br>入墨</span>
+      <span class="brand-seal" aria-label="云间入墨标志">
+        <img src="./assets/ui/yunjian-logo.png" alt="" />
+      </span>
       <div class="brand-text">
         <h1>云间入墨</h1>
-        <p>CloudInk Art Museum · 手势交互数字博物馆</p>
+        <p><span>中国传统绘画数字美术馆</span><i>·</i><strong>手势交互</strong></p>
       </div>
     </div>
     <div id="hall-label" class="hall-label">前庭 · 园区</div>
@@ -66,14 +77,27 @@
 
   <!-- ===== 左下：操作说明 ===== -->
   <aside id="help" class="help hidden">
-    <h3>手势操作</h3>
+    <div class="help-heading">
+      <h3>手势导览</h3>
+      <span>GESTURE GUIDE</span>
+    </div>
+    <p class="help-lead">伸手漫游，靠近后再确认</p>
     <ul>
-      <li><b>张开手掌</b>　向前漫游</li>
-      <li><b>握拳</b>　　　向后退</li>
-      <li><b>食指左右</b>　转向</li>
-      <li><b>捏合两指 · 三指张开</b>　查看 / 关闭展品</li>
+      <li><span class="help-gesture"><i>01</i><b>张开手掌</b></span><span>向前漫游</span></li>
+      <li><span class="help-gesture"><i>02</i><b>握拳</b></span><span>向后退</span></li>
+      <li><span class="help-gesture"><i>03</i><b>食指左右</b></span><span>转向</span></li>
+      <li><span class="help-gesture"><i>04</i><b>捏合 · 三指张开</b></span><span>查看 / 关闭</span></li>
     </ul>
-    <p class="help-key">键盘备选：W/S 前进后退 · A/D 转向 · E 查看 · Q 关闭 · R 重置视角 · V 全景 · T 第三人称 · 左键拖动转向</p>
+    <div class="help-key" aria-label="键盘备选操作">
+      <b class="help-key-title">键盘备选</b>
+      <span class="key-chip"><kbd>W</kbd><kbd>S</kbd><em>前进 · 后退</em></span>
+      <span class="key-chip"><kbd>A</kbd><kbd>D</kbd><em>转向</em></span>
+      <span class="key-chip"><kbd>E</kbd><em>查看</em></span>
+      <span class="key-chip"><kbd>Q</kbd><em>关闭</em></span>
+      <span class="key-chip"><kbd>R</kbd><em>重置</em></span>
+      <span class="key-chip"><kbd>V</kbd><em>全景</em></span>
+      <span class="key-chip"><kbd>T</kbd><em>第三人称</em></span>
+    </div>
   </aside>
 
   <!-- ===== 右下：工具栏 ===== -->
@@ -148,7 +172,7 @@
   <script src="./js/gesture.js"></script>
   <script src="./js/exhibit.js"></script>
   <script src="./js/ui.js"></script>
-  <script src="./js/ink-worlds.js"></script>
+  <script src="./js/ink-worlds.js?v=20261028-h264"></script>
   <script src="./js/main.js"></script>
   <!-- Vue 入口（Vite 模块，最后加载，不干扰上方引擎脚本） -->
   <script type="module" src="/src/main.js"></script>
