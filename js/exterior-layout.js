@@ -960,11 +960,18 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 外墙一周（北墙 z=-40 一线直墙——原中央 13m 外凸北门楼已整体拆除； ---------- *
    * ---------- 南墙中央内凹两级形成主入口外广场，x ±50 / z ±40 为外包络） ---------- */
   function buildBoundary() {
-    /* 西墙、东墙：直墙 */
+    /* 西墙直墙；东墙在人物与书斋之间为溪流留水口。 */
     wallRun(-50, -40, -50, 40);
-    wallRun(50, -40, 50, 40);
-    /* 北墙：一线直墙 z=-40（北门楼已整体拆除，中央 13m 外凸部随之取消） */
-    wallRun(-50, -40, 50, -40);
+    wallRun(50, -40, 50, -3.5);
+    wallRun(50, 3.5, 50, 40);
+    /* 北墙在山水与花鸟之间为溪流留水口。 */
+    wallRun(-50, -40, -25, -40);
+    wallRun(-18, -40, 50, -40);
+    /* 两处墙顶横梁连贯，水从下方流出。 */
+    box(7, 0.32, 0.58, M.paper, -21.5, 2.02, -40);
+    box(7, 0.08, 0.76, M.tile, -21.5, 2.25, -40);
+    box(0.58, 0.32, 7, M.paper, 50, 2.02, 0);
+    box(0.76, 0.08, 7, M.tile, 50, 2.25, 0);
     /* 南墙：角段 z=40（x ±26~±50）→ 内折 → 中段 z=36（x ±11~±26）→ 内折，中央 x±11 开口（序厅大门） */
     wallRun(26, 40, 50, 40);
     wallRun(26, 40, 26, 36);
@@ -1601,10 +1608,16 @@ window.MuseumExteriorLayout = (function () {
     }, undefined, function () { buildCentralArchBridge(); });
   }
 
-  /* ---------- 中心庭（中心湖约 16×8m，中心坐标 0,-2.2） ---------- */
+  /* ---------- 中心庭（改为穿园小溪，桥位仍在 0,-2.2） ---------- */
   function buildZhongxinCourt() {
-    /* 中央庭院只保留一块特别大的水池；删除亭子、池中建筑、草坪内景与内部连廊。 */
-    irregularPond(0, -2.2, 16.0, 8.0, 55);
+    /* 花鸟与山水之间的空地 → 桥下 → 人物与书斋之间的空地。 */
+    windingStream([
+      [-21.5, -44.0], [-21.5, -37.1], [-21.0, -30.0], [-20.0, -22.5], [-16.4, -18.5],
+      [-11.9, -13.5], [-6.5, -8.6], [0.0, -2.2], [7.1, 0.8],
+      [14.2, 2.9], [20.8, 4.4], [26.2, 5.2], [29.0, 3.6],
+      [35.0, 2.0], [42.0, 0.8], [47.2, 0.0], [55.0, -1.2]
+    ], 3.2, 55);
+    if (typeof location !== 'undefined' && /(^|[?&])streamGuide=1(?:&|$)/.test(location.search)) drawStreamRouteGuides();
     loadCentralArchBridge();
     return;
     /* 周边碎石广场 */
@@ -1928,6 +1941,76 @@ window.MuseumExteriorLayout = (function () {
     }
   }
 
+  /* ---------- 临时溪流路线校验线：?streamGuide=1 才显示 ---------- */
+  function drawStreamRouteGuides() {
+    var guideGroup = new THREE.Group(); guideGroup.name = 'stream-route-guides'; S.scene.add(guideGroup);
+    var redRoute = [
+      [-22.0, -44.0], [-22.0, -37.0], [-21.5, -30.0], [-20.5, -22.0], [-17.0, -18.0],
+      [-12.5, -13.0], [-7.0, -8.2], [0.0, -2.2], [7.0, 0.4],
+      [14.0, 2.5], [20.5, 4.0], [26.0, 4.8], [29.0, 3.2],
+      [35.0, 1.6], [42.0, 0.4], [47.2, -0.4], [55.0, -1.6]
+    ];
+    var blueRoute = [
+      [-21.0, -44.0], [-21.0, -37.2], [-20.5, -30.2], [-19.0, -23.0], [-15.8, -19.0],
+      [-11.2, -14.0], [-6.0, -9.0], [0.0, -2.2], [7.2, 1.2],
+      [14.5, 3.3], [21.0, 4.8], [26.5, 5.5], [29.3, 4.0],
+      [35.2, 2.4], [42.2, 1.2], [47.2, 0.4], [55.0, -0.8]
+    ];
+    function addGuide(points, color) {
+      var vertices = [], i;
+      for (i = 0; i < points.length; i++) vertices.push(points[i][0], 0.32, points[i][1]);
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      var line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.92 }));
+      line.renderOrder = 20; guideGroup.add(line);
+    }
+    addGuide(redRoute, 0xd13b32);
+    addGuide(blueRoute, 0x1677d2);
+  }
+
+  /* ---------- 穿园小溪：可控宽度的连续水道，桥下溪宽约 3.2m ---------- */
+  function windingStream(points, width, seed) {
+    var i, j, half = width / 2, bank = half + 0.62;
+    var waterLeft = [], waterRight = [], bedLeft = [], bedRight = [];
+    function offsetPoint(index, distance) {
+      var p = points[index];
+      var prev = points[Math.max(0, index - 1)], next = points[Math.min(points.length - 1, index + 1)];
+      var dx = next[0] - prev[0], dz = next[1] - prev[1], len = Math.sqrt(dx * dx + dz * dz) || 1;
+      return [p[0] - dz / len * distance, p[1] + dx / len * distance];
+    }
+    for (i = 0; i < points.length; i++) {
+      waterLeft.push(offsetPoint(i, half)); waterRight.push(offsetPoint(i, -half));
+      bedLeft.push(offsetPoint(i, bank)); bedRight.push(offsetPoint(i, -bank));
+    }
+    function shapeFrom(left, right) {
+      var shape = new THREE.Shape();
+      shape.moveTo(left[0][0], -left[0][1]);
+      for (j = 1; j < left.length; j++) shape.lineTo(left[j][0], -left[j][1]);
+      for (j = right.length - 1; j >= 0; j--) shape.lineTo(right[j][0], -right[j][1]);
+      shape.closePath();
+      return shape;
+    }
+    var bed = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(bedLeft, bedRight)), M.ink);
+    bed.rotation.x = -Math.PI / 2; bed.position.y = -0.14; bed.receiveShadow = true; S.scene.add(bed);
+    var water = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(waterLeft, waterRight)), M.water);
+    water.rotation.x = -Math.PI / 2; water.position.y = 0.06; water.receiveShadow = true; S.scene.add(water);
+    var s = seed >>> 0;
+    for (i = 0; i < points.length - 1; i++) {
+      var a = points[i], b = points[i + 1], dx = b[0] - a[0], dz = b[1] - a[1];
+      var len = Math.sqrt(dx * dx + dz * dz) || 1, nx = -dz / len, nz = dx / len;
+      var count = Math.max(2, Math.round(len / 1.6));
+      for (j = 0; j <= count; j++) {
+        var t = j / count, cx = a[0] + dx * t, cz = a[1] + dz * t;
+        s = (s * 1664525 + 1013904223) >>> 0;
+        var side = (j + i) % 2 ? 1 : -1, jitter = ((s % 100) / 100 - 0.5) * 0.18;
+        var stone = new THREE.Mesh(blobGeo(0.16 + (s % 100) / 100 * 0.12, 0.22, 0.42, seed + i * 19 + j), M.rock);
+        stone.position.set(cx + nx * (bank + jitter) * side, 0.12, cz + nz * (bank + jitter) * side);
+        stone.rotation.y = Math.atan2(dz, dx) + (s % 100) / 100; stone.castShadow = stone.receiveShadow = true;
+        S.scene.add(stone);
+      }
+    }
+  }
+
   /* ---------- 中央自然曲池：非规则池岸，中心为 (0,-2.2)，约 16×8m ---------- */
   function irregularPond(cx, cz, rx, rz, seed) {
     var s = seed >>> 0, i, n = 32, points = [], bedPoints = [], shore = [];
@@ -2087,16 +2170,8 @@ window.MuseumExteriorLayout = (function () {
     shrub(cx - 1.1 * s2, cz - 0.55 * s2, 0.4, seed + 4);
   }
 
-  /* ---------- 空旷草地填充：西北枯山水回廊院 / 东北石景 / 西南与东南沿墙山水带（水景收进中心庭院，边缘不再设池） ---------- */
+  /* ---------- 空旷草地填充：东北石景 / 西南与东南沿墙山水带 ---------- */
   function buildLandscapeFill() {
-    /* 西北角：枯山水石床（约 9×7m）+ 西/北 L 形曲廊绕床赏石，两端敞口不收门楼 */
-    dryBed(-18, -28.8, 4.6, 3.4, 601);
-    corridor(-25, -24.2, -25, -32.35);
-    corridor(-23.1, -34, -13.5, -34);
-    cornerPavilion(-25, -34); pavPatch(-25, -34);   // 枯山水曲廊转角亭：两段廊顶插檐收进亭檐，不再交叠
-    rockery(-14.6, -24.6, 1.3, 611);          // 床东南岸山石群
-    plantTree(-13.2, -26.2, 1.2, 615);        // 床东岸大树
-    plantTree(-21.5, -24.3, 1.1, 616);        // 床南岸树
     /* 东北角：山石群 + 双树（原水池已撤，留草坪疏林） */
     rockery(18.8, -25.8, 1.3, 612);
     plantTree(26.2, -32.6, 1.1, 617);
@@ -2277,11 +2352,11 @@ window.MuseumExteriorLayout = (function () {
     pave(9.5, -18.5, 29, -13.5);     /* 东长廊通道（人物馆方向） */
     var x, z;
     for (x = -44; x <= 44; x += 8) {
-      if (Math.abs(x) > 9) plantTree(x, -38.2, 0.95, 400 + x);
+      if (Math.abs(x) > 9 && x !== -20) plantTree(x, -38.2, 0.95, 400 + x);
     }
     for (z = -34; z <= 34; z += 8) {
       plantTree(-48, z, 0.9, 500 + z);
-      plantTree(48, z, 0.9, 600 + z);
+      if (z !== -2) plantTree(48, z, 0.9, 600 + z);
     }
     plantTree(-15.8, 39.0, 1.1, 701);   /* 前墙外西侧树：外移让开西马头墙（原 -14.5 时树冠咬墙头） */
     plantTree(15.8, 39.0, 1.1, 702);    /* 前墙外东侧树：同理 */
@@ -2306,7 +2381,6 @@ window.MuseumExteriorLayout = (function () {
     bananaPlant(19.2, -21.0, 237, S.scene, 0.90);
     bananaPlant(-19.6, -20.4, 238, S.scene, 0.88);
     /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
-    deadTrunk(-22.0, -28.0, 241, S.scene, 0.9);
     deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
     deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
     deadTrunk(30.5, 42.8, 244, S.scene, 0.7);
@@ -2493,7 +2567,7 @@ window.MuseumExteriorLayout = (function () {
     buildAxisScreenWall();    // 序厅后方挡墙
     buildCorridors();         // 只保留中轴画廊
     buildPocketGardens();
-    buildLandscapeFill();     // 空旷草地：曲池、曲廊、山石组
+    buildLandscapeFill();     // 空旷草地：山石组与沿墙绿化
     return { waters: WATERS };
   }
 

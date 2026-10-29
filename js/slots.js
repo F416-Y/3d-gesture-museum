@@ -130,7 +130,8 @@ window.MuseumExteriorSlots = {
       load('dead-trunk').then(function (tpl) {
         if (!tpl) return;
         slots.deadTrunk.forEach(function (d) {
-          var g = instantiate(tpl, { mode: 'h', size: 3.0 * d.k, x: d.x, y: 0, z: d.z, ry: d.seed * 0.9 });
+          // 枯木是横向资产，按高度缩放会把长度放大到失真；最大边长控制在约 3m。
+          var g = instantiate(tpl, { mode: 'max', size: 3.0 * d.k, x: d.x, y: 0, z: d.z, ry: d.seed * 0.9 });
           if (g) { d.group.visible = false; mark('枯木'); }
         });
         report();
