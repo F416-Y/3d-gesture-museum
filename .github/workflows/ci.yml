@@ -19,8 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # PR 只检查本次变更，需要 merge commit 的基线父提交。
+          # 保留 PR merge commit；守卫步骤再显式获取事件中的基线 SHA。
           fetch-depth: 2
+      - name: 获取 PR 基线
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -79,8 +84,9 @@ jobs:
         run: |
           # 例外：MediaPipe 离线推理要把 wasm 与手部模型随仓库分发（Apache-2.0）。
           ALLOW='^(js/vendor/mediapipe/|assets/models/hand_landmarker\.task$)'
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            FILES=$(git diff --name-only --diff-filter=AM "$GITHUB_SHA^1" "$GITHUB_SHA")
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "$BASE_SHA" ] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            # 直接比较基线树和 PR 合并树，不依赖 shallow checkout 的父提交历史。
+            FILES=$(git diff --name-only --diff-filter=AM "$BASE_SHA" "$GITHUB_SHA")
           elif [ -n "$BASE_SHA" ] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
             FILES=$(git diff --name-only --diff-filter=AM "$BASE_SHA...HEAD")
           elif git rev-parse HEAD^ >/dev/null 2>&1; then
