@@ -77,8 +77,37 @@ window.MuseumScene = (function () {
         ctx.fillStyle = "#24355c"; fillRect(ctx, 0, 0, W, H);
         drawStarry(ctx, W, H);
         break;
+      /* 组员6 补齐：以下 8 件既无 jpg 图源、原先也没有 case，
+         会落到 default 的纯米灰底，看上去就是一块空白画板。
+         这里按题材给程序化画芯：三件行书用竖向笔迹，五件茶事/人物用场景构图。 */
+      case "lantingjixu":    // 兰亭集序（神龙本）· 行书
+        drawCalligraphy(ctx, W, H, { paper: "#f0e7d2", cols: 7, size: 27, seed: 1031, ink: "rgba(26,22,18,0.88)" });
+        break;
+      case "jizhiwengao":    // 祭侄文稿 · 行书，稿本有涂改
+        drawCalligraphy(ctx, W, H, { paper: "#eee4cd", cols: 6, size: 26, seed: 2007, ink: "rgba(30,25,20,0.9)", smudge: true });
+        break;
+      case "hanshitie":      // 黄州寒食诗帖 · 行书，墨色枯润变化
+        drawCalligraphy(ctx, W, H, { paper: "#efe7d0", cols: 6, size: 26, seed: 3121, ink: "rgba(36,30,24,0.84)", dry: true });
+        break;
+      case "tingqintu":      // 听琴图 · 松下设琴，三人听
+        drawTeaGathering(ctx, W, H, { seed: 4177, pine: true, scene: "qin" });
+        break;
+      case "huishanchahui":  // 惠山茶会图 · 泉畔茶会
+        drawTeaGathering(ctx, W, H, { seed: 5211, spring: true, scene: "tea" });
+        break;
+      case "shimingtu":      // 事茗图 · 山居待客煮茶
+        drawTeaGathering(ctx, W, H, { seed: 6233, house: true, scene: "tea" });
+        break;
+      case "pinchatu":       // 品茶图 · 松下对坐品饮
+        drawTeaGathering(ctx, W, H, { seed: 7211, pine: true, scene: "tea" });
+        break;
+      case "luyupengchatu":  // 陆羽烹茶图 · 茶炉烹煮
+        drawTeaGathering(ctx, W, H, { seed: 8303, stove: true, scene: "tea" });
+        break;
       default:
-        ctx.fillStyle = "#d8d2c4"; fillRect(ctx, 0, 0, W, H);
+        /* 兜底也要有画面：淡青绿山水，避免再出现整块空地 */
+        ctx.fillStyle = "#dfe4d8"; fillRect(ctx, 0, 0, W, H);
+        drawInkMountains(ctx, W, H);
     }
 
     // 题签：右上竖排（新中式画作装裱习惯）
@@ -249,6 +278,241 @@ window.MuseumScene = (function () {
     ctx.fill();
   }
 
+  /* ---------- 行书书法画芯 ----------
+   * 用不规则短笔画拼出竖排字列，模拟行书的提按与牵丝。
+   * opt: { paper 纸色, cols 列数, size 字距, seed 种子, ink 墨色,
+   *        smudge 涂改稿（祭侄文稿）, dry 枯笔（寒食帖） } */
+  function drawCalligraphy(ctx, W, H, opt) {
+    opt = opt || {};
+    var pad = 26;
+    var paper = opt.paper || "#efe6d0";
+    var ink = opt.ink || "rgba(28,24,20,0.86)";
+    var cols = opt.cols || 6;
+    var size = opt.size || 27;
+
+    /* 纸底 + 纤维纹 */
+    ctx.fillStyle = paper;
+    fillRect(ctx, 0, 0, W, H);
+    ctx.strokeStyle = "rgba(158,142,110,0.13)";
+    ctx.lineWidth = 1;
+    for (var f = 0; f < 24; f++) {
+      ctx.beginPath();
+      ctx.moveTo(0, f * (H / 24) + (f % 3) * 0.8);
+      ctx.lineTo(W, f * (H / 24) + (f % 5) * 0.6);
+      ctx.stroke();
+    }
+
+    var s = (opt.seed || 7) >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+
+    /* 竖排列：每列自上而下写字，字由 2~5 笔组成 */
+    var colW = (W - pad * 2) / cols;
+    var rows = Math.floor((H - pad * 2) / size);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (var c = 0; c < cols; c++) {
+      var cx = pad + colW * c + colW * 0.5;
+      for (var r = 0; r < rows; r++) {
+        if (rnd() < 0.07) continue;          /* 偶尔留白，避免过于规整 */
+        var cy = pad + size * (r + 0.55);
+        var strokes = 2 + Math.floor(rnd() * 4);
+        var dryHere = opt.dry && rnd() < 0.35;
+        for (var k = 0; k < strokes; k++) {
+          ctx.strokeStyle = ink;
+          ctx.globalAlpha = dryHere ? 0.42 + rnd() * 0.2 : 0.72 + rnd() * 0.26;
+          ctx.lineWidth = (dryHere ? 1.0 : 1.5) + rnd() * 1.7;
+          var x0 = cx - 9 + rnd() * 6;
+          var y0 = cy - 10 + rnd() * 7;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.bezierCurveTo(
+            x0 + (rnd() - 0.15) * 13, y0 + 4 + rnd() * 7,
+            x0 - 3 + rnd() * 15, y0 + 11 + rnd() * 7,
+            x0 + (rnd() - 0.4) * 11, y0 + 17 + rnd() * 5
+          );
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+      /* 稿本涂改：在字列上压一道半透明粗线，模拟涂掉的字 */
+      if (opt.smudge && rnd() < 0.35) {
+        var sy = pad + size * (1 + Math.floor(rnd() * (rows - 2)));
+        ctx.strokeStyle = "rgba(30,25,20,0.5)";
+        ctx.lineWidth = 7 + rnd() * 6;
+        ctx.beginPath();
+        ctx.moveTo(cx - colW * 0.3, sy);
+        ctx.lineTo(cx + colW * 0.3, sy + size * 0.6);
+        ctx.stroke();
+      }
+    }
+
+    /* 朱印：主印 + 右下角小印 */
+    ctx.fillStyle = "rgba(168,58,44,0.82)";
+    ctx.fillRect(W - pad - 26, H - pad - 30, 22, 22);
+    ctx.fillStyle = paper;
+    ctx.font = "13px 'SimSun','Songti SC',serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("印", W - pad - 15, H - pad - 19);
+    ctx.fillStyle = "rgba(168,58,44,0.62)";
+    ctx.fillRect(pad + 4, pad + 2, 13, 13);
+    ctx.textBaseline = "alphabetic";
+  }
+
+  /* ---------- 茶事 / 人物场景画芯 ----------
+   * 远山 + 地面 + 树石 + 围坐人物，按 opt 决定加松、泉、屋、炉。
+   * opt: { seed, pine 松树, spring 泉, house 屋, stove 茶炉, scene 'tea'|'qin' } */
+  function drawTeaGathering(ctx, W, H, opt) {
+    opt = opt || {};
+    var s = (opt.seed || 11) >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+
+    /* 天与纸底 */
+    ctx.fillStyle = "#e8e0c9";
+    fillRect(ctx, 0, 0, W, H);
+
+    /* 远山：两层淡墨 */
+    ctx.fillStyle = "rgba(120,134,116,0.34)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.58);
+    for (var x = 0; x <= W; x += 20) {
+      ctx.lineTo(x, H * 0.58 - Math.sin(x * 0.011 + 1.3) * 26 - Math.sin(x * 0.031) * 12);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(88,104,86,0.42)";
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.68);
+    for (var x2 = 0; x2 <= W; x2 += 16) {
+      ctx.lineTo(x2, H * 0.68 - Math.sin(x2 * 0.017 + 0.4) * 18);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+
+    /* 地面 */
+    ctx.fillStyle = "#cdc6ae";
+    fillRect(ctx, 0, H * 0.74, W, H * 0.26);
+
+    /* 泉：几道横向水纹 */
+    if (opt.spring) {
+      ctx.strokeStyle = "rgba(126,160,170,0.55)";
+      ctx.lineWidth = 2.5;
+      for (var w2 = 0; w2 < 4; w2++) {
+        ctx.beginPath();
+        ctx.moveTo(W * 0.06, H * 0.80 + w2 * 9);
+        ctx.bezierCurveTo(W * 0.3, H * 0.78 + w2 * 9, W * 0.55, H * 0.83 + w2 * 9, W * 0.72, H * 0.80 + w2 * 9);
+        ctx.stroke();
+      }
+    }
+
+    /* 屋舍 */
+    if (opt.house) {
+      ctx.fillStyle = "#8d6c4e";
+      ctx.beginPath();
+      ctx.moveTo(W * 0.70, H * 0.62);
+      ctx.lineTo(W * 0.88, H * 0.62);
+      ctx.lineTo(W * 0.86, H * 0.76);
+      ctx.lineTo(W * 0.72, H * 0.76);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#5b4a3a";
+      ctx.beginPath();
+      ctx.moveTo(W * 0.67, H * 0.62);
+      ctx.lineTo(W * 0.79, H * 0.53);
+      ctx.lineTo(W * 0.91, H * 0.62);
+      ctx.closePath(); ctx.fill();
+    }
+
+    /* 松树：主干 + 三层横展枝 */
+    var pineX = opt.pine ? [W * 0.14, W * 0.86] : [W * 0.16];
+    for (var pi = 0; pi < pineX.length; pi++) {
+      var px = pineX[pi];
+      ctx.strokeStyle = "#4b3b2a";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(px, H * 0.78);
+      ctx.bezierCurveTo(px + 6, H * 0.6, px - 8, H * 0.44, px + 2, H * 0.3);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(58,76,54,0.8)";
+      ctx.lineWidth = 3;
+      for (var b = 0; b < 3; b++) {
+        var by = H * (0.36 + b * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(px - 2, by);
+        ctx.quadraticCurveTo(px - 34, by - 12, px - 56, by - 4);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px + 2, by + 4);
+        ctx.quadraticCurveTo(px + 34, by - 8, px + 58, by - 2);
+        ctx.stroke();
+      }
+    }
+
+    /* 人物：围坐，中间一张矮案 */
+    var seatY = H * 0.79;
+    var persons = opt.scene === "qin" ? [[-0.22, 0], [-0.02, 1], [0.18, -1]] : [[-0.26, 1], [-0.06, 0], [0.17, 1], [0.32, -1]];
+    for (var n = 0; n < persons.length; n++) {
+      var cx2 = W * (0.5 + persons[n][0]);
+      var dirn = persons[n][1];
+      ctx.fillStyle = n === 0 ? "#5d6b58" : "#6f7a63";
+      /* 身 */
+      ctx.beginPath();
+      ctx.moveTo(cx2 - 11, seatY);
+      ctx.lineTo(cx2 + 11, seatY);
+      ctx.lineTo(cx2 + 8, seatY - 30);
+      ctx.lineTo(cx2 - 8, seatY - 30);
+      ctx.closePath(); ctx.fill();
+      /* 头 */
+      ctx.fillStyle = "#c9a37a";
+      ctx.beginPath();
+      ctx.arc(cx2 + dirn * 3, seatY - 36, 8, 0, Math.PI * 2);
+      ctx.fill();
+      /* 衣袖 */
+      ctx.strokeStyle = "rgba(80,92,72,0.75)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx2 - 10, seatY - 24);
+      ctx.quadraticCurveTo(cx2 - 18, seatY - 14, cx2 - 8, seatY - 8);
+      ctx.stroke();
+    }
+
+    /* 矮案与茶器 */
+    ctx.fillStyle = "#7a6248";
+    fillRect(ctx, W * 0.42, seatY - 14, W * 0.16, 6);
+    ctx.fillRect(ctx, W * 0.45, seatY - 8, 4, 8);
+    ctx.fillRect(ctx, W * 0.53, seatY - 8, 4, 8);
+    ctx.fillStyle = "#8fa08a";
+    ctx.beginPath();
+    ctx.arc(W * 0.47, seatY - 18, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(W * 0.52, seatY - 18, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* 茶炉：炉身 + 升起的烟 */
+    if (opt.stove) {
+      ctx.fillStyle = "#6b5a44";
+      ctx.beginPath();
+      ctx.arc(W * 0.66, seatY - 6, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(150,150,145,0.4)";
+      ctx.lineWidth = 2;
+      for (var sm = 0; sm < 3; sm++) {
+        ctx.beginPath();
+        ctx.moveTo(W * 0.66 + sm * 3 - 3, seatY - 16);
+        ctx.bezierCurveTo(W * 0.66 + sm * 4, seatY - 30, W * 0.66 - sm * 4, seatY - 44, W * 0.66 + sm * 3, seatY - 58);
+        ctx.stroke();
+      }
+    }
+
+    /* 琴：抚琴场景横置一条 */
+    if (opt.scene === "qin") {
+      ctx.fillStyle = "#5a4433";
+      ctx.save();
+      ctx.translate(W * 0.5, seatY - 20);
+      ctx.rotate(-0.06);
+      fillRect(ctx, -46, 0, 92, 7);
+      ctx.restore();
+    }
+  }
+
   /* 展品说明牌（小型立牌） */
   function drawSign(line1, line2) {
     var cv = makeCanvas(320, 180);
@@ -387,31 +651,20 @@ window.MuseumScene = (function () {
     }
     return cv.canvas;
   }
-  /* 木格花窗（新中式视觉关键元素，替换原来纯黑窗洞） */
-  function drawLattice() {
-    var cv = makeCanvas(256, 320);
+  /* 素窗纸：不含任何棂条格子与对角交叉。
+     用户要求墙上挂画附近不要再出现「田字格方框」和「十字木架」，
+     原来贴木格花窗的位置统一改用这张。 */
+  function drawPlainWindow() {
+    var cv = makeCanvas(128, 160);
     var ctx = cv.ctx;
-    ctx.fillStyle = "#17140f";
-    fillRect(ctx, 0, 0, 256, 320);
-    var warm = ctx.createRadialGradient(128, 150, 16, 128, 150, 190);
-    warm.addColorStop(0, "rgba(255,214,150,0.42)");
-    warm.addColorStop(1, "rgba(255,214,150,0.02)");
+    ctx.fillStyle = "#f3eee2";
+    fillRect(ctx, 0, 0, 128, 160);
+    /* 极淡的暖光晕，避免像一块死白板 */
+    var warm = ctx.createRadialGradient(64, 76, 12, 64, 76, 96);
+    warm.addColorStop(0, "rgba(255,242,214,0.55)");
+    warm.addColorStop(1, "rgba(255,242,214,0.06)");
     ctx.fillStyle = warm;
-    fillRect(ctx, 0, 0, 256, 320);
-    ctx.strokeStyle = "#7a5f46";
-    ctx.lineWidth = 8;
-    ctx.strokeRect(4, 4, 248, 312);
-    ctx.lineWidth = 5;
-    for (var i = 1; i <= 3; i++) {
-      ctx.beginPath(); ctx.moveTo(i * 64, 0); ctx.lineTo(i * 64, 320); ctx.stroke();
-    }
-    for (var j = 1; j <= 4; j++) {
-      ctx.beginPath(); ctx.moveTo(0, j * 64); ctx.lineTo(256, j * 64); ctx.stroke();
-    }
-    ctx.strokeStyle = "#8d6c4e";
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(256, 320); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(256, 0); ctx.lineTo(0, 320); ctx.stroke();
+    fillRect(ctx, 0, 0, 128, 160);
     return cv.canvas;
   }
 
@@ -954,7 +1207,7 @@ window.MuseumScene = (function () {
         buildBox(g, 0.18, wh + 0.24, th + 0.08, o.u + ow / 2 + 0.09, bodyY + sill + wh / 2, 0, brick);
         buildBox(g, ow + 0.36, 0.18, th + 0.08, o.u, bodyY + sill - 0.09, 0, brick);
         buildBox(g, ow + 0.36, 0.18, th + 0.08, o.u, bodyY + sill + wh + 0.09, 0, brick);
-        var pane = new _g.Mesh(new _g.PlaneGeometry(ow, wh), canvasMat(drawLattice(), { roughness: 0.55, side: _g.DoubleSide }));
+        var pane = new _g.Mesh(new _g.PlaneGeometry(ow, wh), canvasMat(drawPlainWindow(), { roughness: 0.55, side: _g.DoubleSide }));
         pane.position.set(o.u, bodyY + sill + wh / 2, th / 2 - 0.02);
         g.add(pane);
         var pane2 = pane.clone();
@@ -1089,7 +1342,7 @@ window.MuseumScene = (function () {
     buildBox(g, 10, WALL_TOP, TH, 7, WALL_TOP / 2, Z1, wallMat);
     buildBox(g, 4, WALL_TOP - 3.0, TH, 0, 3.0 + (WALL_TOP - 3.0) / 2, Z1, wallMat);
     // 南墙木格长窗（门洞两侧各一樘 2.2×2.4，落地，中心 x=±5.6）
-    var winMat = canvasMat(drawLattice(), { roughness: 0.55 });
+    var winMat = canvasMat(drawPlainWindow(), { roughness: 0.55 });
     [-5.6, 5.6].forEach(function (wx) {
       buildBox(g, 2.2, 2.4, 0.16, wx, FLOOR + 1.2, Z1 - 0.09, winMat);
     });
@@ -1344,14 +1597,29 @@ window.MuseumScene = (function () {
     art.castShadow = true;
     parent.add(art);
 
-    // 木框（四条）
+    /* 木框：上下左右四条细边框。
+       原先两次 addFrameBox 的深度参数写错了（横条深度给了 h+2t、竖条深度给了 w+2t），
+       两个薄片各自朝画里纵深贯穿，正视就是一根横条加一根竖条交叉的十字，
+       还会从画面前后伸出来。这里用一个 Group 统一旋转，四条边深度都只有 t。 */
     var frameMat = mat(0x6d5544, { roughness: 0.7 });
     var t = 0.07;
-    addFrameBox(parent, w + t * 2, t, h + t * 2, pos.x, pos.y, pos.z - 0.02, pos.ry, frameMat);
-    addFrameBox(parent, t, h + t * 2, w + t * 2, pos.x, pos.y, pos.z - 0.02, pos.ry, frameMat);
+    var fg = new _g.Group();
+    fg.position.set(pos.x, pos.y, pos.z);
+    fg.rotation.y = pos.ry || 0;
+    parent.add(fg);
+    function frameEdge(ew, eh, ox, oy) {
+      var m = new _g.Mesh(new _g.BoxGeometry(ew, eh, t), frameMat);
+      m.position.set(ox, oy, -0.03);
+      m.castShadow = true;
+      fg.add(m);
+    }
+    frameEdge(w + t * 2, t, 0, h / 2 + t / 2);          /* 上边 */
+    frameEdge(w + t * 2, t, 0, -h / 2 - t / 2);         /* 下边 */
+    frameEdge(t, h + t * 2, -w / 2 - t / 2, 0);         /* 左边 */
+    frameEdge(t, h + t * 2, w / 2 + t / 2, 0);          /* 右边 */
 
-    // 说明牌（画下）
-    addSign(parent, pos.x, pos.y - h / 2 - 0.4, pos.z, ex.title + " · " + ex.dynasty);
+    // 说明牌（画下）：传 pos.ry，让牌子与画面同轴；位置略往画内收，避免压到画框下沿
+    addSign(parent, pos.x, pos.y - h / 2 - 0.42, pos.z, ex.title + " · " + ex.dynasty, pos.ry || 0);
 
     // 射灯：必须显式设置 target 并把 target 加入场景图。
     // three.js 的 SpotLight 不设 target 时会一直照向世界原点 (0,0,0)——
@@ -1372,25 +1640,35 @@ window.MuseumScene = (function () {
     registerSpot({ exhibitId: exhibitId, x: pos.x, y: pos.y, z: pos.z, radius: 2.8 });
   }
 
-  function addFrameBox(parent, w, h, d, x, y, z, ry, m) {
-    var mesh = new _g.Mesh(new _g.BoxGeometry(w, h, d), m);
-    mesh.position.set(x, y, z - 0.03);
-    mesh.rotation.y = ry || 0;
-    parent.add(mesh);
-  }
-
   /* 说明牌 */
-  function addSign(parent, x, y, z, text) {
+  /* 展品说明牌：牌子 + 支杆 + 底座，整组随 ry 与画面同轴。
+     原实现没有 rotation.y，牌子永远朝 +z，朝东/朝西的墙上一律歪出画面；
+     牌面又和墙同一 z 值，杆子直接切进墙里。 */
+  function addSign(parent, x, y, z, text, ry) {
     text = String(text == null ? "" : text);
+    var r = ry || 0;
+    var g = new _g.Group();
+    g.position.set(x, y, z);
+    g.rotation.y = r;
+    parent.add(g);
+
+    /* 牌面沿画面法线前推 0.06，避免与墙面 z-fighting */
     var sign = new _g.Mesh(
       new _g.PlaneGeometry(1.15, 0.62),
       canvasMat(drawSign(text.split(" · ")[0], text.split(" · ")[1] || ""), { side: _g.DoubleSide })
     );
-    sign.position.set(x, y, z);
-    parent.add(sign);
-    var pole = new _g.Mesh(new _g.CylinderGeometry(0.025, 0.025, 0.4, 6), mat(0x3f3a35));
-    pole.position.set(x, y - 0.5, z);
-    parent.add(pole);
+    sign.position.set(0, 0, 0.06);
+    g.add(sign);
+
+    /* 支杆与底座也在这条法线上，不再嵌墙 */
+    var pole = new _g.Mesh(new _g.CylinderGeometry(0.025, 0.025, 0.5, 8), mat(0x3f3a35));
+    pole.position.set(0, -0.55, 0.06);
+    pole.castShadow = true;
+    g.add(pole);
+    var foot = new _g.Mesh(new _g.CylinderGeometry(0.12, 0.15, 0.045, 10), mat(0x3f3a35));
+    foot.position.set(0, -0.82, 0.06);
+    foot.castShadow = true;
+    g.add(foot);
   }
 
   /* 西侧连廊（文明对话厅） */
@@ -1917,7 +2195,7 @@ window.MuseumScene = (function () {
   }
 
   function buildPartLattice(parent, x, y, z, ry) {
-    var lattice = new _g.Mesh(new _g.PlaneGeometry(0.9, 0.9), canvasMat(drawLattice(), { roughness: 0.55 }));
+    var lattice = new _g.Mesh(new _g.PlaneGeometry(0.9, 0.9), canvasMat(drawPlainWindow(), { roughness: 0.55 }));
     lattice.position.set(x, y, z);
     lattice.rotation.y = ry;
     parent.add(lattice);
@@ -2172,20 +2450,30 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙挂画：左韩熙载、中洛神赋、右步辇图
-    addPainting(g, { x: -5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 3.4, 2.2, "hanxizai");
-    addPainting(g, { x: 0,   y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "luoshenfu");
-    addPainting(g, { x: 5.5, y: 2.55, z: -8.6, ry: 0, lamp: [0, 0.9] }, 2.2, 1.5, "buniantu");
-    buildPartHallTitle(g, "人物丹青", "观古鉴今 · 以画识人", 0, 4.0, -8.5, 0);
+    /* 挂画分散到三面墙，避免全部挤在北墙。
+       厅 18×18，门在西墙中间（宽 3m，占 z −1.5~1.5），门两侧仍可挂。
+         北墙 z=-8.72  三幅居中
+         东墙 x= 8.72  三个立轴（z −3.6 / 0 / 3.6）
+         南墙 z= 8.72  两幅
+         西墙 x=-8.72  门两侧各一幅 */
+    addPainting(g, { x: -3.2, y: 2.55, z: -8.72, ry: 0, lamp: [0, 0.9] }, 2.6, 1.8, "hanxizai");
+    addPainting(g, { x: 0,    y: 2.55, z: -8.72, ry: 0, lamp: [0, 0.9] }, 2.6, 1.8, "luoshenfu");
+    addPainting(g, { x: 3.2,  y: 2.55, z: -8.72, ry: 0, lamp: [0, 0.9] }, 2.6, 1.8, "buniantu");
+    buildPartHallTitle(g, "人物丹青", "观古鉴今 · 以画识人", 0, 4.0, -8.6, 0);
 
-    // 中央将军俑
-    addPedestalLocal(g, 0, F, 0, "jiangjunyong", "将军俑 · 秦");
+    addPainting(g, { x: -3.0, y: 2.5, z: 8.72, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "molantu");
+    addPainting(g, { x: 3.0,  y: 2.5, z: 8.72, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "wuniutu");
 
-    // 侧墙立轴书法
-    buildPartVerticalScroll(g, -8.4, 2.4, -3.0, Math.PI / 2);
-    buildPartVerticalScroll(g, -8.4, 2.4, -9.0, Math.PI / 2);
-    buildPartVerticalScroll(g, 8.4, 2.4, -3.0, -Math.PI / 2);
-    buildPartVerticalScroll(g, 8.4, 2.4, -9.0, -Math.PI / 2);
+    addPainting(g, { x: -8.72, y: 2.5, z: -5.4, ry: Math.PI / 2, lamp: [0.9, 0] }, 2.0, 1.4, "monalisa");
+    addPainting(g, { x: -8.72, y: 2.5, z: 5.4,  ry: Math.PI / 2, lamp: [0.9, 0] }, 2.0, 1.4, "starrynight");
+
+    buildPartVerticalScroll(g, 8.72, 2.4, -3.6, -Math.PI / 2, "xieshengzhenqintu");
+    buildPartVerticalScroll(g, 8.72, 2.4, 0.0,  -Math.PI / 2, "qianlijiangshan");
+    buildPartVerticalScroll(g, 8.72, 2.4, 3.6,  -Math.PI / 2, "xishanxinglvtu");
+
+    // 中央两座对照雕塑：左西方维纳斯、右中国将军俑，各配方形石基座与铭牌
+    addPedestalLocal(g, -2.2, F, 0.4, "venus", "西方雕塑");
+    addPedestalLocal(g, 2.2, F, 0.4, "jiangjunyong", "中国人物雕塑");
 
     // 条凳与盆栽
     buildPartBench(g, -5.5, -7.5, 0);
@@ -2223,11 +2511,17 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙：山水画 + 两侧对联
+    /* 北墙：山水画居中 + 两侧立轴（补展品 id，原先无 id 会显示空白题名纸）
+       南墙再排三幅，避免画全挤在北墙一面。
+       厅 16×14，门在西墙中间；东墙是窗格扇 + 书架，东西墙不再挂画。 */
     addPainting(g, { x: 0, y: 2.6, z: -halfD + 0.2, ry: 0, lamp: [0, 0.9] }, 4.0, 1.8, "xishanxinglvtu");
-    buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0);
-    buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0);
+    buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0, "fuchunshanjv");
+    buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0, "qianlijiangshan");
     buildPartHallTitle(g, "书斋", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
+
+    addPainting(g, { x: -3.4, y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "hanxizai");
+    addPainting(g, { x: 0,    y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "luoshenfu");
+    addPainting(g, { x: 3.4,  y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "buniantu");
 
     // 中央茶席长案 3.2m x 1m + 六方凳
     buildPartLongTable(g, 0, F, 0, 3.2, 1.0);
@@ -2277,12 +2571,17 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    // 北墙：匾额 + 五幅小画
+    /* 匾额 + 挂画分两面墙。
+       原来五幅 0.9m 小画全挤在北墙，密度过高、南墙全空。
+       厅 16×14：门在东墙中间，西墙是窗格扇 + 展示架，只在南北两面挂。
+         北墙 x −3 / 0 / 3 三幅
+         南墙 x −3 / 3 两幅 */
     buildPartHallTitle(g, "文创雅集馆", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
-    [-4, -2, 0, 2, 4].forEach(function (px, idx) {
-      var ids = ["xieshengzhenqintu", "wuniutu", "fuchunshanjv", "xishanxinglvtu", "qianlijiangshan"];
-      addPainting(g, { x: px, y: 2.05, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 0.9, 1.35, ids[idx]);
-    });
+    addPainting(g, { x: -3.0, y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.6, 1.5, "xieshengzhenqintu");
+    addPainting(g, { x: 0,    y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.9, 1.5, "qianlijiangshan");
+    addPainting(g, { x: 3.0,  y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.6, 1.5, "fuchunshanjv");
+    addPainting(g, { x: -3.0, y: 2.4, z: halfD - 0.2, ry: Math.PI, lamp: [0, -0.85] }, 1.9, 1.5, "wuniutu");
+    addPainting(g, { x: 3.0,  y: 2.4, z: halfD - 0.2, ry: Math.PI, lamp: [0, -0.85] }, 1.9, 1.5, "xishanxinglvtu");
 
     // 中央 2-3 张临帖长案
     buildPartLongTable(g, -2.2, F, 0, 2.6, 0.9);
@@ -2309,12 +2608,27 @@ window.MuseumScene = (function () {
     parent.add(g);
   }
 
-    function buildPartVerticalScroll(parent, x, y, z, ry) {
+  /* 立轴：id 给定时贴真实画作，否则退回题名纸。
+     早先固定传 drawSign("","")，画芯是一块米色空牌，
+     十几处立轴看上去全是空画框。 */
+  function buildPartVerticalScroll(parent, x, y, z, ry, id) {
     var g = new _g.Group();
     g.position.set(x, y, z);
     g.rotation.y = ry;
+
+    var paintMat = null;
+    if (id && window.MuseumGallery && window.MuseumGallery.texById) {
+      var t = window.MuseumGallery.texById(id);
+      if (t) paintMat = new _g.MeshStandardMaterial({ map: t, roughness: 0.92, side: _g.DoubleSide });
+    }
+    if (!paintMat) {
+      var ex = id ? findExhibit(id) : null;
+      paintMat = ex
+        ? canvasMat(drawPainting(ex), { side: _g.DoubleSide })
+        : canvasMat(drawSign("", ""), { side: _g.DoubleSide });
+    }
     // 卷轴
-    var scroll = new _g.Mesh(new _g.PlaneGeometry(0.55, 2.2), canvasMat(drawSign("", ""), { side: _g.DoubleSide }));
+    var scroll = new _g.Mesh(new _g.PlaneGeometry(0.55, 2.2), paintMat);
     scroll.position.z = 0.02;
     g.add(scroll);
     // 上下轴头
@@ -2386,25 +2700,16 @@ window.MuseumScene = (function () {
    * 签名保持不变，六厅自动全部升级 */
   function buildPartHallWalls(g, W, D, WH, TH, wallMat, doorSide, doorCenter, doorW, doorH) {
     var a = W / 2, b = D / 2;
-    var win = function (u, sill, w, h) { return { kind: "window", u: u, w: w, h: h, sill: sill }; };
     var door = function (u) { return { kind: "door", u: u, w: doorW, h: doorH, sill: 0 }; };
 
-    /* 北墙：挂画的主墙，只开高窗，不打断画面 */
-    var north = [win(-a * 0.45, 1.9, 1.2, 1.3), win(a * 0.45, 1.9, 1.2, 1.3)];
-    /* 南墙 */
-    var south = [];
-    if (doorSide === "s") {
-      south.push(door(doorCenter));
-      [-1, 1].forEach(function (s) {
-        var u = doorCenter + s * (doorW / 2 + 1.6);
-        if (Math.abs(u) < a - 1.3) south.push(win(u, 1.9, 1.1, 1.3));
-      });
-    } else {
-      south.push(win(-a * 0.5, 1.9, 1.2, 1.3), win(a * 0.5, 1.9, 1.2, 1.3));
-    }
-    /* 东西墙：开门的那面开门，另一面开中窗（借景） */
-    var west = doorSide === "w" ? [door(doorCenter)] : [win(0, 1.9, 1.3, 1.4)];
-    var east = doorSide === "e" ? [door(doorCenter)] : [win(0, 1.9, 1.3, 1.4)];
+    /* 用户要求删掉所有墙面窗框：这些窗在 buildPartWallRun 里会生成
+       一圈带砖纹的白色方框，和挂画叠在一起把人挡掉一半。
+       四面墙现在只留门洞，不再开窗。 */
+    var north = [], south = [], west = [], east = [];
+    if (doorSide === "s") south.push(door(doorCenter));
+    if (doorSide === "n") north.push(door(doorCenter));
+    if (doorSide === "w") west.push(door(doorCenter));
+    if (doorSide === "e") east.push(door(doorCenter));
 
     buildPartWallRun(g, { cx: 0, cz: -b, len: W, h: WH, th: TH, ry: 0, openings: north, name: "wall-N", outward: -1 });
     buildPartWallRun(g, { cx: 0, cz: b, len: W, h: WH, th: TH, ry: 0, openings: south, name: "wall-S", outward: 1 });
@@ -2430,21 +2735,37 @@ window.MuseumScene = (function () {
   }
   /* 局部坐标展台（不依赖 addPedestal 的硬编码 z=-2） */
   function addPedestalLocal(parent, x, floorY, z, exhibitId, signText) {
-    var base = new _g.Mesh(new _g.BoxGeometry(1.5, 1.05, 1.5), mat(0x7a5c48, { roughness: 0.75 }));
+    /* 方形石基座 + 上下压边，对应参考图里「西方雕塑 / 中国人物雕塑」的做法。
+       原先用深褐色木座、无压边，和效果图的石灰基座差得远。 */
+    var base = new _g.Mesh(new _g.BoxGeometry(1.5, 1.05, 1.5), mat(0xdfd9cc, { roughness: 0.88 }));
     base.position.set(x, floorY + 0.525, z);
-    base.castShadow = true;
+    base.castShadow = true; base.receiveShadow = true;
     parent.add(base);
+    buildBox(parent, 1.62, 0.07, 1.62, x, floorY + 1.015, z, mat(0xc9c2b3, { roughness: 0.9 }));
+    buildBox(parent, 1.62, 0.07, 1.62, x, floorY + 0.035, z, mat(0xc9c2b3, { roughness: 0.9 }));
     obstacles.push({ type: "circle", x: x, z: z, r: 1.0 });
 
-    var artifact;
+    var topY = floorY + 1.05;
+    /* 代码件兜底：后母戊鼎 / 将军俑。维纳斯没有代码件，直接等 GLB。 */
+    var artifact = null;
     if (exhibitId === "houmuwuding") artifact = buildDing();
-    else artifact = buildWarrior();
-    artifact.position.set(x, floorY + 1.05, z);
-    artifact.castShadow = true;
-    parent.add(artifact);
+    else if (exhibitId !== "venus") artifact = buildWarrior();
+    if (artifact) {
+      artifact.position.set(x, topY, z);
+      artifact.castShadow = true;
+      parent.add(artifact);
+    }
 
-    addSign(parent, x, floorY + 1.05, z + 0.9, signText);
-    registerSpot({ exhibitId: exhibitId, x: x, y: floorY + 1.76, z: z, radius: 2.6 });
+    /* 优先换成 GLB 真模型；失败时保留上面的代码件（维纳斯则留空不闪） */
+    var glbUrl = {
+      venus: "assets/models/parts/opt/venus.glb",
+      jiangjunyong: "assets/models/parts/opt/warrior.glb"
+    }[exhibitId];
+    if (glbUrl) tryReplaceWithGlb(parent, glbUrl, x, topY, z, 1.85, artifact);
+
+    /* 铭牌贴在基座正面（而不是浮在半空） */
+    addSign(parent, x, floorY + 0.52, z + 0.82, signText);
+    registerSpot({ exhibitId: exhibitId, x: x, y: topY + 0.9, z: z, radius: 2.6 });
   }
   /* ---------- 7. 家具零件 ---------- */
   function buildPartTeaTable(parent, x, y, z) {
@@ -2624,19 +2945,25 @@ window.MuseumScene = (function () {
    * ============================================================ */
   function registerProtoExhibitSpots() {
     var RING = 2.4, SCULPT = 2.8;
-    var paintings = [
-      /* 人物厅中西对照：左侧西方、右侧中国，与人物厅实际挂画一致。 */
-      ["monalisa",           28.42, -17.3],
-      ["starrynight",        28.42, -14.7],
-      ["hanxizai",           45.08, -19.7],
-      ["qianlijiangshan",    45.08, -18.5],
-      ["fuchunshanjv",       45.08, -17.3],
-      ["xishanxinglvtu",     45.08, -16.1],
-      ["buniantu",            45.08, -14.9],
-      ["xieshengzhenqintu",   45.08, -13.7],
-      ["wuniutu",             45.08, -12.5],
-      ["molantu",             45.08, -11.3],
-      ["luoshenfu",           45.08, -10.5],
+      var paintings = [
+      /* 人物厅中西对照：左墙西方 2 幅、右墙中国 5 幅、后墙中国 4 幅。
+         坐标必须与 slots.js 里 wallScrollAt 的实际落点一致 —— 那边
+         sideScroll 用 ±(len/2-0.42)、backScroll 用 dep/2-0.42，
+         人物厅 len=15.3、dep=5.5、中心(36.75,-17.35)：
+           左墙 x=36.75-7.23=29.52 → 取 29.57（画面厚 0.05）
+           右墙 x=36.75+7.23=43.98 → 取 43.93
+           后墙 z=-17.35-(2.75-0.42)=-19.68 */
+      ["monalisa",           29.57, -18.75],
+      ["starrynight",        29.57, -15.95],
+      ["hanxizai",           43.93, -19.55],
+      ["qianlijiangshan",    43.93, -18.45],
+      ["buniantu",           43.93, -17.35],
+      ["xieshengzhenqintu",  43.93, -16.25],
+      ["luoshenfu",          43.93, -15.15],
+      ["fuchunshanjv",       34.35, -19.68],
+      ["xishanxinglvtu",     35.95, -19.68],
+      ["wuniutu",            37.55, -19.68],
+      ["molantu",            39.15, -19.68],
       /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
       ["lantingjixu",        40.84, 10.0],
       ["jizhiwengao",        40.84, 15.0],
@@ -2649,9 +2976,9 @@ window.MuseumScene = (function () {
       ["luyupengchatu",     -43.84, 31.0],
     ];
     var sculptures = [
-      ["houmuwuding",   0,      27.0],   // 序厅（原型 slots.ding 落点）
-      ["jiangjunyong",  36.75, -13.8],   // 人物厅正房
-      ["venus",          34.55, -18.2],  // 人物厅西侧中西对照
+      ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）
+      ["venus",         34.55, -17.30],  // 人物厅中心对照：左侧西方（与 slots.js compareB 一致）
+      ["jiangjunyong",  38.95, -17.30],  // 人物厅中心对照：右侧中方
       ["matayafeiyan",  0,     -13],     // 中心庭广场点景
     ];
     paintings.forEach(function (p) {

@@ -48,7 +48,6 @@ window.MuseumExteriorSlots = {
         var ks = Object.keys(done);
         if (ks.length) console.info('[真模型接线] 已替换：' + ks.map(function (k) { return k + '×' + done[k]; }).join('，'));
       }
-  
       /* 景石：大主石用太湖石，配石用圆浑巨石；底端按代码版的埋深落地 */
       Promise.all([load('taihu-rock'), load('rock-boulder')]).then(function (rs) {
         var taihu = rs[0], boulder = rs[1];
@@ -66,7 +65,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 石狮：序厅高台大门两侧一对（落在须弥座上，通高近 2m） */
       load('stone-lion').then(function (tpl) {
         if (!tpl) return;
@@ -76,7 +74,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 序厅铜鼎：换成青铜方鼎，落在原石座上 */
       load('bronze-ding').then(function (tpl) {
         if (!tpl) return;
@@ -86,7 +83,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 树：沿墙一排用冷杉，水边用垂柳，庭院里用杂树 */
       Promise.all([load('tree'), load('willow'), load('fir-tree')]).then(function (ts) {
         var tree = ts[0], willow = ts[1], fir = ts[2];
@@ -103,7 +99,6 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
       /* 竹丛 */
       load('bamboo').then(function (tpl) {
         if (!tpl) return;
@@ -113,7 +108,33 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-  
+      /* 芭蕉：宽叶放射，按清单 2.2m 归一 */
+      load('banana').then(function (tpl) {
+        if (!tpl) return;
+        slots.banana.forEach(function (b) {
+          var g = instantiate(tpl, { mode: 'h', size: 2.2 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
+          if (g) { b.group.visible = false; mark('芭蕉'); }
+        });
+        report();
+      });
+      /* 沿阶草：低面数草丛，逐点撒放，不合并，保留每丛自己的朝向 */
+      load('grass-tuft').then(function (tpl) {
+        if (!tpl) return;
+        slots.grassTuft.forEach(function (t) {
+          var g = instantiate(tpl, { mode: 'h', size: 0.3 * t.k, x: t.x, y: 0, z: t.z, ry: t.seed * 1.1 });
+          if (g) { t.group.visible = false; mark('沿阶草'); }
+        });
+        report();
+      });
+      /* 枯木：林下水平构件 */
+      load('dead-trunk').then(function (tpl) {
+        if (!tpl) return;
+        slots.deadTrunk.forEach(function (d) {
+          var g = instantiate(tpl, { mode: 'h', size: 3.0 * d.k, x: d.x, y: 0, z: d.z, ry: d.seed * 0.9 });
+          if (g) { d.group.visible = false; mark('枯木'); }
+        });
+        report();
+      });
       /* ---------- 案头小品与架侧摆件（代码建模，随布展落位） ---------- */
       var MT = {
         celadon: new THREE.MeshStandardMaterial({ color: 0x9db8a6, roughness: 0.3 }),
@@ -310,7 +331,6 @@ window.MuseumExteriorSlots = {
         v.position.y = 0.99; g.add(v);
         g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
       }
-  
       /* 架格小件：册页叠 / 瓷碟木托 / 小瓶；书架用线装书摞 / 立放书 */
       function miniItem(kind, seed) {
         var g = new THREE.Group(), i, m;
@@ -373,7 +393,6 @@ window.MuseumExteriorSlots = {
           placed++;
         }
       }
-  
       /* 室内陈设布展：按厅定式，不再千厅一面——
          山水=立轴画廊（后墙三联轴 + 侧墙对轴 + 中央长案手卷 + 卷轴缸）
          花鸟=中岛展台（四墩瓷瓶 + 后墙架排 + 门口盆景 + 侧墙立轴）
@@ -403,7 +422,6 @@ window.MuseumExteriorSlots = {
         var seedBase = (Math.floor(Math.abs(h.cx) * 31 + Math.abs(h.cz) * 17) >>> 0);
         var shelfTpl = isBook ? (L.shelf || L.display) : (L.display || L.shelf);
         var i, p;
-  
         /* ---- 共用构件 ---- */
         function shelfRow(maxN, bOff) {
           if (!shelfTpl) return;
@@ -448,10 +466,13 @@ window.MuseumExteriorSlots = {
           p = at(sig * (len / 2 - 0.42), bOff);
           wallScrollAt(p[0], p[1], Math.atan2(-sig * ux, -sig * uz), seed);
         }
+        /* 侧墙挂画别名：团队重构时删掉了这个包装函数，
+           但人物厅的展线仍按 sideArtwork(sig, bOff, id) 调用，这里补回。 */
+        function sideArtwork(sig, bOff, id) { sideScroll(sig, bOff, id); }
         function potAt(uOff, bOff, seed) { p = at(uOff, bOff); potted(p[0], p[1], floor, seed); }
         function pedestalAt(uOff, bOff, seed) { p = at(uOff, bOff); pedestalVase(p[0], p[1], floor, seed); }
         function pot2(uOff, bOff, seed) { p = at(uOff, bOff); scrollPot(p[0], p[1], floor, seed); }
-  
+
         /* ---- 按厅定式 ---- */
         if (tag === '山水') {
           backScroll(-2.2, seedBase + 1, dep / 2 - 0.75); backScroll(0, seedBase + 2, dep / 2 - 0.75); backScroll(2.2, seedBase + 3, dep / 2 - 0.75);
@@ -469,24 +490,69 @@ window.MuseumExteriorSlots = {
           sideScroll(-1, 0.5, seedBase + 7); sideScroll(1, 0.5, seedBase + 8);
           lampPair(2.2, -0.45);
         } else if (tag === '人物') {
-          sideScroll(-1, 0.8, seedBase + 1); sideScroll(1, 0.8, seedBase + 2);
-          if (L.warrior) {
-            var wpos = [[-len / 4, dep / 2 - 3.3], [len / 4, dep / 2 - 3.3], [-len / 4, dep / 2 - 4.5], [len / 4, dep / 2 - 4.5]];
-            for (i = 0; i < 4; i++) {
-              p = at(wpos[i][0], wpos[i][1]);
-              if (instantiate(L.warrior, { mode: 'h', size: 1.6, x: p[0], y: floor, z: p[1], ry: faceRy })) mark('将军俑');
-            }
+          /* 面向正门时左侧为西方，右侧为中国，形成同题材对照。
+             侧墙可用长度 = dep（5.5m），立轴宽 0.72m，故侧墙每面最多 5 幅、
+             间距 1.1m 才能排进 ±2.2 之内。早先把 9 幅全排在侧墙、
+             偏移跨到 +4.2~-5.0，超出墙面 5.5m 的范围，画会甩到墙外。 */
+          sideArtwork(-1, 1.4, 'monalisa');
+          sideArtwork(-1, -1.4, 'starrynight');
+          var chineseWall = [
+            ['hanxizai', 2.2], ['qianlijiangshan', 1.1],
+            ['buniantu', 0], ['xieshengzhenqintu', -1.1],
+            ['luoshenfu', -2.2]
+          ];
+          for (i = 0; i < chineseWall.length; i++) {
+            sideArtwork(1, chineseWall[i][1], chineseWall[i][0]);
           }
-          if (L.horse) {
-            p = at(0, dep / 2 - 1.9);
-            var ped = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.8), MT.stoneG);
-            ped.position.set(p[0], floor + 0.375, p[1]);
-            ped.rotation.y = faceRy;
-            ped.castShadow = ped.receiveShadow = true; scene.add(ped);
-            if (instantiate(L.horse, { mode: 'h', size: 1.1, x: p[0], y: floor + 0.75, z: p[1], ry: faceRy + Math.PI / 2 })) mark('马踏飞燕');
+          /* 余下 4 幅挪到后墙：后墙宽 len（15.3m），从容排开 */
+          var backUs = [-2.4, -0.8, 0.8, 2.4];
+          var backIds = ['fuchunshanjv', 'xishanxinglvtu', 'wuniutu', 'molantu'];
+          for (i = 0; i < backUs.length; i++) {
+            backScroll(backUs[i], backIds[i], dep / 2 - 0.42);
           }
-          p = at(0, dep / 2 - 0.6); /* 后墙挂对轴（后门已撤，厅心马踏飞燕可绕行） */
-          backScroll(-1.9, seedBase + 10); backScroll(1.9, seedBase + 11);
+          /* 人物厅中心对照：左侧维纳斯，右侧将军俑；各配方形石基座与铭牌，
+             对应参考图里「西方雕塑 / 中国人物雕塑」两块铜牌的做法。 */
+          var compareB = dep / 2 - 2.8;
+          /* 方形石基座 + 正面铭牌；返回顶面高度，雕塑站上去 */
+          function sculpturePlinth(px, pz, text) {
+            var pw = 1.55, ph = 0.92, pd = 1.15;
+            var pg = new THREE.Group();
+            pg.position.set(px, floor, pz);
+            scene.add(pg);
+            var body = new THREE.Mesh(new THREE.BoxGeometry(pw, ph, pd), MT.stoneG);
+            body.position.y = ph / 2;
+            body.castShadow = true; body.receiveShadow = true;
+            pg.add(body);
+            /* 上下压边，避免一块光板 */
+            var cap = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.12, 0.07, pd + 0.12), MT.stoneG);
+            cap.position.y = ph - 0.035; cap.castShadow = true; pg.add(cap);
+            var foot = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.12, 0.07, pd + 0.12), MT.stoneG);
+            foot.position.y = 0.035; foot.receiveShadow = true; pg.add(foot);
+            /* 铭牌：canvas 写字，贴在正面（朝 +z，与厅门方向一致） */
+            var cv = document.createElement('canvas');
+            cv.width = 512; cv.height = 128;
+            var cx2 = cv.getContext('2d');
+            cx2.fillStyle = '#2b2b2b'; cx2.fillRect(0, 0, 512, 128);
+            cx2.strokeStyle = 'rgba(198,168,104,0.75)'; cx2.lineWidth = 4;
+            cx2.strokeRect(10, 10, 492, 108);
+            cx2.fillStyle = '#d9c79a';
+            cx2.font = '600 52px "Microsoft YaHei", "PingFang SC", sans-serif';
+            cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+            cx2.fillText(text, 256, 66);
+            var tex = new THREE.CanvasTexture(cv);
+            tex.needsUpdate = true;
+            var badge = new THREE.Mesh(new THREE.PlaneGeometry(pw * 0.78, pw * 0.78 / 4),
+              new THREE.MeshBasicMaterial({ map: tex, transparent: false }));
+            badge.position.set(0, ph * 0.52, pd / 2 + 0.006);
+            pg.add(badge);
+            return floor + ph;
+          }
+          var plinthTop = sculpturePlinth(at(-2.2, compareB)[0], at(-2.2, compareB)[1], '西方雕塑');
+          p = at(-2.2, compareB);
+          if (L.venus && instantiate(L.venus, { mode: 'h', size: 1.8, x: p[0], y: plinthTop, z: p[1], ry: faceRy })) mark('维纳斯');
+          var plinthTop2 = sculpturePlinth(at(2.2, compareB)[0], at(2.2, compareB)[1], '中国人物雕塑');
+          p = at(2.2, compareB);
+          if (L.warrior && instantiate(L.warrior, { mode: 'h', size: 1.8, x: p[0], y: plinthTop2, z: p[1], ry: faceRy })) mark('将军俑');
           lampPair(1.2, dep / 2 - 1.9);
         } else if (tag === '临摹') {
           shelfRow(4, dep / 2 - 0.55);
@@ -527,8 +593,10 @@ window.MuseumExteriorSlots = {
           }
         }
       }
-      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse')]).then(function (fs) {
-        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6] };
+      Promise.all([load('long-table'), load('bookshelf'), load('display-shelf'), load('stool'), load('lantern'), load('warrior'), load('horse'), load('venus')]).then(function (fs) {
+        /* 合并冲突时团队把第 7 项从 venus 换成了 horse，导致 L 里没有 venus，
+           人物厅的 L.venus 永远短路。这里两项都加载，venus 追加到第 8 位。 */
+        var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6], venus: fs[7] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
       });
