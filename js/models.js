@@ -16,6 +16,7 @@ window.MuseumModels = (function () {
   /* 拿不到清单时的兜底尺寸（真实最大边长，米） */
   var FALLBACK = {
     willow: 4.5, camphor: 5.0, bamboo: 2.6, bush: 0.8, "grass-clump": 0.35,
+    "grass-tuft": 0.3, banana: 2.2,
     "taihu-rock": 1.8, lantern: 0.6, horse: 1.6, "stone-lion": 1.2, "bronze-ding": 1.1,
     "door-column": 5.0, "door-leaf": 3.0, "door-canopy": 8.0, "roof-tile": 12.0,
     "wall-pillar": 2.6, "back-wall": 14.0,

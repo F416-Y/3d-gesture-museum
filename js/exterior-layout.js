@@ -10,7 +10,7 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 共享上下文 ---------- */
   /* slots：给 glb 真模型接线用的登记表（代码件先建，模型加载成功后替换隐藏） */
-  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], lion: [], ding: [], hall: [] }, seats: [], anims: [] };
+  var S = { scene: null, slots: { rock: [], tree: [], bamboo: [], banana: [], grassTuft: [], deadTrunk: [], lion: [], ding: [], hall: [] }, seats: [], anims: [] };
   var M = {};
   /* HALL_DOORS：闭门展厅登记册（靠近弹窗 + 门口拦阻 + 厅内落点），buildHall 闭门时填入；
      挂 window：交互逻辑在另一闭包（闭包乙），跨闭包只走 window 桥 */
@@ -422,6 +422,126 @@ window.MuseumExteriorLayout = (function () {
       l1.castShadow = l2.castShadow = false;
     }
     S.slots.bamboo.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一株芭蕉（宽叶放射，s≈1 时约 2.2m） ---------- */
+  function bananaPlant(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    /* 假茎：加粗加高一些，单株才有体量 */
+    cyl(0.19 * k, 0.25 * k, 1.30 * k, 12, M.wood, x, 0.65 * k, z, g);
+    /* 叶片：14 片宽叶绕茎顶放射，五层错落。
+       用压扁球体近似叶团，比平面片有厚度，远处看不会消失。 */
+    var LEAVES = 14;
+    var leafGeo = new THREE.SphereGeometry(1, 8, 6);
+    for (var j = 0; j < LEAVES; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = (Math.PI * 2 / LEAVES) * j + 0.3;
+      var tier = j % 5;
+      var h = (1.16 + tier * 0.15) * k;
+      var len = (1.90 - tier * 0.16) * k;
+      var w = (0.92 - tier * 0.06) * k;
+      var tilt = -0.30 - tier * 0.05;
+      var leaf = new THREE.Mesh(leafGeo, M.leaf);
+      leaf.scale.set(len * 0.58, 0.12 * k, w * 0.5);
+      leaf.position.set(x + Math.cos(ang) * len * 0.52, h, z + Math.sin(ang) * len * 0.52);
+      leaf.rotation.y = -ang;
+      leaf.rotation.z = tilt;
+      leaf.castShadow = true;
+      leaf.receiveShadow = true;
+      g.add(leaf);
+    }
+    /* 根部两片新芽，从茎底斜出，让株型不满在顶上 */
+    for (var n = 0; n < 2; n++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var na = ((s % 1000) / 1000) * Math.PI * 2;
+      var shoot = new THREE.Mesh(leafGeo, M.leaf);
+      shoot.scale.set(0.85 * k, 0.09 * k, 0.34 * k);
+      shoot.position.set(x + Math.cos(na) * 0.62 * k, 0.42 * k, z + Math.sin(na) * 0.62 * k);
+      shoot.rotation.y = -na;
+      shoot.rotation.z = -0.72;
+      shoot.castShadow = true;
+      g.add(shoot);
+    }
+    S.slots.banana.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一丛沿阶草（低面数，供撒点用） ----------
+   * 叶片各自变换后合并成一个 BufferGeometry，一整丛只占 1 个 draw call。
+   * 早先每根叶片是独立 Mesh，一丛 9 个 draw call，丛数一多就撑不住。 */
+  var TUFT_BASE = null;
+  function grassTuft(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    if (!TUFT_BASE) TUFT_BASE = new THREE.BoxGeometry(1, 1, 1);
+    var pos = [], nor = [], idx = [], off = 0;
+    var m4 = new THREE.Matrix4(), eul = new THREE.Euler(), quat = new THREE.Quaternion();
+    var vec = new THREE.Vector3(), scl = new THREE.Vector3();
+    var pAttr = TUFT_BASE.attributes.position, nAttr = TUFT_BASE.attributes.normal;
+    var BLADES = 16;
+    for (var j = 0; j < BLADES; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = ((s % 1000) / 1000) * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var lean = (0.20 + (s % 1000) / 1000 * 0.36) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var h = (0.36 + (s % 1000) / 1000 * 0.34) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var rad = (0.02 + (s % 1000) / 1000 * 0.10) * k;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var bw = (0.046 + (s % 1000) / 1000 * 0.030) * k;
+      var px = x + Math.cos(ang) * rad;
+      var pz = z + Math.sin(ang) * rad;
+      eul.set(-Math.sin(ang) * lean, 0, Math.cos(ang) * lean);
+      quat.setFromEuler(eul);
+      vec.set(px, h * 0.5, pz);
+      scl.set(bw, h, bw * 0.35);
+      m4.compose(vec, quat, scl);
+      for (var i = 0; i < pAttr.count; i++) {
+        vec.set(pAttr.getX(i), pAttr.getY(i), pAttr.getZ(i)).applyMatrix4(m4);
+        pos.push(vec.x, vec.y, vec.z);
+        vec.set(nAttr.getX(i), nAttr.getY(i), nAttr.getZ(i)).transformDirection(m4);
+        nor.push(vec.x, vec.y, vec.z);
+      }
+      for (var kk = 0; kk < TUFT_BASE.index.count; kk++) {
+        idx.push(TUFT_BASE.index.getX(kk) + off);
+      }
+      off += pAttr.count;
+    }
+    var geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+    geo.setIndex(idx);
+    var mesh = new THREE.Mesh(geo, M.lawn || M.leaf);
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    g.add(mesh);
+    S.slots.grassTuft.push({ group: g, x: x, z: z, k: k, seed: seed });
+  }
+
+  /* ---------- 一段枯木（庭院角落与林下） ---------- */
+  function deadTrunk(x, z, seed, parent, sc) {
+    var gp = parent || S.scene, s = seed >>> 0;
+    var g = new THREE.Group(); gp.add(g);
+    var k = sc || 1;
+    var main = cyl(0.16 * k, 0.26 * k, 3.0 * k, 9, M.wood, x, 1.5 * k, z, g);
+    s = (s * 1664525 + 1013904223) >>> 0;
+    main.rotation.z = ((s % 1000) / 1000 - 0.5) * 0.12;
+    /* 三段断枝，方向错开 */
+    for (var j = 0; j < 3; j++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var ang = ((s % 1000) / 1000) * Math.PI * 2;
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var bh = (1.1 + (s % 1000) / 1000 * 0.9) * k;
+      var br = cyl(0.04 * k, 0.09 * k, bh, 6, M.wood, x, (1.8 + j * 0.4) * k, z, g);
+      br.rotation.z = Math.cos(ang) * 0.9;
+      br.rotation.x = Math.sin(ang) * 0.9;
+      br.position.x += Math.cos(ang) * bh * 0.35;
+      br.position.z += Math.sin(ang) * bh * 0.35;
+    }
+    S.slots.deadTrunk.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
 
   /* ---------- 水面与莲叶 ---------- */
@@ -1239,6 +1359,19 @@ window.MuseumExteriorLayout = (function () {
     var paint = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 1.42),
       new THREE.MeshStandardMaterial({ map: scrollTex(seed), roughness: 0.92 }));
     paint.position.set(0, 1.5, 0.015); g.add(paint);
+    /* 真实画作：按 seed 查 gallery.js 的映射表拿展品 id，直接加载图片换材质。
+       早先依赖 gallery.tex() 内部「先给占位、再偷换 image」的异步做法，
+       实测贴图不刷新，长廊十几幅立轴一直显示题名纸。
+       这里改成与 scene.js 的 addPainting 同一套写法，可靠得多。 */
+    var _id = (window.MuseumGallery && window.MuseumGallery.map) ? window.MuseumGallery.map[seed] : null;
+    if (_id && THREE.TextureLoader) {
+      new THREE.TextureLoader().load("assets/images/" + _id + ".jpg", function (tex) {
+        if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+        tex.anisotropy = 8;
+        paint.material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, side: THREE.DoubleSide });
+        paint.material.needsUpdate = true;
+      }, undefined, function () { /* 图片缺失：保留程序化画芯 */ });
+    }
     var r1 = cyl(0.016, 0.016, 0.98, 6, M.wood, 0, 2.4, 0.02, g); r1.rotation.z = Math.PI / 2;   /* 天杆 */
     var r2 = cyl(0.035, 0.035, 1.0, 8, M.wood, 0, 0.62, 0.03, g); r2.rotation.z = Math.PI / 2;   /* 地杆 */
     var k1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.ink); k1.position.set(-0.53, 0.62, 0.03); k1.castShadow = true; g.add(k1);
@@ -1447,7 +1580,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 中轴真实拱桥：优先加载单桥 GLB，失败回退程序桥 ---------- */
   function loadCentralArchBridge() {
     if (!THREE.GLTFLoader) { buildCentralArchBridge(); return; }
-    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/rodin_bridge_single.glb', function (gltf) {
+    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/central-arch-bridge.glb', function (gltf) {
       var bridge = gltf.scene; bridge.name = 'rodin-central-arch-bridge'; bridge.updateMatrixWorld(true);
       var raw = new THREE.Box3().setFromObject(bridge), rawSize = raw.getSize(new THREE.Vector3());
       if (!Math.max(rawSize.x, rawSize.z)) { buildCentralArchBridge(); return; }
@@ -1456,9 +1589,15 @@ window.MuseumExteriorLayout = (function () {
       bridge.updateMatrixWorld(true);
       var fitted = new THREE.Box3().setFromObject(bridge), center = fitted.getCenter(new THREE.Vector3());
       var group = new THREE.Group(); group.name = 'central-arch-bridge-glb'; group.add(bridge);
-      group.position.set(-center.x, 0.06 - fitted.min.y, -2.2 - center.z);
+      // 桥脚要嵌入湖床/岸基，不能只停在水面高度，否则会产生“浮桥”视觉。
+      group.position.set(-center.x, -0.08 - fitted.min.y, -2.2 - center.z);
       bridge.traverse(function (node) { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
       S.scene.add(group);
+      // 两端桥台承接桥脚并嵌入湖床；拱腹跨水，不让桥体看起来整块漂在水面。
+      box(2.8, 0.46, 1.45, M.stone, 0, -0.08, -10.0);
+      box(2.8, 0.46, 1.45, M.stone, 0, -0.08, 5.6);
+      box(2.45, 0.16, 0.95, M.stoneDark, 0, 0.23, -9.72);
+      box(2.45, 0.16, 0.95, M.stoneDark, 0, 0.23, 5.32);
     }, undefined, function () { buildCentralArchBridge(); });
   }
 
@@ -1970,6 +2109,156 @@ window.MuseumExteriorLayout = (function () {
     plantTree(44.6, 24.5, 1.05, 624);
   }
 
+  /* ---------- 360° 远景山脉层 ----------
+   * 参考快景外景的做法：远山不是一张正面背景图，而是围绕园区的多段
+   * 半透明山脊卡片。每层高度、色值和雾带不同，转身时仍能保持连续的
+   * 远近关系；卡片只承担远景，不参与碰撞，也不会遮住园区建筑。
+   */
+  function mountainBackdropTexture(seed, tone) {
+    var cv = document.createElement('canvas'); cv.width = 768; cv.height = 320;
+    var ctx = cv.getContext('2d');
+    var palettes = [
+      ['rgba(170,191,196,0.82)', 'rgba(115,145,153,0.76)', 'rgba(78,111,119,0.68)'],
+      ['rgba(127,156,161,0.88)', 'rgba(76,110,117,0.84)', 'rgba(45,77,83,0.78)'],
+      ['rgba(99,128,117,0.92)', 'rgba(54,87,72,0.88)', 'rgba(28,56,45,0.84)']
+    ];
+    var colors = palettes[tone % palettes.length];
+    var phase = seed * 0.73;
+    function ridge(y, amp, step, color, alpha, detail) {
+      var peaks = [0.08, 0.23, 0.41, 0.61, 0.82];
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath(); ctx.moveTo(0, 256); ctx.lineTo(0, y);
+      for (var x = 0; x <= 768; x += step) {
+        var t = (x / 768 + phase * 0.003) % 1, h = 0, pi, d, ph;
+        for (pi = 0; pi < peaks.length; pi++) {
+          ph = (peaks[pi] + (pi % 2 ? 0.025 : -0.018) * tone + 1) % 1;
+          d = Math.abs(t - ph); d = Math.min(d, 1 - d);
+          h += Math.exp(-Math.pow(d / (0.075 + (pi % 3) * 0.014), 2))
+            * (0.52 + 0.32 * Math.sin(seed * 0.17 + pi * 2.4));
+        }
+        var yy = y - h * amp
+          - (Math.sin(x * 0.051 + phase * 1.7) * 0.5 + 0.5) * amp * detail * 0.22;
+        ctx.lineTo(x, yy);
+      }
+      ctx.lineTo(768, 256); ctx.lineTo(768, 320); ctx.lineTo(0, 320); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ridge(112 + tone * 12, 78 - tone * 7, 8, colors[0], 0.78, 0.42);
+    ridge(150 + tone * 12, 58 - tone * 5, 7, colors[1], 0.86, 0.50);
+    ridge(187 + tone * 10, 42 - tone * 3, 6, colors[2], 0.90, 0.58);
+
+    /* 山腰云雾：上下都透明，避免把每张远景卡片刷成矩形色块 */
+    var mist = ctx.createLinearGradient(0, 148, 0, 264);
+    mist.addColorStop(0, 'rgba(226,234,231,0)');
+    mist.addColorStop(0.48, 'rgba(226,234,231,0.26)');
+    mist.addColorStop(0.72, 'rgba(226,234,231,0.12)');
+    mist.addColorStop(1, 'rgba(226,234,231,0)');
+    ctx.fillStyle = mist; ctx.fillRect(0, 140, 768, 130);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function buildDistantMountains() {
+    var ringRadius = 106;
+    for (var layer = 0; layer < 3; layer++) {
+      var tex = mountainBackdropTexture(20 + layer * 13, layer);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(1, 1);
+      tex.needsUpdate = true;
+      var mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, opacity: 0.96 - layer * 0.06,
+        depthWrite: false, side: THREE.BackSide, fog: false
+      });
+      var radius = ringRadius - layer * 8;
+      var mountainRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, 60 + layer * 5, 96, 1, true), mat
+      );
+      mountainRing.position.y = 22 + layer * 2.5;
+      mountainRing.userData.isDistantMountain = true;
+      S.scene.add(mountainRing);
+    }
+    buildTreeline();
+  }
+
+  /* ---------- 远景树线：两道不同高度的林冠剪影 ----------
+   * 远山与园林之间缺一层过渡，视线会从墙头直接跳到山脚。
+   * 这里在山前加两道树冠带：近的一道高而疏，远的一道矮而密，
+   * 底边压到 y=0 以下，与地面相接，转身时不露白边。 */
+  function treelineTexture(seed, tall) {
+    var cv = document.createElement('canvas');
+    cv.width = 1024; cv.height = 256;
+    var ctx = cv.getContext('2d');
+    var s = seed >>> 0;
+    function rnd() { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }
+
+    var baseY = tall ? 150 : 176;        /* 林冠基准高度 */
+    var crownH = tall ? 62 : 40;         /* 树冠起伏幅度 */
+    var step = tall ? 26 : 15;           /* 树的间距，近疏远密 */
+
+    /* 底色：从树冠色向下渐变到地面色，保证底边与草坪衔接 */
+    var body = ctx.createLinearGradient(0, baseY - crownH, 0, 256);
+    if (tall) {
+      body.addColorStop(0, 'rgba(58,78,58,0.94)');
+      body.addColorStop(0.55, 'rgba(44,62,46,0.96)');
+      body.addColorStop(1, 'rgba(36,50,38,1)');
+    } else {
+      body.addColorStop(0, 'rgba(94,116,96,0.90)');
+      body.addColorStop(0.55, 'rgba(76,98,80,0.94)');
+      body.addColorStop(1, 'rgba(62,84,66,1)');
+    }
+
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(0, 256);
+    ctx.lineTo(0, baseY);
+    for (var x = 0; x <= cv.width; x += step) {
+      /* 每株一个半圆冠，半径带抖动，形成参差林冠线 */
+      var r = (0.45 + rnd() * 0.55) * crownH * 0.5;
+      var cx = x + (rnd() - 0.5) * step * 0.6;
+      var top = baseY - r - rnd() * crownH * 0.35;
+      ctx.lineTo(cx - r * 0.9, baseY);
+      ctx.quadraticCurveTo(cx - r, top, cx, top - r * 0.25);
+      ctx.quadraticCurveTo(cx + r, top, cx + r * 0.9, baseY);
+    }
+    ctx.lineTo(cv.width, baseY);
+    ctx.lineTo(cv.width, 256);
+    ctx.closePath();
+    ctx.fill();
+
+    /* 树冠上缘再压一层更浅的雾色，做出空气透视 */
+    var haze = ctx.createLinearGradient(0, baseY - crownH, 0, baseY);
+    haze.addColorStop(0, 'rgba(198,210,205,0.30)');
+    haze.addColorStop(1, 'rgba(198,210,205,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, baseY - crownH, cv.width, crownH);
+
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function buildTreeline() {
+    /* 两道树线：半径略小于最内层远山，保证山在树后 */
+    var specs = [
+      { radius: 82, height: 15, y: 7.5, seed: 77, tall: true, opacity: 0.95 },
+      { radius: 88, height: 11, y: 5.5, seed: 91, tall: false, opacity: 0.88 }
+    ];
+    specs.forEach(function (sp) {
+      var tex = treelineTexture(sp.seed, sp.tall);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(3, 1);            /* 横向重复三次，转身时纹理不拉长 */
+      tex.needsUpdate = true;
+      var mat = new THREE.MeshBasicMaterial({
+        map: tex, transparent: true, opacity: sp.opacity,
+        depthWrite: false, side: THREE.BackSide, fog: false
+      });
+      var ring = new THREE.Mesh(
+        new THREE.CylinderGeometry(sp.radius, sp.radius, sp.height, 96, 1, true), mat
+      );
+      ring.position.y = sp.y;
+      ring.userData.isTreeline = true;
+      S.scene.add(ring);
+    });
+  }
+
   /* ---------- 草坪与沿墙树阵 ---------- */
   function buildGreenery() {
     var ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), M.lawn);
@@ -2007,6 +2296,46 @@ window.MuseumExteriorLayout = (function () {
     plantTree(9.8, 4.5, 1.25, 991);
     plantTree(24.5, 19.6, 1.15, 992);
     plantTree(-14.5, -8.6, 1.1, 993);
+    /* 芭蕉：东西两侧对称布置，南北草坪各点几株，避免只有一边有绿 */
+    bananaPlant(20.5, 8.0, 231, S.scene, 1.05);
+    bananaPlant(22.4, 10.8, 232, S.scene, 0.88);
+    bananaPlant(-20.5, 8.0, 233, S.scene, 1.02);
+    bananaPlant(-22.6, 11.2, 234, S.scene, 0.86);
+    bananaPlant(28.8, 40.2, 235, S.scene, 0.96);
+    bananaPlant(-29.4, 39.6, 236, S.scene, 0.92);
+    bananaPlant(19.2, -21.0, 237, S.scene, 0.90);
+    bananaPlant(-19.6, -20.4, 238, S.scene, 0.88);
+    /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
+    deadTrunk(-22.0, -28.0, 241, S.scene, 0.9);
+    deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
+    deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
+    deadTrunk(30.5, 42.8, 244, S.scene, 0.7);
+    /* 沿阶草：铺满所有未墁地的草坪，避开广场、廊道、水面与中轴通道。
+       数量从原来 86 丛提到约 356 丛；每丛已合并成一个 mesh，draw call 反而更省。
+       确定性抖动，刷新后位置不变。 */
+    (function scatterTufts() {
+      var sd2 = 76231;
+      function r2() { sd2 = (sd2 * 1664525 + 1013904223) >>> 0; return sd2 / 4294967296; }
+      var spots = [
+        /* [x0, x1, z0, z1, 数量] */
+        [-46.0, -4.5, 37.5, 54.0, 70],    /* 正门前西侧大草坪 */
+        [4.5, 46.0, 37.5, 54.0, 70],      /* 正门前东侧大草坪 */
+        [-46.0, -17.0, -30.0, 34.0, 70],  /* 西侧绿化带 */
+        [17.0, 46.0, -30.0, 34.0, 70],    /* 东侧绿化带 */
+        [-13.4, -9.7, 8.0, 22.0, 12],     /* 中轴南院西侧窄条 */
+        [9.7, 13.4, 8.0, 22.0, 12],       /* 中轴南院东侧窄条 */
+        [-46.0, -17.0, -37.0, -23.0, 26], /* 北侧西段林下 */
+        [17.0, 46.0, -37.0, -23.0, 26]    /* 北侧东段林下 */
+      ];
+      spots.forEach(function (a, ai) {
+        for (var i = 0; i < a[4]; i++) {
+          var px = a[0] + r2() * (a[1] - a[0]);
+          var pz = a[2] + r2() * (a[3] - a[2]);
+          var sc2 = 0.80 + r2() * 0.80;
+          grassTuft(px, pz, 300 + ai * 200 + i, S.scene, sc2);
+        }
+      });
+    })();
   }
 
   /* =====================================================================
@@ -2147,6 +2476,7 @@ window.MuseumExteriorLayout = (function () {
     HALL_DOORS.length = 0;
     S.scene = scene;
     initMaterials();
+    buildDistantMountains();  // 三层远山 + 两道树线（合并时 build() 里的调用被团队删掉了，这里补回）
     buildGreenery();
     buildBoundary();
     buildSouthEntry();

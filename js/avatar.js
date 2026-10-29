@@ -23,6 +23,10 @@ window.MuseumAvatar = (function () {
   var camPos = new THREE.Vector3();  // 平滑后的相机位置（跨帧保持）
   var camInited = false;             // 是否已从第一人称眼位初始化平滑起点
 
+  // 人物模型目标身高（米）：eggman.glb 原始约 2.65m 高、2.60m 宽（近正圆蛋形）。
+  // 若按 1.72m 真人高等比缩放，会得到近 1.7m 宽的蛋、观感过大；改按 ~1.0m 的伴生小人。
+  var AVATAR_HEIGHT = 1.0;
+
   function init(root) {
     scene = root;
     holder = new THREE.Group();
@@ -34,7 +38,7 @@ window.MuseumAvatar = (function () {
       model = gltf.scene;
       var box = new THREE.Box3().setFromObject(model);
       var size = box.getSize(new THREE.Vector3());
-      var scale = 1.72 / Math.max(size.y || 1, 0.001);
+      var scale = AVATAR_HEIGHT / Math.max(size.y || 1, 0.001);
       model.scale.setScalar(scale);
       box.setFromObject(model);
       var center = box.getCenter(new THREE.Vector3());
