@@ -2,155 +2,281 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>云间入墨 · 展厅内饰</title>
-<meta name="description" content="美术鉴赏课程设计：基于 Three.js 与 MediaPipe 的 3D 手势交互数字博物馆。隔空漫游、隔空赏画。">
-<link rel="stylesheet" href="./css/style.css">
-  <link rel="stylesheet" href="./css/intro.css">
-<!--
-  ============================================================
-  云间入墨 CloudInk Art Museum
-  前端 3D 手势交互博物馆 · 美术鉴赏 × 软件工程
-  ------------------------------------------------------------
-  脚本加载顺序（依赖顺序，不可调换）：
-  1. three.min.js      —— 3D 渲染核心（r147 UMD 全局 THREE）
-  2. vision_bundle.js  —— MediaPipe 手部关键点识别（全局 FilesetResolver / HandLandmarker）
-  3. js/config.js      —— 展品数据 + 全局配置（组员4 / 全体共用）
-  4. js/scene.js       —— 园区建筑与展厅场景（组长·外观 / 组员1·接缝）
-  5. js/player.js      —— 第一人称漫游与碰撞（组员2）
-  6. js/gesture.js     —— 手势识别与手势映射（组员3）
-  7. js/exhibit.js     —— 展品热点与鉴赏弹窗（组员4）
-  8. js/ui.js          —— 界面视觉与面板（组员5）
-  9. js/main.js        —— 启动与主循环（组员7 整合）
-  ============================================================
--->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#171816">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23a54535'/%3E%3Cpath d='M9 8h14v2H9zm0 7h14v2H9zm0 7h14v2H9z' fill='%23f0ede2'/%3E%3C/svg%3E">
+<meta name="description" content="云间入墨人物厅：将军俑、马踏飞燕、石狮、青铜鼎与展台基座的独立三维展陈。">
+<title>人物风骨 · 云间入墨</title>
+<style>
+:root{color-scheme:dark;--ink:#171816;--ink-soft:#242520;--paper:#f0ede2;--paper-muted:#bbb6a9;--wood:#5a3d29;--wood-light:#8a684c;--cinnabar:#a54535;--stone:#aaa397;--line:rgba(235,230,214,.22);--panel:rgba(20,21,19,.94)}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--ink);color:var(--paper);font-family:"Noto Serif SC","Songti SC","STSong",SimSun,serif}
+button{font:inherit;color:inherit}#gallery{position:fixed;inset:0;display:block;width:100%;height:100%;touch-action:none;cursor:grab}#gallery.dragging{cursor:grabbing}
+.museum-ui{position:fixed;inset:0;z-index:4;pointer-events:none}.museum-ui button,.museum-ui a{pointer-events:auto}
+.identity{position:absolute;top:max(24px,env(safe-area-inset-top));left:max(28px,env(safe-area-inset-left));display:flex;gap:14px;align-items:flex-start;text-shadow:0 2px 18px rgba(0,0,0,.45)}
+.seal{width:42px;height:42px;display:grid;place-items:center;border:1px solid rgba(236,220,195,.68);background:var(--cinnabar);font-family:"KaiTi","STKaiti",serif;font-size:12px;line-height:1.08;text-align:center}
+.identity h1{margin:0;font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:clamp(25px,2.5vw,34px);font-weight:500;line-height:1}.identity p{margin:8px 0 0;color:rgba(240,237,226,.64);font:10px/1.5 "Noto Sans SC","Microsoft YaHei",sans-serif;letter-spacing:.08em}
+.top-actions{position:absolute;top:max(24px,env(safe-area-inset-top));right:max(28px,env(safe-area-inset-right));display:flex;gap:8px}
+.ui-button{min-height:38px;padding:0 12px;border:1px solid var(--line);background:rgba(21,22,20,.62);color:rgba(248,244,232,.9);backdrop-filter:blur(12px);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font:11px/1 "Noto Sans SC","Microsoft YaHei",sans-serif;cursor:pointer;transition:.18s}
+.ui-button:hover,.ui-button.active{border-color:rgba(225,199,161,.76);background:rgba(70,51,37,.86);color:#fff9eb}
+.collection{position:absolute;left:max(28px,env(safe-area-inset-left));bottom:max(28px,env(safe-area-inset-bottom));width:min(310px,calc(100vw - 56px));padding:15px 17px 14px;border-left:1px solid rgba(226,219,198,.45);background:linear-gradient(90deg,rgba(18,19,17,.82),rgba(18,19,17,0));text-shadow:0 2px 12px rgba(0,0,0,.4)}
+.collection h2{margin:0 0 10px;color:rgba(240,237,226,.58);font:9px/1.3 "Noto Sans SC","Microsoft YaHei",sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.exhibit-list{display:grid;gap:1px}.exhibit-button{display:grid;grid-template-columns:24px 1fr auto;gap:7px;align-items:baseline;width:100%;padding:7px 2px;border:0;background:transparent;text-align:left;color:rgba(240,237,226,.7);cursor:pointer;transition:.15s}
+.exhibit-button:hover,.exhibit-button.active{color:#fffaf0;transform:translateX(2px)}.exhibit-button.active .num{color:#d66b55}.num{color:rgba(222,199,164,.52);font:9px/1 "Noto Sans SC","Microsoft YaHei",sans-serif}.meta{color:rgba(240,237,226,.38);font:9px/1 "Noto Sans SC","Microsoft YaHei",sans-serif;white-space:nowrap}
+.hint{margin:10px 0 0;color:rgba(240,237,226,.42);font:9px/1.6 "Noto Sans SC","Microsoft YaHei",sans-serif}
+.caption{position:absolute;right:max(28px,env(safe-area-inset-right));bottom:max(28px,env(safe-area-inset-bottom));width:min(330px,calc(100vw - 56px));padding:14px 16px;border-right:1px solid rgba(226,219,198,.35);background:linear-gradient(270deg,rgba(18,19,17,.78),rgba(18,19,17,0));text-align:right}
+.caption h3{margin:0 0 6px;font:500 19px/1.2 "Kaiti SC","STKaiti","KaiTi",serif}.caption p{margin:0;color:rgba(240,237,226,.55);font:10px/1.7 "Noto Sans SC","Microsoft YaHei",sans-serif}
+.loading{position:fixed;inset:0;z-index:9;display:grid;place-items:center;background:var(--ink);transition:opacity .5s}.loading.done{opacity:0;pointer-events:none}.loading-inner{text-align:center}.loading-mark{width:52px;height:52px;margin:0 auto 18px;border:1px solid rgba(226,219,198,.48);background:var(--cinnabar);display:grid;place-items:center;font-family:"KaiTi",serif}.loading p{margin:0;color:rgba(240,237,226,.62);font:11px/1.6 "Noto Sans SC","Microsoft YaHei",sans-serif}.loading strong{display:block;margin-bottom:7px;color:var(--paper);font:500 21px/1.2 "Kaiti SC","STKaiti",serif}
+.error{position:fixed;left:50%;top:50%;z-index:10;transform:translate(-50%,-50%);display:none;max-width:440px;padding:20px 24px;border:1px solid rgba(165,69,53,.7);background:rgba(24,19,17,.96);color:#f3e6db;text-align:center;font:12px/1.8 "Noto Sans SC","Microsoft YaHei",sans-serif}.error.show{display:block}
+@media(max-width:700px){.identity{top:18px;left:18px}.top-actions{top:18px;right:18px}.top-actions .ui-button:first-child{display:none}.collection{left:18px;bottom:18px;width:min(260px,calc(100vw - 36px));padding:12px}.caption{right:18px;bottom:148px;width:min(260px,calc(100vw - 36px));padding:10px 12px}.caption h3{font-size:16px}.meta{display:none}}
+</style>
 </head>
 <body>
-<script>window.MuseumInteriorOnly=true; window.MuseumInteriorHall="hall3";</script>
-<!-- ===== 开场粒子序章覆盖层 ===== -->
-<div id="intro">
-  <canvas id="introCanvas"></canvas>
-  <div id="introTitle">
-    <h1>云间入墨</h1>
-  </div>
-  <div id="introPanel">
-    <label>基色 <input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
-    <label>密度 <input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
-  </div>
-  <div id="introCamWrap" aria-label="摄像头实时画面，可拖动右下角调整大小">
-    <video id="introVideo" autoplay muted playsinline></video>
-    <div id="introCamTag">摄像头 · 手势追踪（右下角拖拽调大小）</div>
-  </div>
-  <div id="introBR">
-    <button id="introFull" aria-label="全屏切换">全屏</button>
-    <button id="introEnter" aria-label="进入博物馆">进入博物馆 →</button>
-  </div>
-  <div id="introStatus">正在加载手势模型…</div>
+<canvas id="gallery" aria-label="人物厅三维展厅"></canvas>
+<div class="museum-ui">
+  <header class="identity"><span class="seal">人物<br>风骨</span><div><h1>人物风骨</h1><p>将军俑 · 马踏飞燕 · 石狮 · 青铜鼎</p></div></header>
+  <div class="top-actions"><button id="btn-back-view" class="ui-button" type="button">背面检查</button><button id="btn-reset" class="ui-button" type="button">全景视角</button><a class="ui-button" href="./index.html">返回全园</a></div>
+  <aside class="collection"><h2>展陈零件 / 固定观察机位</h2><div id="exhibit-list" class="exhibit-list"></div><p class="hint">拖拽环视 · 滚轮缩放 · 观察范围限制在人物厅内</p></aside>
+  <section class="caption"><h3 id="caption-title">人物厅全景</h3><p id="caption-text">从入口看俑阵、马踏飞燕、石狮与青铜鼎的完整展陈关系。</p></section>
 </div>
+<div id="loading" class="loading"><div class="loading-inner"><div class="loading-mark">墨</div><strong>正在布置人物厅</strong><p id="loading-text">加载五件立体展品…</p></div></div>
+<div id="error" class="error"></div>
+<script src="./js/vendor/three.min.js"></script>
+<script src="./js/vendor/GLTFLoader.js"></script>
+<script>
+(function () {
+  "use strict";
+  var FLOOR = 0.26;
+  var loads = {};
+  var errors = [];
+  var selected = "overall";
+  var view = { pos: new THREE.Vector3(0, 2.1, 7.4), target: new THREE.Vector3(0, 1.25, -2.5) };
+  var orbit = { yaw: 0, pitch: 0.08, radius: 10 };
+  var anim = null;
+  var pointer = null;
+  var scene, camera, renderer, raycaster;
+  var models = {};
+  var modelRoots = {};
 
-  <!-- ===== 3D 画布容器 ===== -->
-  <div id="stage"></div>
+  var canvas = document.getElementById("gallery");
+  var loading = document.getElementById("loading");
+  var loadingText = document.getElementById("loading-text");
+  var errorBox = document.getElementById("error");
+  var list = document.getElementById("exhibit-list");
+  var captionTitle = document.getElementById("caption-title");
+  var captionText = document.getElementById("caption-text");
 
-  <!-- ===== 顶部标题（朱砂印章式签名元素） ===== -->
-  <header id="topbar" class="topbar hidden">
-    <div class="brand">
-      <span class="brand-seal">云间<br>入墨</span>
-      <div class="brand-text">
-        <h1>云间入墨</h1>
-        <p>CloudInk Art Museum · 手势交互数字博物馆</p>
-      </div>
-    </div>
-    <div id="hall-label" class="hall-label">前庭 · 园区</div>
-  </header>
+  var ITEMS = [
+    { id: "overall", label: "人物厅全景", number: "00", meta: "总览", title: "人物厅全景", text: "从入口看俑阵、马踏飞燕、石狮与青铜鼎的完整展陈关系。" },
+    { id: "pedestal", label: "展台基座", number: "01", meta: "1.5 m", title: "展台基座", text: "石质双层底、深木台身与铜箍台面；五件展品按底部尺寸分别落在独立基座上。" },
+    { id: "warrior", label: "将军俑", number: "02", meta: "1.6 m", title: "将军俑", text: "秦代高级军吏俑，鱼鳞甲、鹖冠与束发轮廓作为近景检查重点，站在左侧独立展台上。" },
+    { id: "horse", label: "马踏飞燕", number: "03", meta: "1.6 m", title: "马踏飞燕", text: "东汉铜奔马三足腾空、一足踏燕；侧向摆放，让奔马轮廓和最小支点完整可见。" },
+    { id: "stone-lion", label: "石狮", number: "04", meta: "1.2 m", title: "石狮", text: "入口两侧成对布置，朝向厅内与观众；与中央展台保持观看距离，不遮挡主展品。" },
+    { id: "bronze-ding", label: "青铜鼎", number: "05", meta: "1.1 m", title: "青铜鼎", text: "商代青铜方鼎，三足双耳与饕餮纹作为近景检查重点，安置在右侧独立展台上。" }
+  ];
+  var VIEWS = {
+    overall: { pos: [0, 2.1, 7.4], target: [0, 1.25, -2.5], caption: "人物厅全景" },
+    pedestal: { pos: [0, 1.15, 0.15], target: [0, 0.82, -5.0], caption: "展台基座" },
+    warrior: { pos: [-0.55, 1.72, 0.55], target: [-2.8, 1.32, -2.1], caption: "将军俑" },
+    horse: { pos: [0, 1.72, 0.45], target: [0, 1.42, -4.9], caption: "马踏飞燕" },
+    "stone-lion": { pos: [-3.55, 1.38, 6.45], target: [-6.25, 0.95, 4.75], caption: "石狮" },
+    "bronze-ding": { pos: [1.45, 1.44, 0.55], target: [3.0, 1.1, -2.1], caption: "青铜鼎" },
+    back: { pos: [0, 2.25, -7.55], target: [0, 1.2, -1.4], caption: "背面检查" }
+  };
 
-  <!-- ===== 左下：操作说明 ===== -->
-  <aside id="help" class="help hidden">
-    <h3>手势操作</h3>
-    <ul>
-      <li><b>张开手掌</b>　向前漫游</li>
-      <li><b>握拳</b>　　　向后退</li>
-      <li><b>食指左右</b>　转向</li>
-      <li><b>捏合两指 · 三指张开</b>　查看 / 关闭展品</li>
-    </ul>
-    <p class="help-key">键盘备选：W/S 前进后退 · A/D 转向 · E 查看 · Q 关闭 · R 重置视角 · V 全景 · T 第三人称</p>
-  </aside>
-
-  <!-- ===== 右下：工具栏 ===== -->
-  <div id="toolbar" class="toolbar hidden">
-    <button id="btn-camera" type="button" title="开启/关闭摄像头手势控制">摄像头：关</button>
-    <button id="btn-night" type="button" title="切换昼夜氛围（快捷键 N）">入夜 · 灯火</button>
-    <button id="btn-reset" type="button" title="重置视角">重置视角</button>
-    <button id="btn-help" type="button" title="显示/隐藏操作说明">操作说明</button>
-  </div>
-
-  <!-- ===== 摄像头预览小窗 ===== -->
-  <div id="camwrap" class="camwrap hidden">
-    <video id="cam" autoplay playsinline muted></video>
-    <p>手势识别中 · 请坐在屏幕前</p>
-  </div>
-
-  <!-- ===== 展品鉴赏弹窗 ===== -->
-  <div id="panel" class="panel" role="dialog" aria-modal="true" aria-hidden="true">
-    <button id="panel-close" type="button" class="panel-close" aria-label="关闭">×</button>
-    <div id="panel-body" class="panel-body"></div>
-  </div>
-
-  <!-- ===== 提示条 ===== -->
-  <div id="toast" class="toast"></div>
-
-    <!-- ===== Vue 应用挂载点（登录/收藏/展厅路由，src/ 下代码） ===== -->
-  <div id="app"></div>
-
-  <!-- 第三方依赖：Three.js r147（UMD，SRI 锁定） -->
-  <!-- three.js 本地化：原 jsdelivr CDN 在国内常不可达，断网/答辩会白屏 -->
-  <script src="./js/vendor/three.min.js"></script>
-  <script src="./js/vendor/GLTFLoader.js"></script>
-  <!-- 第三方依赖：MediaPipe Tasks Vision 0.10.0（已本地化：js/vendor/mediapipe/，
-       WASM 与 hand_landmarker.task 由 gesture.js 从本地路径加载，断网可用） -->
-  <!-- 注意：vision_bundle.js 是「UMD 外层 + 末尾 ESM export」的混合产物，
-       用普通 <script src> 会直接报 "Uncaught SyntaxError: Unexpected token 'export'"，
-       所以必须用动态 import() 载入（@vite-ignore 防止 Vite 打包时改写路径）；
-       载入后把 FilesetResolver / HandLandmarker 暴露到全局，
-       并派发 mediapipe-ready 事件，供 gesture.js（普通脚本）等待使用。 -->
-  <script type="module">
-    window.MediaPipeReady = (async function () {
-      try {
-        var vision = await import(/* @vite-ignore */ "./js/vendor/mediapipe/vision_bundle.js");
-        window.FilesetResolver = vision.FilesetResolver;
-        window.HandLandmarker = vision.HandLandmarker;
-        window.MediaPipeVision = vision;
-        return true;
-      } catch (err) {
-        console.warn("[云间入墨] MediaPipe 加载失败，将降级为键盘操作：", err);
-        return false;
-      } finally {
-        window.dispatchEvent(new Event("mediapipe-ready"));
+  function setError(message) { errors.push(message); errorBox.textContent = message; errorBox.classList.add("show"); }
+  function canvasTexture(draw, w, h) {
+    var c = document.createElement("canvas"); c.width = w || 512; c.height = h || 512;
+    var ctx = c.getContext("2d"); draw(ctx, c.width, c.height);
+    var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t;
+  }
+  function woodTexture() {
+    return canvasTexture(function (ctx, w, h) {
+      ctx.fillStyle = "#6b4c34"; ctx.fillRect(0, 0, w, h);
+      for (var i = 0; i < 90; i++) {
+        var y = (i * 37) % h;
+        ctx.strokeStyle = i % 3 ? "rgba(34,22,15,.14)" : "rgba(240,205,160,.08)";
+        ctx.lineWidth = i % 5 === 0 ? 5 : 2;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.bezierCurveTo(w * .3, y + 8, w * .7, y - 8, w, y + 2); ctx.stroke();
+        if (i % 19 === 0) { ctx.fillStyle = "rgba(34,22,15,.28)"; ctx.beginPath(); ctx.ellipse((i * 53) % w, y, 22, 8, 0, 0, Math.PI * 2); ctx.fill(); }
       }
-    })();
-  </script>
-
-  <!-- 项目模块（依赖顺序不可调换） -->
-  <script src="./js/config.js"></script>
-  <script src="./js/models.js"></script>
-  <script src="./js/exterior.js"></script>
-  <script src="./js/gallery.js"></script>
-  <script src="./js/windows.js"></script>
-  <script src="./js/exterior-layout.js"></script>
-  <script src="./js/slots.js"></script>
-  <script src="./js/foliage.js"></script>
-  <script src="./js/lighting.js"></script>
-  <script src="./js/intro.js"></script>
-  <script src="./js/scene.js"></script>
-  <script src="./js/avatar.js"></script>
-  <script src="./js/player.js"></script>
-  <script src="./js/gesture.js"></script>
-  <script src="./js/exhibit.js"></script>
-  <script src="./js/ui.js"></script>
-  <script src="./js/main.js"></script>
-  <!-- Vue 入口（Vite 模块，最后加载，不干扰上方引擎脚本） -->
-  <script type="module" src="/src/main.js"></script>
+    }, 512, 512);
+  }
+  function plasterTexture() {
+    return canvasTexture(function (ctx, w, h) {
+      ctx.fillStyle = "#e9e1d1"; ctx.fillRect(0, 0, w, h);
+      for (var i = 0; i < 700; i++) { ctx.fillStyle = i % 2 ? "rgba(80,65,48,.035)" : "rgba(255,255,255,.055)"; ctx.fillRect((i * 83) % w, (i * 47) % h, 2, 2); }
+    }, 256, 256);
+  }
+  function mat(color, roughness, metalness) { return new THREE.MeshStandardMaterial({ color: color, roughness: roughness == null ? .85 : roughness, metalness: metalness || 0 }); }
+  function addBox(parent, w, h, d, material, x, y, z, ry) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material); m.position.set(x, y, z); m.rotation.y = ry || 0; m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
+  }
+  function label(text, x, y, z, scale) {
+    var tex = canvasTexture(function (ctx, w, h) {
+      ctx.clearRect(0, 0, w, h); ctx.fillStyle = "rgba(22,20,17,.78)"; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "rgba(207,174,121,.7)"; ctx.lineWidth = 4; ctx.strokeRect(3, 3, w - 6, h - 6);
+      ctx.fillStyle = "#f3e8d3"; ctx.font = "600 34px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, w / 2, h / 2);
+    }, 256, 64);
+    var sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+    sprite.position.set(x, y, z); sprite.scale.set(1.8, .45, 1); if (scale) sprite.scale.multiplyScalar(scale); scene.add(sprite); return sprite;
+  }
+  function addPainting(id, x, w, h) {
+    var frame = addBox(scene, w + .16, h + .16, .08, mat(0x3c2b20, .7), x, 2.78, -8.71);
+    var tex = new THREE.TextureLoader().load("./assets/images/" + id + ".jpg");
+    tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 4;
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: .88 }));
+    plane.position.set(x, 2.78, -8.66); scene.add(plane);
+    addBox(scene, w + .22, .055, .14, mat(0x8a684c, .6), x, 2.78 + h / 2 + .07, -8.67);
+  }
+  function addScroll(side, index, text) {
+    var x = side * 8.76;
+    var z = index === 0 ? -2.1 : -5.7;
+    var ry = side * -Math.PI / 2;
+    var tex = canvasTexture(function (ctx, w, h) {
+      ctx.fillStyle = "#e8dfcb"; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = "#785d46"; ctx.lineWidth = 8; ctx.strokeRect(8, 8, w - 16, h - 16);
+      ctx.fillStyle = "#342a23"; ctx.font = "500 62px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      var chars = text.split(""); for (var i = 0; i < chars.length; i++) ctx.fillText(chars[i], w / 2, 115 + i * 72);
+    }, 256, 512);
+    var plane = new THREE.Mesh(new THREE.PlaneGeometry(.72, 1.7), new THREE.MeshStandardMaterial({ map: tex, roughness: .92, side: THREE.DoubleSide }));
+    plane.position.set(x, 2.38, z); plane.rotation.y = ry; scene.add(plane);
+    addBox(scene, .07, 2.05, .1, mat(0x3e2b20, .7), x, 2.42, z, ry);
+  }
+  function buildRoom() {
+    var floorTex = woodTexture(); floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(4, 4);
+    addBox(scene, 17.8, FLOOR, 17.8, new THREE.MeshStandardMaterial({ map: floorTex, color: 0xb08c68, roughness: .72 }), 0, FLOOR / 2, 0);
+    var plaster = new THREE.MeshStandardMaterial({ map: plasterTexture(), color: 0xf0e9db, roughness: .95 });
+    var wood = mat(0x4a3325, .75); var woodDark = mat(0x2c2119, .78); var stone = mat(0x978f83, .92); var brass = mat(0xc29a56, .38, .35);
+    addBox(scene, 18, 4.6, .26, plaster, 0, 2.3, -8.92);
+    addBox(scene, .26, 4.6, 18, plaster, -8.92, 2.3, 0);
+    addBox(scene, .26, 4.6, 18, plaster, 8.92, 2.3, 0);
+    addBox(scene, 6.0, 4.6, .26, plaster, -6.0, 2.3, 8.92);
+    addBox(scene, 6.0, 4.6, .26, plaster, 6.0, 2.3, 8.92);
+    addBox(scene, 6.2, 1.8, .26, plaster, 0, 3.7, 8.92);
+    for (var i = -3; i <= 3; i++) addBox(scene, .16, .18, 17.6, woodDark, i * 2.7, 4.52, 0);
+    addBox(scene, 17.8, .18, .18, woodDark, 0, 4.52, -8.75);
+    addBox(scene, .16, .45, 17.6, wood, -8.74, .48, 0); addBox(scene, .16, .45, 17.6, wood, 8.74, .48, 0);
+    addBox(scene, 17.8, .45, .16, wood, 0, .48, -8.74);
+    addBox(scene, 12.9, .24, .36, stone, 0, .38, 8.65);
+    addPainting("hanxizai", -5.1, 3.2, 2.0); addPainting("luoshenfu", 0, 2.25, 1.7); addPainting("buniantu", 5.1, 2.25, 1.7);
+    label("人物丹青", 0, 4.08, -8.62);
+    addScroll(-1, 0, "观古"); addScroll(-1, 1, "鉴今"); addScroll(1, 0, "以画"); addScroll(1, 1, "识人");
+    // 三折屏风
+    for (var p = -1; p <= 1; p++) {
+      var pg = new THREE.Group(); pg.position.set(p * .72, FLOOR, -6.55); pg.rotation.y = -p * .24; scene.add(pg);
+      addBox(pg, .62, 1.86, .075, woodDark, 0, .93, 0); addBox(pg, .54, 1.55, .025, new THREE.MeshStandardMaterial({ color: 0xe8dfcb, roughness: .94 }), 0, .94, .048);
+      addBox(pg, .62, .08, .30, wood, 0, .04, 0); addBox(pg, .06, .08, .07, brass, -.25, 1.68, .08); addBox(pg, .06, .08, .07, brass, .25, 1.68, .08);
+    }
+  }
+  function normalize(root, size, mode) {
+    var clone = root.clone(true); var box = new THREE.Box3().setFromObject(clone); var dims = box.getSize(new THREE.Vector3());
+    var measure = mode === "max" ? Math.max(dims.x, dims.y, dims.z) : dims.y;
+    var scale = measure > .0001 ? size / measure : 1; clone.scale.setScalar(scale); clone.updateMatrixWorld(true);
+    box.setFromObject(clone); var center = box.getCenter(new THREE.Vector3());
+    clone.position.x -= center.x; clone.position.z -= center.z; clone.position.y -= box.min.y;
+    var wrap = new THREE.Group(); wrap.add(clone); wrap.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } }); return wrap;
+  }
+  function place(name, root, x, y, z, ry, sx, sz) {
+    root.position.set(x, y, z); root.rotation.y = ry || 0; if (sx || sz) root.scale.set(sx || 1, 1, sz || 1);
+    scene.add(root); modelRoots[name] = root; return root;
+  }
+  function loadGLB(id) {
+    return new Promise(function (resolve, reject) {
+      new THREE.GLTFLoader().load("./assets/models/parts/opt/" + id + ".glb", function (gltf) { loads[id] = true; resolve(gltf.scene); }, undefined, function (e) { loads[id] = false; errors.push(id + " 加载失败"); reject(e); });
+    });
+  }
+  function buildModels() {
+    var ids = ["pedestal", "warrior", "horse", "stone-lion", "bronze-ding"];
+    var pending = ids.map(function (id) { loadingText.textContent = "加载 " + id + " …"; return loadGLB(id).then(function (r) { models[id] = r; }).catch(function () {}); });
+    Promise.all(pending).then(function () {
+      if (!models.pedestal || !models.warrior || !models.horse || !models["stone-lion"] || !models["bronze-ding"]) {
+        setError("部分零件未加载成功：" + ids.filter(function (id) { return !models[id]; }).join("、"));
+      }
+      var base = models.pedestal ? normalize(models.pedestal, .8, "height") : new THREE.Group();
+      place("warriorBase", base.clone(true), -2.8, FLOOR, -2.1, .08);
+      if (models.warrior) place("warrior", normalize(models.warrior, 1.6, "height"), -2.8, FLOOR + .8, -2.1, .04);
+      var horseBase = models.pedestal ? normalize(models.pedestal, 1.02, "height") : new THREE.Group();
+      place("horseBase", horseBase, 0, FLOOR, -4.9, 0, 1.65, 1.25);
+      if (models.horse) place("horse", normalize(models.horse, 1.6, "max"), 0, FLOOR + 1.02, -4.9, Math.PI / 2);
+      var dingBase = models.pedestal ? normalize(models.pedestal, .86, "height") : new THREE.Group();
+      place("dingBase", dingBase, 3.05, FLOOR, -2.1, 0);
+      if (models["bronze-ding"]) place("bronze-ding", normalize(models["bronze-ding"], 1.1, "height"), 3.05, FLOOR + .86, -2.1, -.07);
+      if (models["stone-lion"]) {
+        var lionL = normalize(models["stone-lion"], 1.2, "height"); place("stone-lion-left", lionL, -6.3, FLOOR, 4.65, .35);
+        var lionR = normalize(models["stone-lion"], 1.2, "height"); place("stone-lion-right", lionR, 6.3, FLOOR, 4.65, -.35);
+        var lionBaseL = models.pedestal ? normalize(models.pedestal, .46, "height") : new THREE.Group(); place("lionBaseLeft", lionBaseL, -6.3, FLOOR, 4.65, .35, 1.1, 1.1);
+        var lionBaseR = models.pedestal ? normalize(models.pedestal, .46, "height") : new THREE.Group(); place("lionBaseRight", lionBaseR, 6.3, FLOOR, 4.65, -.35, 1.1, 1.1);
+        modelRoots["stone-lion-left"].position.y = FLOOR + .46; modelRoots["stone-lion-right"].position.y = FLOOR + .46;
+      }
+      label("将军俑", -2.8, 2.82, -2.1, .82); label("马踏飞燕", 0, 2.55, -4.9, .9); label("青铜鼎", 3.05, 2.32, -2.1, .82);
+      label("石狮", -6.3, 2.04, 4.65, .72); label("石狮", 6.3, 2.04, 4.65, .72);
+      window.__renwu = { focus: focus, setOrbit: setOrbit, scene: scene, camera: camera, models: modelRoots, loaded: loads };
+      window.__renwuReady = { ok: errors.length === 0, loaded: loads, errors: errors };
+      loading.classList.add("done"); setTimeout(function () { loading.style.display = "none"; }, 520);
+    });
+  }
+  function renderList() {
+    list.innerHTML = "";
+    ITEMS.forEach(function (item) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "exhibit-button" + (item.id === selected ? " active" : ""); b.dataset.view = item.id;
+      b.innerHTML = '<span class="num">' + item.number + '</span><span>' + item.label + '</span><span class="meta">' + item.meta + '</span>';
+      b.addEventListener("click", function () { focus(item.id); }); list.appendChild(b);
+    });
+  }
+  function setCaption(id) {
+    var item = ITEMS.filter(function (x) { return x.id === id; })[0] || ITEMS[0]; selected = item.id; captionTitle.textContent = item.title; captionText.textContent = item.text;
+    Array.prototype.forEach.call(list.children, function (b) { b.classList.toggle("active", b.dataset.view === item.id); });
+  }
+  function setOrbit(target, yaw, pitch, radius) {
+    anim = null; view.target.set(target[0], target[1], target[2]); orbit.yaw = yaw; orbit.pitch = pitch; orbit.radius = radius; updateCamera();
+  }
+  function focus(id) {
+    var v = VIEWS[id] || VIEWS.overall; setCaption(id);
+    var fromPos = camera.position.clone(); var fromTarget = view.target.clone(); var toPos = new THREE.Vector3().fromArray(v.pos); var toTarget = new THREE.Vector3().fromArray(v.target);
+    anim = { start: performance.now(), duration: 520, fromPos: fromPos, fromTarget: fromTarget, toPos: toPos, toTarget: toTarget };
+  }
+  function updateCamera() {
+    var cp = Math.cos(orbit.pitch);
+    camera.position.set(view.target.x + orbit.radius * cp * Math.sin(orbit.yaw), view.target.y + orbit.radius * Math.sin(orbit.pitch), view.target.z + orbit.radius * cp * Math.cos(orbit.yaw));
+    /* 相机始终限制在人物厅内部，避免拖拽或缩放串到外景。 */
+    camera.position.x = Math.max(-8.1, Math.min(8.1, camera.position.x));
+    camera.position.z = Math.max(-8.1, Math.min(8.1, camera.position.z));
+    camera.position.y = Math.max(0.95, Math.min(3.9, camera.position.y));
+    camera.lookAt(view.target);
+  }
+  function tick(now) {
+    requestAnimationFrame(tick);
+    if (anim) {
+      var k = Math.min(1, (now - anim.start) / anim.duration), e = 1 - Math.pow(1 - k, 3);
+      camera.position.lerpVectors(anim.fromPos, anim.toPos, e); view.target.lerpVectors(anim.fromTarget, anim.toTarget, e); camera.lookAt(view.target);
+      if (k >= 1) { orbit.yaw = Math.atan2(camera.position.x - view.target.x, camera.position.z - view.target.z); orbit.radius = camera.position.distanceTo(view.target); orbit.pitch = Math.asin((camera.position.y - view.target.y) / orbit.radius); anim = null; }
+    }
+    renderer.render(scene, camera);
+  }
+  function bindControls() {
+    canvas.addEventListener("pointerdown", function (e) { anim = null; pointer = { x: e.clientX, y: e.clientY }; canvas.classList.add("dragging"); canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener("pointermove", function (e) { if (!pointer) return; var dx = e.clientX - pointer.x, dy = e.clientY - pointer.y; pointer = { x: e.clientX, y: e.clientY }; orbit.yaw -= dx * .005; orbit.pitch = Math.max(-.18, Math.min(1.12, orbit.pitch + dy * .0035)); updateCamera(); });
+    function end(e) { pointer = null; canvas.classList.remove("dragging"); if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId); }
+    canvas.addEventListener("pointerup", end); canvas.addEventListener("pointercancel", end);
+    canvas.addEventListener("wheel", function (e) { e.preventDefault(); anim = null; orbit.radius = Math.max(3.2, Math.min(13.5, orbit.radius + e.deltaY * .006)); updateCamera(); }, { passive: false });
+    document.getElementById("btn-reset").addEventListener("click", function () { focus("overall"); });
+    document.getElementById("btn-back-view").addEventListener("click", function () { focus("back"); });
+    window.addEventListener("resize", function () { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(innerWidth, innerHeight, false); });
+  }
+  function init() {
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.setSize(innerWidth, innerHeight, false); renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.08; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0xd8d0c3); scene.fog = new THREE.Fog(0xd8d0c3, 18, 42);
+    camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, .03, 80); camera.rotation.order = "YXZ"; camera.position.set(0, 2.1, 7.4); camera.lookAt(view.target);
+    raycaster = new THREE.Raycaster();
+    scene.add(new THREE.HemisphereLight(0xfff6e8, 0x443a2e, 1.15));
+    var sun = new THREE.DirectionalLight(0xffefd5, 1.45); sun.position.set(-4, 8, 6); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); scene.add(sun);
+    var fill = new THREE.DirectionalLight(0xb8c9d2, .62); fill.position.set(5, 4, -4); scene.add(fill);
+    var warm = new THREE.PointLight(0xffca8c, 1.15, 10, 1.7); warm.position.set(0, 3.8, -2.2); scene.add(warm);
+    var key = new THREE.PointLight(0xffd3a2, 1.0, 6, 1.6); key.position.set(-2.8, 3.0, -1.0); scene.add(key);
+    var key2 = new THREE.PointLight(0xffd3a2, .9, 6, 1.6); key2.position.set(3.0, 3.0, -1.0); scene.add(key2);
+    buildRoom(); renderList(); setCaption("overall"); bindControls(); buildModels(); requestAnimationFrame(tick);
+  }
+  try { init(); } catch (e) { setError("页面初始化失败：" + (e && e.message ? e.message : e)); }
+})();
+</script>
 </body>
 </html>
-
-
-

@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # PR 只检查本次变更，需要 merge commit 的基线父提交。
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -61,9 +64,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # PR 检查只扫描本次相对基线新增或修改的文件，需要 merge commit 的前两个父提交。
-          fetch-depth: 2
       - name: 密钥扫描（提交内容里不能出现 token / 私钥）
         run: |
           # 排除 .github 自身（规则文本本身就包含这些关键字）
@@ -73,29 +73,38 @@ jobs:
             exit 1
           fi
           echo "密钥扫描通过"
-      - name: 大文件守卫（单个跟踪文件不超过 5MB）
+      - name: 大文件守卫（单个变更文件不超过 5MB）
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          # 例外（2026-10-09 放行）：MediaPipe 离线推理要把 wasm 与手部模型随仓库分发（Apache-2.0），
-          # 这 3 个文件天然 >5MB；其余文件仍严格受 5MB 限制。
+          # 例外：MediaPipe 离线推理要把 wasm 与手部模型随仓库分发（Apache-2.0）。
           ALLOW='^(js/vendor/mediapipe/|assets/models/hand_landmarker\.task$)'
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            FILES=$(git diff --name-only --diff-filter=AM "$GITHUB_SHA^1" "$GITHUB_SHA")
+          elif [ -n "$BASE_SHA" ] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            FILES=$(git diff --name-only --diff-filter=AM "$BASE_SHA...HEAD")
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            FILES=$(git diff --name-only --diff-filter=AM HEAD^..HEAD)
+          else
+            FILES=$(git ls-files)
+          fi
           big=""
           allow_cnt=0
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            files=$(git diff --name-only --diff-filter=ACMR "$GITHUB_SHA^1" "$GITHUB_SHA")
-          else
-            # main 推送和手动运行仍扫描全部跟踪文件。
-            files=$(git ls-files)
-          fi
+          lfs_cnt=0
+          check_cnt=0
           while IFS= read -r f; do
             [ -n "$f" ] || continue
             [ -f "$f" ] || continue
+            check_cnt=$((check_cnt + 1))
             if printf '%s' "$f" | grep -Eq "$ALLOW"; then allow_cnt=$((allow_cnt + 1)); continue; fi
+            # LFS 文件已在传输层单独管理，不再按工作区实体大小重复拦截
+            if git check-attr filter -- "$f" | grep -q 'filter: lfs'; then lfs_cnt=$((lfs_cnt + 1)); continue; fi
             s=$(wc -c < "$f")
             if [ "$s" -gt 5242880 ]; then
               big="$big"$'\n'"  $f ($((s / 1024))KB)"
             fi
-          done <<< "$files"
-          echo "白名单放行 $allow_cnt 个文件（MediaPipe 离线件）"
+          done <<< "$FILES"
+          echo "检查本次变更 $check_cnt 个文件；白名单放行 $allow_cnt 个；LFS 托管放行 $lfs_cnt 个"
           if [ -n "$big" ]; then
             echo "::error::以下文件超过 5MB，请压缩或启用 Git LFS"
             echo "$big"
