@@ -141,10 +141,13 @@ async function main() {
     );
 
     const screenshot = path.join(OUT, "组员5-12-展品模型完整取景.png");
-    await page.locator(".panel-card").screenshot({
+    const panelBox = await page.locator(".panel-card").boundingBox();
+    assert(panelBox && panelBox.width > 0 && panelBox.height > 0, "模型弹窗尺寸无效");
+    await page.screenshot({
       path: screenshot,
       type: "png",
       animations: "disabled",
+      clip: panelBox,
     });
     assert((await fsp.stat(screenshot)).size > 30000, "模型完整取景截图内容异常");
 
