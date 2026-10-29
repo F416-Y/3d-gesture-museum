@@ -18,14 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # 保留 PR merge commit；守卫步骤再显式获取事件中的基线 SHA。
-          fetch-depth: 2
-      - name: 获取 PR 基线
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -69,6 +61,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 保留 PR merge commit；下一步再显式获取事件中的基线 SHA。
+          fetch-depth: 2
+      - name: 获取 PR 基线
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
       - name: 密钥扫描（提交内容里不能出现 token / 私钥）
         run: |
           # 排除 .github 自身（规则文本本身就包含这些关键字）
