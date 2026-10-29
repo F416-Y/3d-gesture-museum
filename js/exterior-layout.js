@@ -1580,7 +1580,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 中轴真实拱桥：优先加载单桥 GLB，失败回退程序桥 ---------- */
   function loadCentralArchBridge() {
     if (!THREE.GLTFLoader) { buildCentralArchBridge(); return; }
-    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/rodin_bridge_single.glb', function (gltf) {
+    new THREE.GLTFLoader().load('assets/models/parts/bridge-workbench/central-arch-bridge.glb', function (gltf) {
       var bridge = gltf.scene; bridge.name = 'rodin-central-arch-bridge'; bridge.updateMatrixWorld(true);
       var raw = new THREE.Box3().setFromObject(bridge), rawSize = raw.getSize(new THREE.Vector3());
       if (!Math.max(rawSize.x, rawSize.z)) { buildCentralArchBridge(); return; }
@@ -1589,9 +1589,15 @@ window.MuseumExteriorLayout = (function () {
       bridge.updateMatrixWorld(true);
       var fitted = new THREE.Box3().setFromObject(bridge), center = fitted.getCenter(new THREE.Vector3());
       var group = new THREE.Group(); group.name = 'central-arch-bridge-glb'; group.add(bridge);
-      group.position.set(-center.x, 0.06 - fitted.min.y, -2.2 - center.z);
+      // 桥脚要嵌入湖床/岸基，不能只停在水面高度，否则会产生“浮桥”视觉。
+      group.position.set(-center.x, -0.08 - fitted.min.y, -2.2 - center.z);
       bridge.traverse(function (node) { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
       S.scene.add(group);
+      // 两端桥台承接桥脚并嵌入湖床；拱腹跨水，不让桥体看起来整块漂在水面。
+      box(2.8, 0.46, 1.45, M.stone, 0, -0.08, -10.0);
+      box(2.8, 0.46, 1.45, M.stone, 0, -0.08, 5.6);
+      box(2.45, 0.16, 0.95, M.stoneDark, 0, 0.23, -9.72);
+      box(2.45, 0.16, 0.95, M.stoneDark, 0, 0.23, 5.32);
     }, undefined, function () { buildCentralArchBridge(); });
   }
 

@@ -155,6 +155,7 @@ window.MuseumConfig = {
     },
     {
       id: "houmuwuding", type: "artifact", hall: "hall0",
+      model: "assets/models/parts/opt/bronze-ding.glb",
       title: "后母戊鼎",
       artist: "佚名", dynasty: "商代后期", era: "约公元前 14—前 11 世纪",
       medium: "青铜礼器 · 通高 133cm · 重 832.84kg",
