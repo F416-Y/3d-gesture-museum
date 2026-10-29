@@ -178,7 +178,7 @@ async function main() {
     assert((await fsp.stat(screenshot)).size > 30000, "模型完整取景截图内容异常");
 
     const previousAspect = initial.cameraAspect;
-    await page.setViewportSize({ width: 1000, height: 900 });
+    await page.setViewportSize({ width: 700, height: 900 });
     await page.waitForFunction(
       (aspect) => Number(document.querySelector(".p-model-viewer")?.dataset.cameraAspect) !== aspect,
       previousAspect,
