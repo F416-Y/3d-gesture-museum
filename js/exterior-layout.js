@@ -1608,6 +1608,7 @@ window.MuseumExteriorLayout = (function () {
       [-13.5, 10.5], [-9.0, 6.8], [-4.2, 2.0], [0.0, -2.2],
       [5.2, -6.7], [10.4, -10.8], [15.5, -14.0]
     ], 3.2, 55);
+    if (typeof location !== 'undefined' && /(^|[?&])streamGuide=1(?:&|$)/.test(location.search)) drawStreamRouteGuides();
     loadCentralArchBridge();
     return;
     /* 周边碎石广场 */
@@ -1929,6 +1930,29 @@ window.MuseumExteriorLayout = (function () {
       lotus(cx + ((s % 100) / 100 - 0.5) * rx * 1.1,
             cz + ((s % 97) / 97 - 0.5) * rz * 1.1, 0.22 + (s % 50) / 500);
     }
+  }
+
+  /* ---------- 临时溪流路线校验线：?streamGuide=1 才显示 ---------- */
+  function drawStreamRouteGuides() {
+    var guideGroup = new THREE.Group(); guideGroup.name = 'stream-route-guides'; S.scene.add(guideGroup);
+    var redRoute = [
+      [-19.0, 22.0], [-17.2, 18.2], [-14.2, 14.0], [-11.0, 9.5],
+      [-6.4, 7.0], [-1.0, 6.1], [5.2, 5.5], [11.5, 4.5], [18.0, 3.6]
+    ];
+    var blueRoute = [
+      [-20.0, 22.8], [-18.0, 18.8], [-15.0, 14.6], [-12.0, 10.2],
+      [-7.2, 7.7], [-1.8, 6.9], [4.5, 6.2], [10.8, 5.2], [18.5, 4.2]
+    ];
+    function addGuide(points, color) {
+      var vertices = [], i;
+      for (i = 0; i < points.length; i++) vertices.push(points[i][0], 0.32, points[i][1]);
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      var line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.92 }));
+      line.renderOrder = 20; guideGroup.add(line);
+    }
+    addGuide(redRoute, 0xd13b32);
+    addGuide(blueRoute, 0x1677d2);
   }
 
   /* ---------- 穿园小溪：可控宽度的连续水道，桥下溪宽约 3.2m ---------- */
