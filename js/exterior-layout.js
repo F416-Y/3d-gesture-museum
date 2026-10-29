@@ -1603,10 +1603,10 @@ window.MuseumExteriorLayout = (function () {
 
   /* ---------- 中心庭（改为穿园小溪，桥位仍在 0,-2.2） ---------- */
   function buildZhongxinCourt() {
-    /* 小溪中心段：西北 → 东南穿过中心庭院，桥下净跨按溪宽控制。 */
+    /* 花鸟与山水之间的空地 → 桥下 → 人物与书斋之间的空地。 */
     windingStream([
-      [-13.5, 10.5], [-9.0, 6.8], [-4.2, 2.0], [0.0, -2.2],
-      [5.2, -6.7], [10.4, -10.8], [15.5, -14.0]
+      [-20.0, -22.5], [-16.4, -18.5], [-11.9, -13.5], [-6.5, -8.6],
+      [0.0, -2.2], [7.1, 0.8], [14.2, 2.9], [20.8, 4.4], [26.2, 5.2]
     ], 3.2, 55);
     if (typeof location !== 'undefined' && /(^|[?&])streamGuide=1(?:&|$)/.test(location.search)) drawStreamRouteGuides();
     loadCentralArchBridge();
