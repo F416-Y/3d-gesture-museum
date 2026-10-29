@@ -153,6 +153,7 @@ window.MuseumUI = (function () {
   /* ---------- 鉴赏弹窗（含收藏 + 评论区） ---------- */
   function showExhibit(ex) {
     if (!el.panel || !el.panelBody) return;
+    if (modelViewerCleanup) modelViewerCleanup();
     currentExhibit = ex;
     social.favorited = false;
     social.favLoading = false;
@@ -161,7 +162,7 @@ window.MuseumUI = (function () {
     var artVisual = ex.model
       ? '<div class="p-model-viewer" data-model-url="' + esc(ex.model) + '">' +
           '<canvas class="p-model-canvas" aria-label="' + esc(ex.title) + ' 360度模型预览"></canvas>' +
-          '<div class="p-model-hint">拖动旋转 · 滚轮缩放 · 自动巡览</div>' +
+          '<div class="p-model-hint">拖动旋转 · 滚轮缩放 · 双击复位</div>' +
         '</div>'
       : ex.image
       ? '<img class="p-art-img" src="' + ex.image + '" alt="' + esc(ex.title) + ' 画作" />'
@@ -223,25 +224,51 @@ window.MuseumUI = (function () {
     fill.position.set(-4, 2, -2); scene.add(fill);
     var root = new THREE.Group(); scene.add(root);
     var yaw = 0, pitch = 0.04, distance = 5.2, dragging = false, lastX = 0, lastY = 0;
+    var modelRadius = 0, fitDistance = 5.2, zoomFactor = 1;
+    var resizeObserver = null;
     var frame = 0, disposed = false;
+
+    function calculateFitDistance() {
+      if (modelRadius <= 0) return 5.2;
+      var verticalHalfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
+      var horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * Math.max(camera.aspect, 0.01));
+      var limitingHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
+      // 包围球适配对旋转、俯仰都成立，留 18% 安全边距，避免耳部和四足贴边。
+      return modelRadius / Math.max(Math.sin(limitingHalfFov), 0.01) * 1.18;
+    }
+
+    function applyZoom() {
+      fitDistance = calculateFitDistance();
+      distance = fitDistance * zoomFactor;
+      host.dataset.fitDistance = fitDistance.toFixed(3);
+      host.dataset.fitRadius = modelRadius.toFixed(3);
+      host.dataset.cameraFov = camera.fov.toFixed(3);
+      host.dataset.cameraAspect = camera.aspect.toFixed(6);
+      host.dataset.zoom = zoomFactor.toFixed(3);
+    }
+
     function resize() {
       var w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
       renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+      applyZoom();
     }
     function frameModel(model) {
       var box = new THREE.Box3().setFromObject(model);
+      if (box.isEmpty()) return;
       var size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
       var scale = 2.05 / Math.max(size.x, size.y, size.z, 0.01);
       model.scale.setScalar(scale);
       model.updateMatrixWorld(true);
       var fitted = new THREE.Box3().setFromObject(model);
-      var fittedSize = fitted.getSize(new THREE.Vector3());
       var fittedCenter = fitted.getCenter(new THREE.Vector3());
       model.position.x -= fittedCenter.x;
       model.position.y -= fittedCenter.y;
       model.position.z -= fittedCenter.z;
-      // 依据模型高度自动拉远相机，避免只显示局部纹饰。
-      distance = Math.max(3.8, Math.min(8.5, fittedSize.y / (2 * Math.tan(THREE.MathUtils.degToRad(35) / 2)) * 1.28));
+      model.updateMatrixWorld(true);
+      modelRadius = new THREE.Box3().setFromObject(model).getBoundingSphere(new THREE.Sphere()).radius;
+      zoomFactor = 1;
+      applyZoom();
+      host.dataset.modelReady = "true";
     }
     function render() {
       if (disposed) return;
@@ -258,10 +285,22 @@ window.MuseumUI = (function () {
       lastX = e.clientX; lastY = e.clientY;
     }
     function up(e) { dragging = false; if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId); }
-    function wheel(e) { e.preventDefault(); distance = Math.max(2.4, Math.min(6.5, distance + e.deltaY * 0.003)); }
+    function wheel(e) {
+      e.preventDefault();
+      zoomFactor = Math.max(0.52, Math.min(1.9, zoomFactor * Math.exp(e.deltaY * 0.001)));
+      applyZoom();
+    }
+    function resetView() {
+      yaw = 0; pitch = 0.04; zoomFactor = 1; applyZoom();
+    }
     canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move);
     canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", up);
-    canvas.addEventListener("wheel", wheel, { passive: false }); window.addEventListener("resize", resize);
+    canvas.addEventListener("wheel", wheel, { passive: false }); canvas.addEventListener("dblclick", resetView);
+    window.addEventListener("resize", resize);
+    if (typeof ResizeObserver === "function") {
+      resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(host);
+    }
     resize();
     new THREE.GLTFLoader().load(url, function (gltf) {
       if (disposed) return;
@@ -272,9 +311,11 @@ window.MuseumUI = (function () {
     render();
     modelViewerCleanup = function () {
       disposed = true; cancelAnimationFrame(frame); window.removeEventListener("resize", resize);
+      if (resizeObserver) resizeObserver.disconnect();
       canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move);
       canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", up);
-      canvas.removeEventListener("wheel", wheel); renderer.dispose(); modelViewerCleanup = null;
+      canvas.removeEventListener("wheel", wheel); canvas.removeEventListener("dblclick", resetView);
+      renderer.dispose(); modelViewerCleanup = null;
     };
   }
 
