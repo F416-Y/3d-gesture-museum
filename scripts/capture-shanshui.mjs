@@ -80,26 +80,80 @@ console.log("render stats", JSON.stringify(stats));
 await page.goto(BASE_URL, { waitUntil: "networkidle" });
 await waitForHall();
 const initial = await page.evaluate(() => window.ShanshuiHall.stats());
+
+await page.mouse.move(720, 440);
+await page.mouse.down();
+await page.mouse.move(990, 350, { steps: 8 });
+await page.mouse.up();
 await page.keyboard.down("w");
-await page.waitForTimeout(700);
+await page.keyboard.down("a");
+await page.waitForTimeout(450);
 await page.keyboard.up("w");
-const moved = await page.evaluate(() => window.ShanshuiHall.stats());
-if (moved.position.z >= initial.position.z - 0.2) {
-  throw new Error(`Keyboard movement did not advance toward the paintings: ${initial.position.z} -> ${moved.position.z}`);
+await page.keyboard.up("a");
+
+const fixed = await page.evaluate(() => window.ShanshuiHall.stats());
+if (
+  fixed.camera.join(",") !== initial.camera.join(",") ||
+  fixed.yaw !== initial.yaw ||
+  fixed.pitch !== initial.pitch
+) {
+  throw new Error(`Camera moved despite fixed-orientation mode: ${JSON.stringify({ initial, fixed })}`);
 }
 
-await page.keyboard.down("w");
-await page.waitForTimeout(4200);
-await page.keyboard.up("w");
-const bounded = await page.evaluate(() => window.ShanshuiHall.stats());
-if (bounded.position.z < -5.001 || bounded.position.z > 5.001) {
-  throw new Error(`Player left the hall bounds: z=${bounded.position.z}`);
+await page.keyboard.press("ArrowRight");
+const afterArrow = await page.evaluate(() => window.ShanshuiHall.stats());
+if (afterArrow.activeExhibit === initial.activeExhibit) {
+  throw new Error("ArrowRight did not switch to the next painting");
 }
-console.log("movement", JSON.stringify({ initial: initial.position, moved: moved.position, bounded: bounded.position }));
+
+await page.keyboard.press("e");
+const afterOpen = await page.evaluate(() => window.ShanshuiHall.stats());
+if (!afterOpen.panelOpen) throw new Error("E did not open the active painting");
+await page.keyboard.press("q");
+const afterClose = await page.evaluate(() => window.ShanshuiHall.stats());
+if (afterClose.panelOpen) throw new Error("Q did not close the painting panel");
+
+const gestureTurn = await page.evaluate(() => {
+  window.ShanshuiHall.handleGestureState({ turn: 0.8, pinchPressed: false }, performance.now() + 1000);
+  return window.ShanshuiHall.stats();
+});
+if (gestureTurn.activeExhibit === afterClose.activeExhibit) {
+  throw new Error("Gesture turn did not switch paintings");
+}
+
+const gesturePinch = await page.evaluate(() => {
+  window.ShanshuiHall.handleGestureState({ turn: 0, pinchPressed: true }, performance.now() + 2000);
+  return window.ShanshuiHall.stats();
+});
+if (!gesturePinch.panelOpen) throw new Error("Gesture pinch did not open the painting panel");
+
+const gesturePinchClose = await page.evaluate(() => {
+  window.ShanshuiHall.handleGestureState({ turn: 0, pinchPressed: true }, performance.now() + 3000);
+  return window.ShanshuiHall.stats();
+});
+if (gesturePinchClose.panelOpen) throw new Error("Gesture pinch did not close the painting panel");
+
+console.log("fixed-camera", JSON.stringify({
+  initial: initial.camera,
+  afterDragAndWasd: fixed.camera,
+  afterArrow: afterArrow.activeExhibit,
+  gestureTurn: gestureTurn.activeExhibit,
+  gesturePinchOpened: gesturePinch.panelOpen,
+  gesturePinchClosed: !gesturePinchClose.panelOpen,
+}));
 
 const loadedParts = await page.evaluate(() => window.ShanshuiHall.parts);
 if (loadedParts.length !== 4) {
   throw new Error(`Expected four loaded parts, received: ${loadedParts.join(", ")}`);
+}
+
+await page.goto(`${BASE_URL}?part=column`, { waitUntil: "networkidle" });
+await waitForHall();
+const partStart = await page.evaluate(() => window.ShanshuiHall.stats());
+await page.waitForTimeout(800);
+const partEnd = await page.evaluate(() => window.ShanshuiHall.stats());
+if (partStart.camera.join(",") === partEnd.camera.join(",")) {
+  throw new Error("Part preview is not auto-rotating");
 }
 
 await browser.close();

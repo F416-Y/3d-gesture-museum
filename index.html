@@ -147,7 +147,7 @@
         window.MediaPipeVision = vision;
         return true;
       } catch (err) {
-        console.warn("[云墨美术馆] MediaPipe 加载失败，将降级为键盘操作：", err);
+        console.warn("[云间入墨] MediaPipe 加载失败，将降级为键盘操作：", err);
         return false;
       } finally {
         window.dispatchEvent(new Event("mediapipe-ready"));
