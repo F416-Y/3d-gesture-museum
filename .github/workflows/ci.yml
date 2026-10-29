@@ -77,15 +77,18 @@ jobs:
           ALLOW='^(js/vendor/mediapipe/|assets/models/hand_landmarker\.task$)'
           big=""
           allow_cnt=0
+          lfs_cnt=0
           while IFS= read -r f; do
             [ -f "$f" ] || continue
             if printf '%s' "$f" | grep -Eq "$ALLOW"; then allow_cnt=$((allow_cnt + 1)); continue; fi
+            # LFS 文件已在传输层单独管理，不再按工作区实体大小重复拦截
+            if git check-attr filter -- "$f" | grep -q 'filter: lfs'; then lfs_cnt=$((lfs_cnt + 1)); continue; fi
             s=$(wc -c < "$f")
             if [ "$s" -gt 5242880 ]; then
               big="$big"$'\n'"  $f ($((s / 1024))KB)"
             fi
           done < <(git ls-files)
-          echo "白名单放行 $allow_cnt 个文件（MediaPipe 离线件）"
+          echo "白名单放行 $allow_cnt 个文件（MediaPipe 离线件）；LFS 托管放行 $lfs_cnt 个文件"
           if [ -n "$big" ]; then
             echo "::error::以下文件超过 5MB，请压缩或启用 Git LFS"
             echo "$big"
