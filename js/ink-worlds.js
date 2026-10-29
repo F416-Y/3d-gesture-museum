@@ -23,7 +23,8 @@ window.MuseumInkWorlds = (function () {
    * 穿画转场视频：组员1 负责整理，放到 public/videos/ink/
    * 四幅画的画境视频：组长提供，放到 public/videos/paintings/（见 §12.2）
    * 组长接口若存在则优先使用；函数名以其最终定稿为准，这里只做探测。 */
-  var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4";
+  // 视频由 public/videos/ink/enter-painting.mp4 提供；版本参数避免浏览器继续复用旧占位视频。
+  var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4?v=20261028-h264";
   var INK_FALLBACK_MS = 2600;     // 墨雾占位转场的时长
   var VIDEO_STALL_MS = 12000;     // 穿画视频卡住超过这个时间直接放行
   var INK_WORLD_HANDSHAKE_MS = 12000; // 组长画境接口握手超时（见 enterLeaderPainting）
@@ -280,6 +281,13 @@ window.MuseumInkWorlds = (function () {
     if (state.layer) return;
     if (document.exitPointerLock) document.exitPointerLock();
 
+    // 记录圆形入口的屏幕坐标，让全屏墨晕从用户点击的位置长出来。
+    var gateRect = el.gate.getBoundingClientRect();
+    var gateX = gateRect.left + gateRect.width / 2;
+    var gateY = gateRect.top + gateRect.height / 2;
+    el.videoLayer.style.setProperty("--ink-origin-x", gateX + "px");
+    el.videoLayer.style.setProperty("--ink-origin-y", gateY + "px");
+
     state.layer = "video";
     state.transitionDone = false;
     state.pickerIndex = 0;      // 每次从序厅重新入画，焦点回到第一幅
@@ -288,7 +296,12 @@ window.MuseumInkWorlds = (function () {
     el.fallback.classList.add("is-hidden");
     el.transitionVideo.classList.remove("is-hidden");
     el.skip.classList.remove("is-hidden");
+    el.videoLayer.classList.remove("is-opening");
     show(el.videoLayer);
+    // 等待一帧再加动画，确保 clip-path 从圆圈的零半径开始。
+    requestAnimationFrame(function () {
+      if (state.layer === "video") el.videoLayer.classList.add("is-opening");
+    });
 
     var v = el.transitionVideo;
     try {
@@ -323,6 +336,7 @@ window.MuseumInkWorlds = (function () {
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
     el.transitionVideo.classList.add("is-hidden");
     el.fallback.classList.remove("is-hidden");
+    el.videoLayer.classList.add("is-opening");
     clearTimeout(state.fallbackTimer);
     state.fallbackTimer = setTimeout(finishTransition, INK_FALLBACK_MS);
   }
@@ -333,9 +347,11 @@ window.MuseumInkWorlds = (function () {
     clearTimeout(state.stallTimer);
     clearTimeout(state.fallbackTimer);
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
-    hide(el.videoLayer);
-    el.videoLayer.setAttribute("aria-hidden", "true");
+    // 先让不透明的四画层盖住 3D 园区，再收起视频层，避免结束瞬间露出一帧园区。
     showPaintingPicker();
+    hide(el.videoLayer);
+    el.videoLayer.classList.remove("is-opening");
+    el.videoLayer.setAttribute("aria-hidden", "true");
   }
 
   /* ---------- 2. 四画选择 ---------- */

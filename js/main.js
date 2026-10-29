@@ -256,7 +256,7 @@ window.MuseumMain = (function () {
     }
     var seat = nearestSeat();
     if (seat) {
-      seatPromptEl.textContent = "中轴画廊观画坐凳 · 按 F 坐下";
+      seatPromptEl.textContent = "中轴画廊美人靠 · 按 F 坐下";
       seatPromptEl.classList.add("show");
     } else {
       seatPromptEl.classList.remove("show");

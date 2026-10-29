@@ -6,60 +6,104 @@
   /* ===== 开场粒子序章（水墨宣纸风 · Three.js + MediaPipe Hands 手势交互） ===== */
   #intro {
     position: fixed; inset: 0; z-index: 100; overflow: hidden;
-    background: radial-gradient(ellipse at 50% 62%, #f7f2e6 0%, #f0e9d8 55%, #e5dcc6 100%);
+    background:
+      radial-gradient(ellipse at 50% 57%, rgba(255, 253, 246, 0.92) 0%, rgba(247, 241, 228, 0.88) 42%, transparent 72%),
+      linear-gradient(115deg, #e8deca 0%, #f5efdf 48%, #ded0b7 100%);
     font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
     color: #1c1a17; transition: opacity 0.8s ease;
   }
   #intro.bye { opacity: 0; pointer-events: none; }
   #introCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-  #introTitle { position: absolute; top: 26px; left: 0; right: 0; text-align: center; pointer-events: none; }
+  #introTitle { position: absolute; top: 43px; left: 0; right: 0; text-align: center; pointer-events: none; }
+  #introTitle .intro-kicker {
+    display: block; margin-bottom: 12px; color: rgba(93, 62, 48, 0.62); font-family: "Arial Narrow", sans-serif;
+    font-size: 10px; letter-spacing: 5px; text-transform: uppercase;
+  }
   #introTitle h1 {
-    margin: 0; font-size: 30px; font-weight: 600; letter-spacing: 10px; color: #1c1a17;
+    margin: 0; font-size: 36px; font-weight: 600; letter-spacing: 13px; color: #1c1a17;
     text-shadow: 0 1px 0 rgba(255, 252, 244, 0.65), 0 0 22px rgba(28, 26, 23, 0.12);
   }
+  #introTitle p { margin: 14px 0 0; color: rgba(28, 26, 23, 0.56); font-size: 13px; letter-spacing: 6px; }
+  #introMark {
+    position: absolute; top: 43px; left: 45px; width: 58px; height: 58px; color: #292923;
+    opacity: 0.94; filter: drop-shadow(0 4px 8px rgba(72, 52, 39, 0.12));
+  }
+  #introMark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  #introMark .mark-pool { fill: #292923; }
+  #introMark .mark-cut { fill: #f3ecdc; }
+  #introMark .mark-stroke { fill: none; stroke: #f3ecdc; stroke-width: 2.2; stroke-linecap: round; }
+  #introMark .mark-dot { fill: #a33d31; }
+  #introNote {
+    position: absolute; left: 48px; top: 50%; display: flex; flex-direction: column; align-items: center; gap: 9px;
+    transform: translateY(-25%); color: rgba(52, 49, 44, 0.52); font-size: 12px; letter-spacing: 3px;
+  }
+  #introNote i { width: 1px; height: 18px; background: rgba(140, 59, 46, 0.38); }
   #introPanel {
     position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 16px; padding: 10px 18px;
+    display: flex; align-items: center; gap: 19px; padding: 11px 18px;
     background: rgba(239, 233, 220, 0.82); border: 1px solid rgba(28, 26, 23, 0.18);
-    border-radius: 12px; backdrop-filter: blur(10px); font-size: 13px; letter-spacing: 2px;
+    border-radius: 3px; backdrop-filter: blur(10px); font-size: 12px; letter-spacing: 3px;
     box-shadow: 0 6px 24px rgba(28, 26, 23, 0.10);
   }
   #introPanel label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
   #introPanel input[type="color"] { width: 34px; height: 24px; border: none; background: none; padding: 0; cursor: pointer; }
-  #introPanel input[type="range"] { width: 150px; accent-color: #8c3b2e; }
+  #introPanel input[type="range"] { width: 150px; accent-color: #8c3b2e; cursor: pointer; }
   #introPanel .val { color: rgba(28, 26, 23, 0.6); min-width: 56px; }
-  #introCamWrap {
-    position: absolute; left: 18px; bottom: 18px; width: 220px; height: 150px;
-    min-width: 140px; min-height: 100px; max-width: 46vw; max-height: 40vh;
-    resize: both; overflow: hidden; border: 1px solid rgba(28, 26, 23, 0.35);
-    border-radius: 10px; background: #000; box-shadow: 0 8px 30px rgba(28, 26, 23, 0.28);
+  #introHint { position: absolute; left: 48px; bottom: 32px; color: rgba(28, 26, 23, 0.52); font-size: 11px; letter-spacing: 2px; }
+  #intro, #intro button, #intro input { cursor: none; }
+  #inkRevealBrush {
+    position: fixed; z-index: 13; width: 74px; height: 74px; pointer-events: none; opacity: 0;
+    transform: translate(-50%, -50%); filter: drop-shadow(0 7px 10px rgba(43, 34, 27, 0.22));
   }
-  #introCamWrap video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
-  #introCamTag {
-    position: absolute; left: 8px; bottom: 6px; font-size: 11px; letter-spacing: 2px;
-    color: rgba(255, 255, 255, 0.78); text-shadow: 0 1px 4px #000; pointer-events: none;
+  #inkRevealBrush img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  #inkCursor {
+    position: fixed; z-index: 12; width: 48px; height: 48px; pointer-events: none;
+    transform: translate(-3px, -21px); opacity: 0; transition: opacity 180ms ease;
+    filter: drop-shadow(0 3px 5px rgba(43, 34, 27, 0.2));
   }
+  #inkCursor.visible { opacity: 1; }
+  #inkCursor img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .ink-trail {
+    position: fixed; z-index: 11; width: 8px; height: 8px; border-radius: 50%; pointer-events: none;
+    background: rgba(48, 61, 69, 0.24); filter: blur(1px); transform: translate(-50%, -50%);
+    animation: ink-fade 620ms ease-out forwards;
+  }
+  @keyframes ink-fade { from { opacity: 0.7; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(2.4); } }
   #introBR { position: absolute; right: 18px; bottom: 18px; display: flex; gap: 10px; align-items: center; }
   #introFull {
     padding: 10px 16px; font-family: inherit; font-size: 13px; letter-spacing: 2px; color: #1c1a17;
     background: rgba(239, 233, 220, 0.82); border: 1px solid rgba(28, 26, 23, 0.2);
-    border-radius: 10px; cursor: pointer; backdrop-filter: blur(10px);
+    border-radius: 3px; cursor: pointer; backdrop-filter: blur(10px); transition: border-color 180ms ease, background 180ms ease;
   }
   #introFull:hover { border-color: rgba(140, 59, 46, 0.6); }
   #introEnter {
-    padding: 12px 28px; font-family: inherit; font-size: 15px; letter-spacing: 4px; color: #f5efe2;
-    background: linear-gradient(135deg, #a8453a, #8c3b2e); border: none; border-radius: 10px;
+    padding: 13px 30px; font-family: inherit; font-size: 15px; letter-spacing: 4px; color: #f5efe2;
+    background: linear-gradient(135deg, #a8453a, #8c3b2e); border: none; border-radius: 3px;
     cursor: pointer; box-shadow: 0 6px 24px rgba(140, 59, 46, 0.35);
+    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
   }
-  #introEnter:hover { filter: brightness(1.08); }
+  #introEnter:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 9px 28px rgba(140, 59, 46, 0.4); }
   #introStatus {
     position: absolute; top: 20px; right: 20px; padding: 6px 12px;
     font-size: 12px; letter-spacing: 2px; color: rgba(28, 26, 23, 0.62);
     background: rgba(239, 233, 220, 0.8); border: 1px solid rgba(28, 26, 23, 0.15);
     border-radius: 999px; backdrop-filter: blur(8px);
   }
+  #intro::after {
+    content: ""; position: absolute; inset: 18px; border: 1px solid rgba(71, 57, 44, 0.14); pointer-events: none;
+  }
   @media (max-width: 900px) {
-    #introTitle h1 { font-size: 22px; letter-spacing: 6px; }
+    #introTitle { top: 32px; }
+    #introTitle h1 { font-size: 24px; letter-spacing: 8px; }
+    #introTitle p { font-size: 11px; letter-spacing: 4px; }
+    #introMark, #introNote { left: 20px; }
+    #introHint { left: 20px; bottom: 24px; }
+    #inkCursor { display: none; }
     #introPanel { gap: 10px; padding: 8px 12px; font-size: 12px; }
     #introPanel input[type="range"] { width: 100px; }
+    #introBR { right: 14px; bottom: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #introEnter, #introFull, #inkCursor { transition: none; }
+    .ink-trail { animation: none; display: none; }
   }
