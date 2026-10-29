@@ -1,8 +1,8 @@
 /* ============================================================
- * intro.js —— 开场粒子序章：宣纸粒子云 + 预设巡展 + 全园沙盘压轴
+ * intro.js —— 开场水墨加载页：呼吸墨团 + 宣纸肌理 + 以笔引墨
  * 来源：外观原型 tools/exterior-prototype.html（Kimi 原作），2026-10-04 由组长原样迁入。
  *  - 5 个预设：青铜鼎 / 石狮 / 马踏飞燕 / 太湖石 / 全园沙盘（现采主场景）
- *  - 自动巡展 4.4s/件、压轴 8.5s，循环不中断；点「进入博物馆 →」收起并释放资源
+ *  - 加载阶段不显示 3D 模型，只保留一团有湿边、飞白与渗化的水墨
  *  - 手势：原型用老版 MediaPipe Hands（window.Hands），主项目不分发该库，
  *          2026-10-09 已删除残留的 CDN 加载代码 → 序章固定走鼠标 / 触摸模式
  *  - 唯一改动：压轴采样主场景的句柄改为本项目（MuseumExteriorLayout.ctx.scene）
@@ -24,9 +24,66 @@
   var overlay = document.getElementById('intro');
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
+  var inkFx = document.getElementById('introInkFx');
+  var fx = inkFx ? inkFx.getContext('2d') : null;
   var statusEl = document.getElementById('introStatus');
-  var inkCursor = document.getElementById('inkCursor'), inkRevealBrush = document.getElementById('inkRevealBrush'), lastTrail = 0;
+  var inkCursor = document.getElementById('inkCursor');
+  var inkRevealBrush = document.getElementById('inkRevealBrush');
+  var enterBtn = document.getElementById('introEnter');
+  var motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var reducedMotion = motionQuery.matches;
+  var trailPoints = [];
+  var lastTrail = 0;
+  var inkHover = 0;
+  var inkPress = 0;
+  var revealStarted = false;
+  var revealStartedAt = 0;
+  var orbitActive = false;
+  var orbitClock = 0;
+  var unfoldStarted = false;
+  var unfoldClock = 0;
+  var unfoldMix = 0;
+  var modelReady = false;
+  var pointer = { x: -100, y: -100, inside: false, pressed: false, ui: true };
+  var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
+
+  function onMotionPreferenceChange(event) {
+    reducedMotion = event.matches;
+    if (reducedMotion) {
+      trailPoints = [];
+      cursorMotion.tilt = 0;
+    }
+  }
+  if (motionQuery.addEventListener) motionQuery.addEventListener('change', onMotionPreferenceChange);
+  else if (motionQuery.addListener) motionQuery.addListener(onMotionPreferenceChange);
+
+  function isUiTarget(target) {
+    return !!(target && target.closest && target.closest('button,a,input,label'));
+  }
+
+  function isBrandArea(x, y) {
+    var mark = document.getElementById('introMark');
+    if (!mark) return false;
+    var r = mark.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+
+  function brushCoversControls() {
+    if (!inkCursor) return false;
+    var brushRect = inkCursor.getBoundingClientRect();
+    var controls = overlay.querySelectorAll('button,a,input');
+    for (var ci = 0; ci < controls.length; ci++) {
+      var controlRect = controls[ci].getBoundingClientRect();
+      if (
+        brushRect.right > controlRect.left - 4 &&
+        brushRect.left < controlRect.right + 4 &&
+        brushRect.bottom > controlRect.top - 4 &&
+        brushRect.top < controlRect.bottom + 4
+      ) return true;
+    }
+    return false;
+  }
 
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -70,27 +127,199 @@
   }
   var inkDotTex = makeInkDot();
 
-  /* ---------- 淡墨远点背景（替深空星尘：暖灰墨点，纸面纵深） ---------- */
-  var SN = 2800, sp = new Float32Array(SN * 3), sc = new Float32Array(SN * 3);
-  var tmpC = new THREE.Color(), i, r, th, ph;
-  for (i = 0; i < SN; i++) {
-    r = 13 + Math.random() * 30;
-    th = Math.random() * Math.PI * 2;
-    ph = Math.acos(2 * Math.random() - 1);
-    sp[i * 3] = r * Math.sin(ph) * Math.cos(th);
-    sp[i * 3 + 1] = r * Math.cos(ph) * 0.7;
-    sp[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
-    tmpC.setHSL(0.09, 0.06 + Math.random() * 0.08, 0.3 + Math.random() * 0.4);
-    sc[i * 3] = tmpC.r; sc[i * 3 + 1] = tmpC.g; sc[i * 3 + 2] = tmpC.b;
+  function makeInkWashTexture() {
+    var c = document.createElement('canvas');
+    c.width = c.height = 1024;
+    var x = c.getContext('2d');
+    var random = (function (seed) {
+      var state = seed >>> 0;
+      return function () {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 4294967296;
+      };
+    })(1037);
+    var centerX = 512;
+    var centerY = 520;
+
+    function blobPath(ctx) {
+      var points = [];
+      for (var p = 0; p < 26; p++) {
+        var angle = p / 26 * Math.PI * 2;
+        var wobble =
+          1 +
+          Math.sin(angle * 3 + 0.7) * 0.095 +
+          Math.sin(angle * 7 - 1.2) * 0.045 +
+          (random() - 0.5) * 0.035;
+        points.push({
+          x: centerX + Math.cos(angle) * 326 * wobble,
+          y: centerY + Math.sin(angle) * 235 * wobble
+        });
+      }
+      ctx.beginPath();
+      ctx.moveTo((points[0].x + points[1].x) * 0.5, (points[0].y + points[1].y) * 0.5);
+      for (var i = 1; i <= points.length; i++) {
+        var current = points[i % points.length];
+        var next = points[(i + 1) % points.length];
+        ctx.quadraticCurveTo(current.x, current.y, (current.x + next.x) * 0.5, (current.y + next.y) * 0.5);
+      }
+      ctx.closePath();
+    }
+
+    /* 外围淡墨先洇开，形成不规则湿边。 */
+    x.save();
+    x.filter = 'blur(18px)';
+    blobPath(x);
+    x.fillStyle = 'rgba(42, 53, 49, 0.24)';
+    x.fill();
+    x.restore();
+
+    for (var h = 0; h < 9; h++) {
+      var ha = h / 9 * Math.PI * 2 + random() * 0.4;
+      var hx = centerX + Math.cos(ha) * (190 + random() * 130);
+      var hy = centerY + Math.sin(ha) * (120 + random() * 85);
+      var hr = 70 + random() * 105;
+      var halo = x.createRadialGradient(hx, hy, 0, hx, hy, hr);
+      halo.addColorStop(0, 'rgba(43, 54, 50, ' + (0.055 + random() * 0.05).toFixed(3) + ')');
+      halo.addColorStop(0.7, 'rgba(43, 54, 50, ' + (0.028 + random() * 0.025).toFixed(3) + ')');
+      halo.addColorStop(1, 'rgba(43, 54, 50, 0)');
+      x.fillStyle = halo;
+      x.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
+    }
+
+    /* 墨团主体由多层灰青墨积成，中心浓、边缘薄。 */
+    x.save();
+    blobPath(x);
+    x.clip();
+    x.fillStyle = 'rgba(36, 45, 41, 0.58)';
+    x.fillRect(0, 0, 1024, 1024);
+    var core = x.createRadialGradient(centerX - 18, centerY - 22, 24, centerX, centerY, 350);
+    core.addColorStop(0, 'rgba(16, 23, 21, 0.34)');
+    core.addColorStop(0.5, 'rgba(20, 28, 25, 0.18)');
+    core.addColorStop(1, 'rgba(25, 33, 30, 0)');
+    x.fillStyle = core;
+    x.fillRect(0, 0, 1024, 1024);
+    for (var i = 0; i < 72; i++) {
+      var angle = random() * Math.PI * 2;
+      var distance = Math.pow(random(), 0.56) * 290;
+      var px = centerX + Math.cos(angle) * distance;
+      var py = centerY + Math.sin(angle) * distance * 0.64;
+      var radius = 36 + random() * 112;
+      var shade = 25 + Math.floor(random() * 34);
+      var wash = x.createRadialGradient(px, py, radius * 0.03, px, py, radius);
+      wash.addColorStop(0, 'rgba(' + shade + ',' + (shade + 8) + ',' + (shade + 5) + ',' + (0.075 + random() * 0.16).toFixed(3) + ')');
+      wash.addColorStop(0.48, 'rgba(' + shade + ',' + (shade + 8) + ',' + (shade + 5) + ',' + (0.035 + random() * 0.065).toFixed(3) + ')');
+      wash.addColorStop(1, 'rgba(43, 53, 49, 0)');
+      x.fillStyle = wash;
+      x.fillRect(px - radius, py - radius, radius * 2, radius * 2);
+    }
+
+    /* 干笔擦出纤维与飞白，保留宣纸底色，不做均匀透明。 */
+    x.globalCompositeOperation = 'destination-out';
+    for (var s = 0; s < 58; s++) {
+      var sx = 220 + random() * 590;
+      var sy = 300 + random() * 430;
+      var sx2 = sx + 26 + random() * 118;
+      var sy2 = sy - 12 + random() * 24;
+      x.strokeStyle = 'rgba(0, 0, 0, ' + (0.08 + random() * 0.18).toFixed(3) + ')';
+      x.lineWidth = 0.7 + random() * 4.2;
+      x.beginPath();
+      x.moveTo(sx, sy);
+      x.bezierCurveTo(sx + 22, sy - 8, sx2 - 28, sy2 + 7, sx2, sy2);
+      x.stroke();
+    }
+    for (var f = 0; f < 90; f++) {
+      var fx = 235 + random() * 555;
+      var fy = 320 + random() * 380;
+      x.strokeStyle = 'rgba(0, 0, 0, ' + (0.035 + random() * 0.075).toFixed(3) + ')';
+      x.lineWidth = 0.45 + random() * 0.7;
+      x.beginPath();
+      x.moveTo(fx, fy);
+      x.lineTo(fx + 14 + random() * 44, fy - 2 + random() * 4);
+      x.stroke();
+    }
+    x.globalCompositeOperation = 'source-over';
+    x.restore();
+
+    /* 湿边积墨：深边、断续重笔和极细的渗化毛边。 */
+    x.save();
+    blobPath(x);
+    x.strokeStyle = 'rgba(24, 32, 29, 0.28)';
+    x.lineWidth = 25;
+    x.stroke();
+    x.strokeStyle = 'rgba(18, 25, 22, 0.42)';
+    x.lineWidth = 7;
+    x.stroke();
+    x.setLineDash([2, 11, 34, 8]);
+    x.strokeStyle = 'rgba(12, 18, 16, 0.48)';
+    x.lineWidth = 2.2;
+    x.stroke();
+    x.setLineDash([]);
+    x.restore();
+
+    /* 少量飞溅墨点，大小与浓淡错落。 */
+    for (var d = 0; d < 42; d++) {
+      var da = random() * Math.PI * 2;
+      var dr = 245 + random() * 145;
+      var dotX = centerX + Math.cos(da) * dr;
+      var dotY = centerY + Math.sin(da) * dr * 0.68;
+      var dotR = 0.6 + Math.pow(random(), 2.4) * 4.5;
+      x.fillStyle = 'rgba(22, 30, 27, ' + (0.14 + random() * 0.3).toFixed(3) + ')';
+      x.beginPath();
+      x.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+      x.fill();
+      if (dotR > 2.6 && random() > 0.64) {
+        x.fillStyle = 'rgba(22, 30, 27, 0.2)';
+        x.beginPath();
+        x.arc(dotX + 6 + random() * 10, dotY - 4 + random() * 8, 0.7 + random() * 1.2, 0, Math.PI * 2);
+        x.fill();
+      }
+    }
+    return c;
   }
-  var starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
-  starGeo.setAttribute('color', new THREE.BufferAttribute(sc, 3));
-  var stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
-    size: 0.13, map: glowTex, vertexColors: true, transparent: true, opacity: 0.5,
-    depthWrite: false, blending: THREE.NormalBlending
-  }));
-  scene.add(stars);
+
+  var inkWashTexture = makeInkWashTexture();
+
+  function resizeFx() {
+    if (!fx || !inkFx) return;
+    var ratio = Math.min(window.devicePixelRatio || 1, 1.75);
+    var width = Math.round(window.innerWidth * ratio);
+    var height = Math.round(window.innerHeight * ratio);
+    if (inkFx.width !== width || inkFx.height !== height) {
+      inkFx.width = width;
+      inkFx.height = height;
+      fx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+  }
+
+  function smoothStep(value) {
+    value = Math.max(0, Math.min(1, value));
+    return value * value * (3 - 2 * value);
+  }
+
+  function getInkBaseSize() {
+    return window.innerWidth < 760
+      ? Math.min(window.innerWidth * 0.72, window.innerHeight * 0.36, 284)
+      : Math.min(window.innerWidth * 0.44, window.innerHeight * 0.58, 440);
+  }
+
+  function beginReveal() {
+    if (revealStarted || !enterBtn) return;
+    revealStarted = true;
+    revealStartedAt = performance.now();
+    orbitActive = true;
+    orbitClock = 0;
+    unfoldStarted = false;
+    unfoldClock = 0;
+    unfoldMix = 0;
+    trailPoints = [];
+    pointer.ui = true;
+    if (inkCursor) inkCursor.classList.remove('visible');
+    overlay.classList.add('revealing');
+    if (!store[PRESETS[cur].id]) modelReady = false;
+    loadPreset(PRESETS[cur]);
+    setStatus(reducedMotion ? '墨色化形' : '引笔绕墨 · 静候成形');
+  }
+
   /* 淡墨远山三叠：大幅柔边墨团，缓慢漂移，衬出水墨纵深 */
   function makeBlob() {
     var c = document.createElement('canvas'); c.width = c.height = 256;
@@ -113,7 +342,8 @@
     scene.add(bm); blobs.push(bm);
   }
 
-  /* ---------- 主粒子云（一份几何，两层渲染：核心 + 光晕） ---------- */
+  /* ---------- 墨形粒子云（只在墨团显形后启用） ---------- */
+  var tmpC = new THREE.Color(), i, r;
   var MAXN = 30000;
   var pos = new Float32Array(MAXN * 3);
   var col = new Float32Array(MAXN * 3);
@@ -138,6 +368,7 @@
     size: 0.2, map: glowTex, vertexColors: true, transparent: true, opacity: 0.1,
     depthWrite: false, blending: THREE.NormalBlending
   })));
+  cloud.visible = false;
   scene.add(cloud);
 
   /* ---------- 程序化回退造型（glb 加载失败时用） ---------- */
@@ -178,9 +409,10 @@
     }
     return normalizePts(o.a);
   }
-  function normalizePts(a, target) {
+  function normalizePts(a, target, count) {
+    count = count || MAXN;
     var i, mnx = 1e9, mny = 1e9, mnz = 1e9, mxx = -1e9, mxy = -1e9, mxz = -1e9;
-    for (i = 0; i < MAXN; i++) {
+    for (i = 0; i < count; i++) {
       var x = a[i * 3], y = a[i * 3 + 1], z = a[i * 3 + 2];
       if (x < mnx) mnx = x; if (x > mxx) mxx = x;
       if (y < mny) mny = y; if (y > mxy) mxy = y;
@@ -188,7 +420,7 @@
     }
     var cx = (mnx + mxx) / 2, cy = (mny + mxy) / 2, cz = (mnz + mxz) / 2;
     var d = Math.max(mxx - mnx, mxy - mny, mxz - mnz), s = d > 1e-6 ? (target || 3.4) / d : 1;
-    for (i = 0; i < MAXN; i++) {
+    for (i = 0; i < count; i++) {
       a[i * 3] = (a[i * 3] - cx) * s;
       a[i * 3 + 1] = (a[i * 3 + 1] - cy) * s;
       a[i * 3 + 2] = (a[i * 3 + 2] - cz) * s;
@@ -293,7 +525,7 @@
       out[k * 3 + 1] = tris[o + 1] * w + tris[o + 4] * u + tris[o + 7] * v;
       out[k * 3 + 2] = tris[o + 2] * w + tris[o + 5] * u + tris[o + 8] * v;
     }
-    return normalizePts(out);
+    return normalizePts(out, 3.4, count);
   }
 
   /* ---------- 压轴：整馆场景表面采样（两遍法，不占大内存） ----------
@@ -403,101 +635,124 @@
       rotXT = 0.55;               /* 三分俯视，呈现沙盘感 */
       if (density < 24000) {      /* 全园粒子多，自动提密度 */
         density = 24000;
-        dEl.value = 24000;
-        dVal.textContent = '24000 粒';
+        if (dEl) dEl.value = 24000;
+        if (dVal) dVal.textContent = '24000 粒';
       }
     }
   }
+  function finishPreset(P) {
+    if (PRESETS[cur] !== P) return;
+    modelReady = true;
+    applyPreset(P);
+    if (unfoldStarted) setStatus('墨色化形 · 轮廓渐显');
+  }
   function loadPreset(P) {
-    if (store[P.id]) { if (PRESETS[cur] === P && revealReady) applyPreset(P); return; }
+    if (store[P.id]) { finishPreset(P); return; }
     if (P.id === '__museum') {
       setStatus('正在生成全园粒子沙盘…');
       setTimeout(function () {
         var pts = null;
         try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
         store[P.id] = pts || fbGate();
-        if (PRESETS[cur] === P && revealReady) applyPreset(P);
+        finishPreset(P);
         setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '全园粒子沙盘就绪 · 移动鼠标旋转');
       }, 30);
       return;
     }
-    if (!loader) { store[P.id] = P.fb(); if (PRESETS[cur] === P && revealReady) applyPreset(P); return; }
-    loader.load('assets/models/parts/' + P.id + '.glb', function (g) {
+    if (!loader) { store[P.id] = P.fb(); finishPreset(P); return; }
+    loader.load('assets/models/parts/opt/' + P.id + '.glb', function (g) {
       var pts = null;
-      try { pts = sampleObject(g.scene, MAXN); } catch (e) { pts = null; }
+      try { pts = sampleObject(g.scene, 12000); } catch (e) { pts = null; }
       store[P.id] = pts || P.fb();
-      if (PRESETS[cur] === P && revealReady) applyPreset(P);
+      finishPreset(P);
     }, undefined, function () {
       store[P.id] = P.fb();
-      if (PRESETS[cur] === P && revealReady) applyPreset(P);
+      finishPreset(P);
     });
   }
-  var revealReady = false, revealDone = false, revealClock = 0;
+  var revealDone = false;
   base.set(makeInkBlob());
-  for (var pli = 0; pli < PRESETS.length - 1; pli++) loadPreset(PRESETS[pli]);   /* 压轴不预载，播到时现采 */
 
   /* ---------- 交互状态 ---------- */
   var spread = 0.72, spreadT = 0.72;
   var rotX = 0, rotY = 0, rotXT = 0, rotYT = 0, spin = 0;
   var handSeen = false;
   var density = 9000;
-  /* 自动巡展：按序播放各预设，压轴全园沙盘，循环不中断（加载动画） */
-  var autoOn = true, autoIdx = 0, autoT = 0;
-  var hsl = { h: 0, s: 0, l: 0 };
-  var baseHue = tmpC.set('#3a3f4a').getHSL(hsl).h;   /* 默认花青墨 */
 
   /* ---------- 交互模式：鼠标 / 触摸 ----------
    * 原型里另有一段老版 MediaPipe Hands（window.Hands / Camera）手势控制，
    * 但主项目不分发该库，这段代码从未执行，只留下一条 jsdelivr CDN 地址。
    * 2026-10-09 连同 onHand() 一并删除；手势漫游由进馆后的 js/gesture.js
    * （本地 MediaPipe Tasks Vision）提供，序章固定走鼠标 / 触摸。 */
-  setStatus('鼠标模式：移动旋转 · 按住散开（进馆后可用手势）');
+  setStatus('引笔近墨 · 园境将开');
 
   /* ---------- 鼠标 / 触摸回退 ---------- */
   overlay.addEventListener('pointermove', function (e) {
-    if (inkCursor) {
-      inkCursor.style.left = e.clientX + 'px'; inkCursor.style.top = e.clientY + 'px'; inkCursor.classList.add('visible');
-      if (e.timeStamp - lastTrail > 36 && e.target === canvas) {
-        var drop = document.createElement('span'); drop.className = 'ink-trail';
-        drop.style.left = (e.clientX - 4 + Math.random() * 8) + 'px'; drop.style.top = (e.clientY + 4 + Math.random() * 8) + 'px';
-        drop.style.width = drop.style.height = (4 + Math.random() * 7) + 'px';
-        overlay.appendChild(drop); setTimeout(function () { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 680); lastTrail = e.timeStamp;
-      }
+    var overUi = isUiTarget(e.target);
+    var dx = e.clientX - cursorMotion.x;
+    var dy = e.clientY - cursorMotion.y;
+    cursorMotion.x = e.clientX;
+    cursorMotion.y = e.clientY;
+    if (!reducedMotion && Math.hypot(dx, dy) > 1) {
+      cursorMotion.tilt = Math.max(-7, Math.min(7, cursorMotion.tilt * 0.72 + dx * 0.42));
+    } else {
+      cursorMotion.tilt *= 0.8;
     }
-    if (handSeen || e.target !== canvas) return;
+    if (inkCursor) {
+      inkCursor.style.left = e.clientX + 'px';
+      inkCursor.style.top = e.clientY + 'px';
+      inkCursor.style.setProperty('--brush-tilt', cursorMotion.tilt.toFixed(2) + 'deg');
+    }
+    var brushBlocked = brushCoversControls();
+    var baseSize = getInkBaseSize();
+    var distanceToInk = Math.hypot(e.clientX - window.innerWidth * 0.5, e.clientY - window.innerHeight * 0.55);
+    if (!revealStarted && !overUi && !brushBlocked && distanceToInk < baseSize * 0.48) {
+      beginReveal();
+    }
+    var cursorVisible = !overUi && !brushBlocked && !orbitActive;
+    if (inkCursor) inkCursor.classList.toggle('visible', cursorVisible);
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+    pointer.inside = true;
+    pointer.ui = !cursorVisible;
+    if (cursorVisible && !reducedMotion && e.timeStamp - lastTrail > 34) {
+      trailPoints.push({ x: e.clientX, y: e.clientY, time: performance.now(), size: 1.6 + Math.random() * 2.6 });
+      if (trailPoints.length > 16) trailPoints.shift();
+      lastTrail = e.timeStamp;
+    }
+    if (handSeen || overUi) return;
     rotYT = (0.5 - e.clientX / window.innerWidth) * Math.PI * 2.2;
     rotXT = (e.clientY / window.innerHeight - 0.5) * Math.PI * 1.1;
   });
-  overlay.addEventListener('pointerleave', function () { if (inkCursor) inkCursor.classList.remove('visible'); });
-  overlay.addEventListener('pointerdown', function (e) {
-    if (e.target === canvas && !handSeen) spreadT = 1.8;
+  overlay.addEventListener('pointerleave', function () {
+    pointer.inside = false;
+    pointer.pressed = false;
+    pointer.ui = true;
+    if (inkCursor) inkCursor.classList.remove('visible');
   });
-  window.addEventListener('pointerup', function () { if (!handSeen) spreadT = 1; });
+  overlay.addEventListener('pointerdown', function (e) {
+    if (isUiTarget(e.target) || isBrandArea(e.clientX, e.clientY) || brushCoversControls()) return;
+    pointer.pressed = true;
+    spreadT = 1.8;
+    beginReveal();
+  });
+  window.addEventListener('pointerup', function () {
+    pointer.pressed = false;
+    if (!handSeen) spreadT = 1;
+  });
+  window.addEventListener('pointercancel', function () {
+    pointer.pressed = false;
+    pointer.inside = false;
+    if (inkCursor) inkCursor.classList.remove('visible');
+  });
+  window.addEventListener('blur', function () {
+    pointer.pressed = false;
+    pointer.inside = false;
+    if (inkCursor) inkCursor.classList.remove('visible');
+  });
 
   /* ---------- UI 控件 ---------- */
-  var mBtns = document.querySelectorAll('#introModels button');
-  function showPreset(idx) {
-    var j;
-    for (j = 0; j < mBtns.length; j++) mBtns[j].classList.toggle('on', j === idx);
-    cur = idx;
-    loadPreset(PRESETS[idx]);
-  }
-  for (i = 0; i < mBtns.length; i++) {
-    mBtns[i].addEventListener('click', function () {
-      /* 加载动画巡展不中断：点选只是跳到该件，随后继续按序播放 */
-      var idx = +this.getAttribute('data-m');
-      autoIdx = idx; autoT = 0;
-      showPreset(idx);
-    });
-  }
-  document.getElementById('introColor').addEventListener('input', function () {
-    baseHue = tmpC.set(this.value).getHSL(hsl).h;
-  });
-  var dEl = document.getElementById('introDensity'), dVal = document.getElementById('introDensityVal');
-  dEl.addEventListener('input', function () {
-    density = +dEl.value;
-    dVal.textContent = density + ' 粒';
-  });
+  var dEl = null, dVal = null;
   var fullBtn = document.getElementById('introFull');
   fullBtn.addEventListener('click', function () {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -509,9 +764,13 @@
 
   /* ---------- 进入博物馆：收场并释放资源 ---------- */
   var running = true;
-  document.getElementById('introEnter').addEventListener('click', function () {
+  enterBtn.addEventListener('click', function () {
+    if (enterBtn.disabled) return;
     overlay.classList.add('bye');
     running = false;
+    pointer.inside = false;
+    pointer.ui = true;
+    if (inkCursor) inkCursor.classList.remove('visible');
     setTimeout(function () {
       overlay.style.display = 'none';
       renderer.dispose();
@@ -523,7 +782,105 @@
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    resizeFx();
   });
+
+  function drawInkFx(t) {
+    if (!fx) return;
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    var cx = width * 0.5;
+    var cy = height * 0.55;
+    var now = performance.now();
+
+    fx.clearRect(0, 0, width, height);
+    if (unfoldMix >= 0.999) return;
+    var baseSize = getInkBaseSize();
+    var pointerDistance = Math.hypot(pointer.x - cx, pointer.y - cy);
+    var hoverTarget = pointer.inside && !pointer.ui
+      ? Math.max(0, 1 - pointerDistance / (baseSize * 0.62))
+      : 0;
+    hoverTarget *= hoverTarget;
+    inkHover += (hoverTarget - inkHover) * (reducedMotion ? 1 : 0.12);
+    var pressTarget = pointer.pressed && !pointer.ui && hoverTarget > 0.01 ? 1 : 0;
+    inkPress += (pressTarget - inkPress) * (reducedMotion ? 1 : 0.16);
+
+    var breath = reducedMotion ? 0 : Math.sin(t * 0.82);
+    var revealPulse = revealStarted && !reducedMotion ? Math.sin(orbitClock * 0.72) * 0.035 : 0;
+    var brushSpread = inkHover * 0.022 + inkPress * 0.04;
+    var size = baseSize * (1 + breath * 0.035 + revealPulse + brushSpread + unfoldMix * 0.06);
+    var driftX = pointer.inside ? (pointer.x - cx) * 0.012 : 0;
+    var driftY = pointer.inside ? (pointer.y - cy) * 0.01 : 0;
+    var inkAlpha = (0.9 + breath * 0.035) * (1 - unfoldMix);
+    fx.save();
+    fx.translate(cx + driftX, cy + driftY + (reducedMotion ? 0 : Math.sin(t * 0.55) * 3));
+    fx.rotate((reducedMotion ? 0 : Math.sin(t * 0.14) * 0.018) + brushSpread * 0.16 + unfoldMix * 0.045);
+
+    /* 外晕与主体错开呼吸相位，边缘像纸纤维一样缓缓吸墨。 */
+    fx.save();
+    fx.filter = 'blur(' + Math.round(size * 0.025) + 'px)';
+    fx.globalAlpha = inkAlpha * 0.22;
+    fx.scale(1.035 + breath * 0.018, 1.025 - breath * 0.012);
+    fx.drawImage(inkWashTexture, -size * 0.5, -size * 0.5, size, size);
+    fx.restore();
+
+    fx.globalAlpha = reducedMotion ? inkAlpha : inkAlpha * (0.96 + Math.sin(t * 1.17 + 0.8) * 0.025);
+    fx.drawImage(inkWashTexture, -size * 0.5, -size * 0.5, size, size);
+
+    /* 笔锋靠近或按下时，墨边朝笔尖方向轻轻推开。 */
+    if (inkHover > 0.015 || inkPress > 0.015) {
+      fx.save();
+      fx.translate((pointer.x - cx) * 0.015 * inkHover, (pointer.y - cy) * 0.012 * inkHover);
+      fx.scale(1 + inkHover * 0.012 + inkPress * 0.018, 1 + inkHover * 0.008 + inkPress * 0.014);
+      fx.globalAlpha = inkAlpha * (0.035 * inkHover + 0.045 * inkPress);
+      fx.drawImage(inkWashTexture, -size * 0.5, -size * 0.5, size, size);
+      fx.restore();
+    }
+
+    /* 数枚极淡墨点缓慢吞吐，给静止墨团一点生气。 */
+    var dotPhase = reducedMotion ? 0 : t;
+    var dots = [
+      [0.56, -0.3, 4.8, 0.13],
+      [0.41, -0.15, 2.6, 0.09],
+      [0.61, 0.18, 3.6, 0.11],
+      [-0.37, 0.31, 2.2, 0.08]
+    ];
+    for (var di = 0; di < dots.length; di++) {
+      var dot = dots[di];
+      fx.globalAlpha = (dot[3] + Math.sin(dotPhase * 0.7 + di) * 0.025) * (1 - unfoldMix);
+      fx.fillStyle = '#26302c';
+      fx.beginPath();
+      fx.arc(size * dot[0], size * dot[1], dot[2] + Math.sin(dotPhase * 0.5 + di) * 0.5, 0, Math.PI * 2);
+      fx.fill();
+    }
+    fx.restore();
+
+    if (!reducedMotion && trailPoints.length) {
+      trailPoints = trailPoints.filter(function (point) {
+        return now - point.time < 620;
+      });
+      for (var p = 1; p < trailPoints.length; p++) {
+        var from = trailPoints[p - 1];
+        var to = trailPoints[p];
+        var age = Math.max(0, 1 - (now - to.time) / 620);
+        fx.save();
+        fx.lineCap = 'round';
+        fx.strokeStyle = 'rgba(39,47,43,' + (0.12 * age * (1 - unfoldMix)).toFixed(3) + ')';
+        fx.lineWidth = Math.max(0.6, to.size * age);
+        fx.beginPath();
+        fx.moveTo(from.x, from.y);
+        fx.lineTo(to.x, to.y);
+        fx.stroke();
+        fx.fillStyle = 'rgba(38,45,41,' + (0.1 * age * (1 - unfoldMix)).toFixed(3) + ')';
+        fx.beginPath();
+        fx.arc(to.x + 2, to.y + 2, Math.max(0.6, to.size * 0.58), 0, Math.PI * 2);
+        fx.fill();
+        fx.restore();
+      }
+    }
+  }
+
+  resizeFx();
 
   /* ---------- 主循环（无逐帧新对象） ---------- */
   var clock = new THREE.Clock();
@@ -532,66 +889,84 @@
     requestAnimationFrame(tick);
     var rdt = clock.getDelta();
     var dt = Math.min(rdt, 0.05), t = clock.elapsedTime;
-    /* 自动巡展：每个展品停留约 4.4s，压轴全园沙盘停留 8.5s，然后循环（按真实时间走，低帧率不拖慢） */
-    if (!revealDone) {
-      revealClock += rdt;
-      var brushIn = revealClock - 0.7;
-      if (brushIn > 0 && brushIn < 2.65) {
-        var revealP = Math.min(1, brushIn / 1.95), revealAngle = revealP * Math.PI * 4.2;
+    if (revealStarted && !revealDone) {
+      var orbitDuration = reducedMotion ? 0.35 : 4.6;
+      var unfoldDuration = reducedMotion ? 0.3 : 1.8;
+      if (orbitActive && !unfoldStarted) {
+        orbitClock += rdt;
+        var orbitProgress = Math.min(1, orbitClock / orbitDuration);
+        var orbitAngle = -Math.PI * 0.5 + orbitProgress * Math.PI * 4;
+        var orbitBase = getInkBaseSize();
         var revealCX = window.innerWidth * 0.5, revealCY = window.innerHeight * 0.55;
-        var revealR = Math.min(190, window.innerWidth * 0.16) * (0.72 + 0.28 * Math.sin(revealP * Math.PI));
-        inkRevealBrush.style.opacity = '1';
-        inkRevealBrush.style.left = (revealCX + Math.cos(revealAngle) * revealR) + 'px';
-        inkRevealBrush.style.top = (revealCY + Math.sin(revealAngle) * revealR) + 'px';
-        inkRevealBrush.style.transform = 'translate(-50%, -50%) rotate(' + (revealAngle + Math.PI * 0.25) + 'rad)';
-      } else if (revealClock >= 2.65) {
-        revealReady = true;
+        inkRevealBrush.style.opacity = reducedMotion ? '0' : '1';
+        inkRevealBrush.style.left = (revealCX + Math.cos(orbitAngle) * orbitBase * 0.52) + 'px';
+        inkRevealBrush.style.top = (revealCY + Math.sin(orbitAngle) * orbitBase * 0.34) + 'px';
+        inkRevealBrush.style.transform = 'translate(-50%, -50%) rotate(' + (orbitAngle + 0.72).toFixed(3) + 'rad)';
+        if (orbitProgress >= 1 && modelReady) {
+          orbitActive = false;
+          unfoldStarted = true;
+          unfoldClock = 0;
+          cloud.visible = true;
+          cloud.scale.setScalar(0.72);
+          canvas.style.opacity = '0';
+          setStatus('墨色化形 · 轮廓渐显');
+        } else if (orbitProgress >= 1) {
+          setStatus('墨色化形 · 静候轮廓');
+        }
+      }
+      if (unfoldStarted) {
+        unfoldClock += rdt;
+        var unfoldProgress = Math.min(1, unfoldClock / unfoldDuration);
+        unfoldMix = smoothStep(unfoldProgress);
+        canvas.style.opacity = unfoldMix.toFixed(3);
+        cloud.scale.setScalar(0.72 + unfoldMix * 0.28);
+        inkRevealBrush.style.opacity = (1 - unfoldMix).toFixed(3);
+      }
+      if (unfoldStarted && unfoldProgress >= 1) {
         revealDone = true;
+        orbitActive = false;
+        canvas.style.opacity = '1';
+        cloud.scale.setScalar(1);
         inkRevealBrush.style.opacity = '0';
-        applyPreset(PRESETS[cur]);
-        spread = 0.08;
-        spreadT = 1;
-        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '移动毛笔或鼠标，旋转观看墨中之形');
+        overlay.classList.add('ready');
+        enterBtn.disabled = false;
+        enterBtn.setAttribute('aria-disabled', 'false');
+        setStatus('园境已开 · 可入馆');
       }
     }
-    if (revealDone && autoOn) {
-      autoT += rdt;
-      var autoDur = (autoIdx === PRESETS.length - 1) ? 8.5 : 4.4;
-      if (autoT >= autoDur) {
-        autoT = 0;
-        autoIdx = (autoIdx + 1) % PRESETS.length;
-        showPreset(autoIdx);
-      }
+    if (!handSeen && !reducedMotion) spin += dt * 0.25;
+    rotY += (rotYT - rotY) * (reducedMotion ? 0 : 0.06);
+    rotX += (rotXT - rotX) * (reducedMotion ? 0 : 0.06);
+    if (inkCursor && !reducedMotion && Math.abs(cursorMotion.tilt) > 0.04) {
+      cursorMotion.tilt *= 0.9;
+      inkCursor.style.setProperty('--brush-tilt', cursorMotion.tilt.toFixed(2) + 'deg');
     }
-    if (!handSeen) spin += dt * 0.25;
-    rotY += (rotYT - rotY) * 0.06;
-    rotX += (rotXT - rotX) * 0.06;
     spread += (spreadT - spread) * 0.07;
     cloud.rotation.y = spin + rotY;
     cloud.rotation.x = rotX * 0.7;
-    var hueBase = baseHue + (spin + rotY) * 0.03;   /* 色相仅随旋转轻微漂移，不走霓虹 */
-    var n = density, i3, br;
-    for (var k = 0; k < n; k++) {
-      i3 = k * 3;
-      br = spread + Math.sin(t * 1.8 + phase[k]) * 0.035;
-      pos[i3] = base[i3] * br;
-      pos[i3 + 1] = base[i3 + 1] * br;
-      pos[i3 + 2] = base[i3 + 2] * br;
-      /* 墨分五色：浓淡偏移为主，微呼吸，积墨处自深 */
-      var li2 = 0.3 + hueOff[k] * 0.9 + 0.05 * Math.sin(t * 2.2 + phase[k] * 2);
-      /* 墨分五色：低饱和冷灰蓝，不再是整齐的同色蓝点。 */
-      tmpC.setHSL((hueBase + hueOff[k] * 0.04 + 2) % 1, 0.12 + Math.abs(hueOff[k]) * 0.22, Math.max(0.1, Math.min(0.48, li2)));
-      col[i3] = tmpC.r; col[i3 + 1] = tmpC.g; col[i3 + 2] = tmpC.b;
+    if (cloud.visible) {
+      var n = density, i3, br;
+      for (var k = 0; k < n; k++) {
+        i3 = k * 3;
+        br = spread + Math.sin(t * 1.8 + phase[k]) * 0.035;
+        pos[i3] = base[i3] * br;
+        pos[i3 + 1] = base[i3 + 1] * br;
+        pos[i3 + 2] = base[i3 + 2] * br;
+        /* 只用墨黑与灰青的浓淡变化，不引入色相漂移。 */
+        var inkLight = Math.max(0.075, Math.min(0.38, 0.22 + hueOff[k] * 0.72 + 0.025 * Math.sin(t * 1.7 + phase[k] * 2)));
+        col[i3] = inkLight * 0.88;
+        col[i3 + 1] = inkLight;
+        col[i3 + 2] = inkLight * 0.96;
+      }
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.color.needsUpdate = true;
+      geo.setDrawRange(0, n);
+      for (bi = 0; bi < blobs.length; bi++) {
+        blobs[bi].position.x = blobs[bi].userData.bx + Math.sin(t * 0.04 + bi * 2.1) * 0.7;
+      }
+      renderer.render(scene, camera);
     }
-    geo.attributes.position.needsUpdate = true;
-    geo.attributes.color.needsUpdate = true;
-    geo.setDrawRange(0, n);
-    stars.rotation.y -= dt * 0.02;
-    stars.rotation.x = Math.sin(t * 0.05) * 0.05;
-    for (bi = 0; bi < blobs.length; bi++) {
-      blobs[bi].position.x = blobs[bi].userData.bx + Math.sin(t * 0.04 + bi * 2.1) * 0.7;
-    }
-    renderer.render(scene, camera);
+    drawInkFx(t);
   }
   tick();
 })();

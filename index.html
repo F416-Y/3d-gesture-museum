@@ -31,31 +31,23 @@
 <!-- ===== 开场粒子序章覆盖层 ===== -->
 <div id="intro">
   <canvas id="introCanvas"></canvas>
+  <canvas id="introInkFx" aria-hidden="true"></canvas>
   <div id="introTitle">
-    <span class="intro-kicker">云间入墨 · DIGITAL MUSEUM</span>
     <h1>云间入墨</h1>
     <p>中国传统绘画数字美术馆 · 手势入境</p>
   </div>
   <div id="introMark" aria-label="云间入墨标志">
-    <img src="./assets/ui/yunjian-logo.png" alt="" />
+    <img src="./assets/ui/yunjian-logo.png" alt="云间入墨" />
   </div>
-  <div id="introNote" aria-hidden="true">
-    <span>山水</span><i></i><span>花鸟</span><i></i><span>人物</span><i></i><span>书斋</span><i></i><span>文创</span>
-  </div>
-  <div id="introPanel">
-    <label><span>墨色</span><input type="color" id="introColor" value="#3a3f4a" aria-label="粒子基础颜色" /></label>
-    <label><span>墨点</span><input type="range" id="introDensity" min="2000" max="30000" step="1000" value="9000" aria-label="粒子密度" /><span class="val" id="introDensityVal">9000 粒</span></label>
-  </div>
-  <div id="introHint">拖动以转动 · 按住让墨色散开</div>
-  <div id="inkRevealBrush" aria-hidden="true"><img src="./assets/ui/brush-cursor.svg" alt="" /></div>
+  <div id="inkRevealBrush" aria-hidden="true"><img src="./assets/ui/brush-cursor.png" alt="" /></div>
   <div id="inkCursor" aria-hidden="true">
-    <img src="./assets/ui/brush-cursor.svg" alt="" />
+    <img src="./assets/ui/brush-cursor.png" alt="" />
   </div>
   <div id="introBR">
     <button id="introFull" aria-label="全屏切换">全屏</button>
-    <button id="introEnter" aria-label="进入博物馆">进入博物馆 →</button>
+    <button id="introEnter" type="button" aria-label="进入博物馆" disabled aria-disabled="true">进入博物馆 →</button>
   </div>
-  <div id="introStatus">正在加载手势模型…</div>
+  <div id="introStatus" role="status" aria-live="polite">引笔近墨 · 园境将开</div>
 </div>
 
   <!-- ===== 3D 画布容器 ===== -->
