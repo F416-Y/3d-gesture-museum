@@ -214,15 +214,15 @@ window.MuseumUI = (function () {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0);
     var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(28, 1, 0.01, 100);
-    camera.position.set(0, 1.1, 4.2);
+    var camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+    camera.position.set(0, 0, 5.2);
     scene.add(new THREE.HemisphereLight(0xfff7e8, 0x28313a, 2.1));
     var key = new THREE.DirectionalLight(0xffffff, 2.8);
     key.position.set(3, 5, 4); scene.add(key);
     var fill = new THREE.DirectionalLight(0xd9e8ff, 1.25);
     fill.position.set(-4, 2, -2); scene.add(fill);
     var root = new THREE.Group(); scene.add(root);
-    var yaw = 0, pitch = 0.04, distance = 4.2, dragging = false, lastX = 0, lastY = 0;
+    var yaw = 0, pitch = 0.04, distance = 5.2, dragging = false, lastX = 0, lastY = 0;
     var frame = 0, disposed = false;
     function resize() {
       var w = Math.max(1, host.clientWidth), h = Math.max(1, host.clientHeight);
@@ -231,15 +231,23 @@ window.MuseumUI = (function () {
     function frameModel(model) {
       var box = new THREE.Box3().setFromObject(model);
       var size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
-      var scale = 2.35 / Math.max(size.x, size.y, size.z, 0.01);
+      var scale = 2.05 / Math.max(size.x, size.y, size.z, 0.01);
       model.scale.setScalar(scale);
-      model.position.set(-center.x * scale, -box.min.y * scale - 0.18, -center.z * scale);
+      model.updateMatrixWorld(true);
+      var fitted = new THREE.Box3().setFromObject(model);
+      var fittedSize = fitted.getSize(new THREE.Vector3());
+      var fittedCenter = fitted.getCenter(new THREE.Vector3());
+      model.position.x -= fittedCenter.x;
+      model.position.y -= fittedCenter.y;
+      model.position.z -= fittedCenter.z;
+      // 依据模型高度自动拉远相机，避免只显示局部纹饰。
+      distance = Math.max(3.8, Math.min(8.5, fittedSize.y / (2 * Math.tan(THREE.MathUtils.degToRad(35) / 2)) * 1.28));
     }
     function render() {
       if (disposed) return;
       if (!dragging) yaw += 0.0035;
       root.rotation.y = yaw; root.rotation.x = pitch;
-      camera.position.set(0, 1.05, distance); camera.lookAt(0, 0.95, 0);
+      camera.position.set(0, 0.08, distance); camera.lookAt(0, 0, 0);
       renderer.render(scene, camera); frame = requestAnimationFrame(render);
     }
     function down(e) { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId); }
