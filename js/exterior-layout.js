@@ -1456,7 +1456,8 @@ window.MuseumExteriorLayout = (function () {
       bridge.updateMatrixWorld(true);
       var fitted = new THREE.Box3().setFromObject(bridge), center = fitted.getCenter(new THREE.Vector3());
       var group = new THREE.Group(); group.name = 'central-arch-bridge-glb'; group.add(bridge);
-      group.position.set(-center.x, 0.06 - fitted.min.y, -2.2 - center.z);
+      // 桥脚要嵌入湖床/岸基，不能只停在水面高度，否则会产生“浮桥”视觉。
+      group.position.set(-center.x, -0.08 - fitted.min.y, -2.2 - center.z);
       bridge.traverse(function (node) { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
       S.scene.add(group);
     }, undefined, function () { buildCentralArchBridge(); });
