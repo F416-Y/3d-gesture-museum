@@ -35,8 +35,7 @@ window.MuseumInkWorlds = (function () {
    *   apiKeyConfirmed        → 该 key 是否已经组长书面确认（见任务卡 §12.2）
    *
    * 《富春山居图》最终 key 由组长 2026-10-28 确认为 "shanshui"（山水厅），
-   * 不使用 "shuzhai"；视频文件名同步为 shanshui.mp4。key 已确认，但视频尚未交付，
-   * 因此 status 仍为 "placeholder"。组长交付视频后把 status 改成 "auto" 即可。 */
+   * 不使用 "shuzhai"。四段画境视频统一使用 paintings/ 下的新文件名。 */
   var PAINTINGS = [
     {
       key: "qianli", title: "千里江山图", artist: "北宋 · 王希孟",
@@ -47,20 +46,20 @@ window.MuseumInkWorlds = (function () {
     {
       key: "shanshui", title: "富春山居图", artist: "元 · 黄公望",
       hall: "hall1", img: "./assets/images/fuchunshanjv.jpg",
-      video: "./videos/paintings/shanshui.mp4",
-      status: "placeholder", apiKeyConfirmed: true,
+      video: "./videos/paintings/fuchun-shanju.mp4",
+      status: "auto", apiKeyConfirmed: true,
     },
     {
       key: "renwu", title: "韩熙载夜宴图", artist: "五代 · 顾闳中",
       hall: "hall3", img: "./assets/images/hanxizai.jpg",
-      video: "./videos/paintings/renwu.mp4",
-      status: "placeholder", apiKeyConfirmed: true,
+      video: "./videos/paintings/hanxizai.mp4",
+      status: "auto", apiKeyConfirmed: true,
     },
     {
       key: "huaniao", title: "墨兰图", artist: "宋末元初 · 郑思肖",
       hall: "hall2", img: "./assets/images/molantu.jpg",
-      video: "./videos/paintings/huaniao.mp4",
-      status: "placeholder", apiKeyConfirmed: true,
+      video: "./videos/paintings/molan.mp4",
+      status: "auto", apiKeyConfirmed: true,
     },
   ];
 
