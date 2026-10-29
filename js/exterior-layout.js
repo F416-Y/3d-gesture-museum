@@ -1936,12 +1936,12 @@ window.MuseumExteriorLayout = (function () {
   function drawStreamRouteGuides() {
     var guideGroup = new THREE.Group(); guideGroup.name = 'stream-route-guides'; S.scene.add(guideGroup);
     var redRoute = [
-      [-19.0, 22.0], [-17.2, 18.2], [-14.2, 14.0], [-11.0, 9.5],
-      [-6.4, 7.0], [-1.0, 6.1], [5.2, 5.5], [11.5, 4.5], [18.0, 3.6]
+      [-20.5, -22.0], [-17.0, -18.0], [-12.5, -13.0], [-7.0, -8.2],
+      [0.0, -2.2], [7.0, 0.4], [14.0, 2.5], [20.5, 4.0], [26.0, 4.8]
     ];
     var blueRoute = [
-      [-20.0, 22.8], [-18.0, 18.8], [-15.0, 14.6], [-12.0, 10.2],
-      [-7.2, 7.7], [-1.8, 6.9], [4.5, 6.2], [10.8, 5.2], [18.5, 4.2]
+      [-19.0, -23.0], [-15.8, -19.0], [-11.2, -14.0], [-6.0, -9.0],
+      [0.0, -2.2], [7.2, 1.2], [14.5, 3.3], [21.0, 4.8], [26.5, 5.5]
     ];
     function addGuide(points, color) {
       var vertices = [], i;
@@ -2157,16 +2157,8 @@ window.MuseumExteriorLayout = (function () {
     shrub(cx - 1.1 * s2, cz - 0.55 * s2, 0.4, seed + 4);
   }
 
-  /* ---------- 空旷草地填充：西北枯山水回廊院 / 东北石景 / 西南与东南沿墙山水带（水景收进中心庭院，边缘不再设池） ---------- */
+  /* ---------- 空旷草地填充：东北石景 / 西南与东南沿墙山水带 ---------- */
   function buildLandscapeFill() {
-    /* 西北角：枯山水石床（约 9×7m）+ 西/北 L 形曲廊绕床赏石，两端敞口不收门楼 */
-    dryBed(-18, -28.8, 4.6, 3.4, 601);
-    corridor(-25, -24.2, -25, -32.35);
-    corridor(-23.1, -34, -13.5, -34);
-    cornerPavilion(-25, -34); pavPatch(-25, -34);   // 枯山水曲廊转角亭：两段廊顶插檐收进亭檐，不再交叠
-    rockery(-14.6, -24.6, 1.3, 611);          // 床东南岸山石群
-    plantTree(-13.2, -26.2, 1.2, 615);        // 床东岸大树
-    plantTree(-21.5, -24.3, 1.1, 616);        // 床南岸树
     /* 东北角：山石群 + 双树（原水池已撤，留草坪疏林） */
     rockery(18.8, -25.8, 1.3, 612);
     plantTree(26.2, -32.6, 1.1, 617);
@@ -2376,7 +2368,6 @@ window.MuseumExteriorLayout = (function () {
     bananaPlant(19.2, -21.0, 237, S.scene, 0.90);
     bananaPlant(-19.6, -20.4, 238, S.scene, 0.88);
     /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
-    deadTrunk(-22.0, -28.0, 241, S.scene, 0.9);
     deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
     deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
     deadTrunk(30.5, 42.8, 244, S.scene, 0.7);
@@ -2563,7 +2554,7 @@ window.MuseumExteriorLayout = (function () {
     buildAxisScreenWall();    // 序厅后方挡墙
     buildCorridors();         // 只保留中轴画廊
     buildPocketGardens();
-    buildLandscapeFill();     // 空旷草地：曲池、曲廊、山石组
+    buildLandscapeFill();     // 空旷草地：山石组与沿墙绿化
     return { waters: WATERS };
   }
 
