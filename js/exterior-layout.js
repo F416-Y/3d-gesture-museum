@@ -1460,6 +1460,11 @@ window.MuseumExteriorLayout = (function () {
       group.position.set(-center.x, -0.08 - fitted.min.y, -2.2 - center.z);
       bridge.traverse(function (node) { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
       S.scene.add(group);
+      // 两端桥台承接桥脚并嵌入湖床；拱腹跨水，不让桥体看起来整块漂在水面。
+      box(2.8, 0.46, 1.45, M.stone, 0, -0.08, -10.0);
+      box(2.8, 0.46, 1.45, M.stone, 0, -0.08, 5.6);
+      box(2.45, 0.16, 0.95, M.stoneDark, 0, 0.23, -9.72);
+      box(2.45, 0.16, 0.95, M.stoneDark, 0, 0.23, 5.32);
     }, undefined, function () { buildCentralArchBridge(); });
   }
 
