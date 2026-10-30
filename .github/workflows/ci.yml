@@ -34,6 +34,8 @@ jobs:
         run: node scripts/smoke-scene.mjs
       - name: 展品热点与弹窗全量验收
         run: npm run verify:exhibits
+      - name: 四幅画境视频验收
+        run: npm run verify:paintings
 
   build:
     name: 生产构建

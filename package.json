@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build && node scripts/postbuild.mjs",
     "preview": "vite preview",
-    "verify:exhibits": "node scripts/verify-exhibits.mjs"
+    "verify:exhibits": "node scripts/verify-exhibits.mjs",
+    "verify:paintings": "node scripts/verify-paintings-videos.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
