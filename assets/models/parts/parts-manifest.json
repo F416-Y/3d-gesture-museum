@@ -231,10 +231,10 @@
       "id": "banana",
       "name": "芭蕉",
       "replaces": "造景补件",
-      "sizeM": 2.2,
-      "faceCount": 1020,
+      "sizeM": 3.4,
+      "faceCount": 4028,
       "plant": true,
-      "prompt": "一株江南庭园芭蕉，五六片宽大长椭形叶片，叶脉清晰，叶缘有自然撕裂，翠绿色；",
+      "prompt": "一株江南庭园芭蕉，二十片宽大长椭形叶片分层放射，带中脉与自然撕裂，翠绿色；三段叶鞘假茎粗壮，根部三片新芽；",
       "aiPredictSize": true,
       "generatedBy": "Blender 4.5 程序化生成（组员6）",
       "note": "本地程序化建模，非 Hyper3D 生成；面数按实时 WebGL 预算控制"
