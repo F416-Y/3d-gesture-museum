@@ -429,38 +429,42 @@ window.MuseumExteriorLayout = (function () {
     var gp = parent || S.scene, s = seed >>> 0;
     var g = new THREE.Group(); gp.add(g);
     var k = sc || 1;
-    /* 假茎：加粗加高一些，单株才有体量 */
-    cyl(0.19 * k, 0.25 * k, 1.30 * k, 12, M.wood, x, 0.65 * k, z, g);
-    /* 叶片：14 片宽叶绕茎顶放射，五层错落。
+    /* 假茎：芭蕉的茎粗短有力，比之前的细高杆更接近实物。
+       三段叠出叶鞘台阶，顶端收细。 */
+    cyl(0.28 * k, 0.38 * k, 1.05 * k, 12, M.wood, x, 0.52 * k, z, g);
+    cyl(0.24 * k, 0.28 * k, 1.00 * k, 12, M.wood, x, 1.55 * k, z, g);
+    cyl(0.20 * k, 0.24 * k, 0.95 * k, 12, M.wood, x, 2.52 * k, z, g);
+    /* 叶片：18 片宽长叶，五层错落。
        用压扁球体近似叶团，比平面片有厚度，远处看不会消失。 */
-    var LEAVES = 14;
-    var leafGeo = new THREE.SphereGeometry(1, 8, 6);
+    var LEAVES = 18;
+    var leafGeo = new THREE.SphereGeometry(1, 10, 7);
     for (var j = 0; j < LEAVES; j++) {
       s = (s * 1664525 + 1013904223) >>> 0;
       var ang = (Math.PI * 2 / LEAVES) * j + 0.3;
       var tier = j % 5;
-      var h = (1.16 + tier * 0.15) * k;
-      var len = (1.90 - tier * 0.16) * k;
-      var w = (0.92 - tier * 0.06) * k;
-      var tilt = -0.30 - tier * 0.05;
+      /* 越靠上的层叶柄越短、叶子更挺，形成明显的高低位层次 */
+      var h = (2.05 + tier * 0.30) * k;
+      var len = (3.30 - tier * 0.34) * k;
+      var w = (0.78 - tier * 0.08) * k;
+      var tilt = -0.26 - tier * 0.10;
       var leaf = new THREE.Mesh(leafGeo, M.leaf);
-      leaf.scale.set(len * 0.58, 0.12 * k, w * 0.5);
-      leaf.position.set(x + Math.cos(ang) * len * 0.52, h, z + Math.sin(ang) * len * 0.52);
+      leaf.scale.set(len * 0.48, 0.13 * k, w * 0.5);
+      leaf.position.set(x + Math.cos(ang) * len * 0.44, h, z + Math.sin(ang) * len * 0.44);
       leaf.rotation.y = -ang;
       leaf.rotation.z = tilt;
       leaf.castShadow = true;
       leaf.receiveShadow = true;
       g.add(leaf);
     }
-    /* 根部两片新芽，从茎底斜出，让株型不满在顶上 */
-    for (var n = 0; n < 2; n++) {
+    /* 根部三片新芽，从茎底斜出，让株型不满在顶上 */
+    for (var n = 0; n < 3; n++) {
       s = (s * 1664525 + 1013904223) >>> 0;
       var na = ((s % 1000) / 1000) * Math.PI * 2;
       var shoot = new THREE.Mesh(leafGeo, M.leaf);
-      shoot.scale.set(0.85 * k, 0.09 * k, 0.34 * k);
-      shoot.position.set(x + Math.cos(na) * 0.62 * k, 0.42 * k, z + Math.sin(na) * 0.62 * k);
+      shoot.scale.set(1.15 * k, 0.10 * k, 0.36 * k);
+      shoot.position.set(x + Math.cos(na) * 0.70 * k, 0.36 * k, z + Math.sin(na) * 0.70 * k);
       shoot.rotation.y = -na;
-      shoot.rotation.z = -0.72;
+      shoot.rotation.z = -0.86;
       shoot.castShadow = true;
       g.add(shoot);
     }

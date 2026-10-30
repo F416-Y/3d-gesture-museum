@@ -108,11 +108,11 @@ window.MuseumExteriorSlots = {
         });
         report();
       });
-      /* 芭蕉：宽叶放射，按清单 2.2m 归一 */
+      /* 芭蕉：宽叶放射，挺拔株型，按 3.4m 归一 */
       load('banana').then(function (tpl) {
         if (!tpl) return;
         slots.banana.forEach(function (b) {
-          var g = instantiate(tpl, { mode: 'h', size: 2.2 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
+          var g = instantiate(tpl, { mode: 'h', size: 3.4 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
           if (g) { b.group.visible = false; mark('芭蕉'); }
         });
         report();
