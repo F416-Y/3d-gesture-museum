@@ -758,28 +758,49 @@ window.MuseumScene = (function () {
     S.slots.bamboo.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
 
-  /* ---------- 一株芭蕉（宽叶放射，s≈1 时约 2.2m） ---------- */
+  /* ---------- 一株芭蕉（宽叶放射，挺拔株型，按 3.4m 归一） ---------- */
   function bananaPlant(x, z, seed, parent, sc) {
     var gp = parent || S.scene, s = seed >>> 0;
     var g = new THREE.Group(); gp.add(g);
     var k = sc || 1;
-    /* 假茎 */
-    cyl(0.16 * k, 0.2 * k, 1.05 * k, 10, M.wood, x, 0.52 * k, z, g);
-    /* 叶片：8 片宽叶绕茎顶放射，按层次错落，用压扁的球体近似叶团 */
-    for (var j = 0; j < 8; j++) {
+    /* 假茎：芭蕉的茎粗短有力，比之前的细高杆更接近实物。
+       三段叠出叶鞘台阶，顶端收细。 */
+    cyl(0.28 * k, 0.38 * k, 1.05 * k, 12, M.wood, x, 0.52 * k, z, g);
+    cyl(0.24 * k, 0.28 * k, 1.00 * k, 12, M.wood, x, 1.55 * k, z, g);
+    cyl(0.20 * k, 0.24 * k, 0.95 * k, 12, M.wood, x, 2.52 * k, z, g);
+    /* 叶片：18 片宽长叶，五层错落。
+       用压扁球体近似叶团，比平面片有厚度，远处看不会消失。 */
+    var LEAVES = 18;
+    var leafGeo = new THREE.SphereGeometry(1, 10, 7);
+    for (var j = 0; j < LEAVES; j++) {
       s = (s * 1664525 + 1013904223) >>> 0;
-      var ang = (Math.PI * 2 / 8) * j + 0.3;
-      var tier = j % 4;
-      var h = (0.95 + tier * 0.13) * k;
-      var len = (1.5 - tier * 0.15) * k;
-      var w = (0.75 - tier * 0.06) * k;
-      var leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 5), M.leaf);
-      leaf.scale.set(len * 0.55, 0.10 * k, w * 0.5);
-      leaf.position.set(x + Math.cos(ang) * len * 0.55, h, z + Math.sin(ang) * len * 0.55);
+      var ang = (Math.PI * 2 / LEAVES) * j + 0.3;
+      var tier = j % 5;
+      /* 越靠上的层叶柄越短、叶子更挺，形成明显的高低位层次 */
+      var h = (2.05 + tier * 0.30) * k;
+      var len = (3.30 - tier * 0.34) * k;
+      var w = (0.78 - tier * 0.08) * k;
+      var tilt = -0.26 - tier * 0.10;
+      var leaf = new THREE.Mesh(leafGeo, M.leaf);
+      leaf.scale.set(len * 0.48, 0.13 * k, w * 0.5);
+      leaf.position.set(x + Math.cos(ang) * len * 0.44, h, z + Math.sin(ang) * len * 0.44);
       leaf.rotation.y = -ang;
-      leaf.rotation.z = -0.34;
+      leaf.rotation.z = tilt;
       leaf.castShadow = true;
+      leaf.receiveShadow = true;
       g.add(leaf);
+    }
+    /* 根部三片新芽，从茎底斜出，让株型不满在顶上 */
+    for (var n = 0; n < 3; n++) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var na = ((s % 1000) / 1000) * Math.PI * 2;
+      var shoot = new THREE.Mesh(leafGeo, M.leaf);
+      shoot.scale.set(1.15 * k, 0.10 * k, 0.36 * k);
+      shoot.position.set(x + Math.cos(na) * 0.70 * k, 0.36 * k, z + Math.sin(na) * 0.70 * k);
+      shoot.rotation.y = -na;
+      shoot.rotation.z = -0.86;
+      shoot.castShadow = true;
+      g.add(shoot);
     }
     S.slots.banana.push({ group: g, x: x, z: z, k: k, seed: seed });
   }
@@ -2807,11 +2828,11 @@ window.MuseumScene = (function () {
       report();
     });
 
-    /* 芭蕉：宽叶放射，按清单 2.2m 归一 */
+    /* 芭蕉：宽叶放射，挺拔株型，按清单 3.4m 归一 */
     load('banana').then(function (tpl) {
       if (!tpl) return;
       slots.banana.forEach(function (b) {
-        var g = instantiate(tpl, { mode: 'h', size: 2.2 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
+        var g = instantiate(tpl, { mode: 'h', size: 3.4 * b.k, x: b.x, y: 0, z: b.z, ry: b.seed * 0.8 });
         if (g) { b.group.visible = false; mark('芭蕉'); }
       });
       report();

@@ -45,7 +45,10 @@ button { font-family: inherit; cursor: pointer; }
 .brand { display: flex; align-items: center; gap: 14px; }
 .brand-seal {
   display: block; width: 54px; height: 54px; padding: 0;
-  background: rgba(25, 25, 21, 0.76); border: 1px solid rgba(245, 241, 232, 0.48);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 56%, rgba(73, 52, 30, 0.06)),
+    #d3c1a9;
+  border: 1px solid rgba(112, 77, 34, 0.52);
   box-shadow: 0 6px 18px var(--shadow); transform: rotate(-2deg); overflow: hidden;
 }
 .brand-seal img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -54,7 +57,7 @@ button { font-family: inherit; cursor: pointer; }
 .brand-seal .brand-mark-stroke { fill: none; stroke: var(--paper); stroke-width: 2.2; stroke-linecap: round; }
 .brand-seal .brand-mark-dot { fill: var(--cinnabar); }
 .brand-seal::after {
-  content: ""; position: absolute; inset: 5px; border: 1px solid rgba(245, 241, 232, 0.18); pointer-events: none;
+  content: ""; position: absolute; inset: 5px; border: 1px solid rgba(112, 77, 34, 0.26); pointer-events: none;
 }
 .brand-text h1 {
   font-family: var(--serif);
