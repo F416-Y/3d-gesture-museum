@@ -6,12 +6,12 @@
 public/videos/paintings/qianli-jiangshan.mp4   → openPaintingVideo('qianli')    《千里江山图》
 public/videos/paintings/shanshui.mp4           → openPaintingVideo('shanshui')  《富春山居图》
 public/videos/paintings/renwu.mp4              → openPaintingVideo('renwu')     《韩熙载夜宴图》
-public/videos/paintings/huaniao.mp4            → openPaintingVideo('huaniao')   《墨兰图》
+public/videos/paintings/luoshenfu.mp4        → openPaintingVideo('luoshenfu')   《洛神赋图》
 ```
 
 > 《富春山居图》最终 key 为 **`shanshui`**（2026-10-28 组长确认，对应 hall1 山水厅），
-> **不使用 `shuzhai`**；视频文件名同步为 `shanshui.mp4`。key 已确认，但视频尚未交付，
-> 代码里该项仍是 `status: "placeholder"`，只显示「画境准备中」；交付后改成 `"auto"` 即可。
+> **不使用 `shuzhai`**；视频文件名同步为 `shanshui.mp4`。key 已确认，交付视频已经接入，
+> 代码里该项现在是 `status: "auto"`；视频加载失败时仍显示兜底提示。
 
 组员1 的 `js/ink-worlds.js` 会先探测组长的画境接口
 （`window.MuseumPaintingWorlds.openPaintingVideo` / `window.MuseumInkWorldApi.openPaintingVideo`），
@@ -25,14 +25,16 @@ public/videos/paintings/huaniao.mp4            → openPaintingVideo('huaniao') 
   避免画境残留和漫游继续冻结；未提供时兼容 `exitPaintingWorld(key)` /
   `closePaintingWorld(key)` 两个别名。
 
-第一阶段默认状态：
+当前交付状态：
 
-| 画作 | 状态 | 说明 |
+| 画作 | 状态 | 视频文件 |
 |---|---|---|
-| 《千里江山图》 | `auto` | 尝试播放视频，文件缺失时显示「画境准备中」 |
-| 其余三幅 | `placeholder` | 只显示选择卡与占位状态 |
+| 《千里江山图》 | `auto` | `qianli-jiangshan.mp4` |
+| 《富春山居图》 | `auto` | `shanshui.mp4` |
+| 《韩熙载夜宴图》 | `auto` | `renwu.mp4` |
+| 《洛神赋图》 | `auto` | `luoshenfu.mp4` |
 
-组长交付视频后，在 `js/ink-worlds.js` 的 `PAINTINGS` 里把对应项 `status` 改成 `"auto"` 即可开放。
+四段原视频来自 `参考视频/交付视频`。项目内版本已修复左上角「豆包 AI 生成」水印区域，保留原有音轨、时长和 1280×720 画幅；原始交付文件未修改。
 
 ## 来源与授权
 

@@ -964,18 +964,10 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 外墙一周（北墙 z=-40 一线直墙——原中央 13m 外凸北门楼已整体拆除； ---------- *
    * ---------- 南墙中央内凹两级形成主入口外广场，x ±50 / z ±40 为外包络） ---------- */
   function buildBoundary() {
-    /* 西墙直墙；东墙在人物与书斋之间为溪流留水口。 */
+    /* 中心湖留在园内，外墙保持连续。 */
     wallRun(-50, -40, -50, 40);
-    wallRun(50, -40, 50, -3.5);
-    wallRun(50, 3.5, 50, 40);
-    /* 北墙在山水与花鸟之间为溪流留水口。 */
-    wallRun(-50, -40, -25, -40);
-    wallRun(-18, -40, 50, -40);
-    /* 两处墙顶横梁连贯，水从下方流出。 */
-    box(7, 0.32, 0.58, M.paper, -21.5, 2.02, -40);
-    box(7, 0.08, 0.76, M.tile, -21.5, 2.25, -40);
-    box(0.58, 0.32, 7, M.paper, 50, 2.02, 0);
-    box(0.76, 0.08, 7, M.tile, 50, 2.25, 0);
+    wallRun(50, -40, 50, 40);
+    wallRun(-50, -40, 50, -40);
     /* 南墙：角段 z=40（x ±26~±50）→ 内折 → 中段 z=36（x ±11~±26）→ 内折，中央 x±11 开口（序厅大门） */
     wallRun(26, 40, 50, 40);
     wallRun(26, 40, 26, 36);
@@ -1612,16 +1604,10 @@ window.MuseumExteriorLayout = (function () {
     }, undefined, function () { buildCentralArchBridge(); });
   }
 
-  /* ---------- 中心庭（改为穿园小溪，桥位仍在 0,-2.2） ---------- */
+  /* ---------- 中心庭：中心湖约 32×16m，中心坐标 (0,-2.2) ---------- */
   function buildZhongxinCourt() {
-    /* 花鸟与山水之间的空地 → 桥下 → 人物与书斋之间的空地。 */
-    windingStream([
-      [-21.5, -44.0], [-21.5, -37.1], [-21.0, -30.0], [-20.0, -22.5], [-16.4, -18.5],
-      [-11.9, -13.5], [-6.5, -8.6], [0.0, -2.2], [7.1, 0.8],
-      [14.2, 2.9], [20.8, 4.4], [26.2, 5.2], [29.0, 3.6],
-      [35.0, 2.0], [42.0, 0.8], [47.2, 0.0], [55.0, -1.2]
-    ], 3.2, 55);
-    if (typeof location !== 'undefined' && /(^|[?&])streamGuide=1(?:&|$)/.test(location.search)) drawStreamRouteGuides();
+    /* 桥沿湖的短轴跨越水面，两端接近南北湖岸。 */
+    irregularPond(0, -2.2, 16.0, 8.0, 55);
     loadCentralArchBridge();
     return;
     /* 周边碎石广场 */
@@ -1942,76 +1928,6 @@ window.MuseumExteriorLayout = (function () {
       s = (s * 1664525 + 1013904223) >>> 0;
       lotus(cx + ((s % 100) / 100 - 0.5) * rx * 1.1,
             cz + ((s % 97) / 97 - 0.5) * rz * 1.1, 0.22 + (s % 50) / 500);
-    }
-  }
-
-  /* ---------- 临时溪流路线校验线：?streamGuide=1 才显示 ---------- */
-  function drawStreamRouteGuides() {
-    var guideGroup = new THREE.Group(); guideGroup.name = 'stream-route-guides'; S.scene.add(guideGroup);
-    var redRoute = [
-      [-22.0, -44.0], [-22.0, -37.0], [-21.5, -30.0], [-20.5, -22.0], [-17.0, -18.0],
-      [-12.5, -13.0], [-7.0, -8.2], [0.0, -2.2], [7.0, 0.4],
-      [14.0, 2.5], [20.5, 4.0], [26.0, 4.8], [29.0, 3.2],
-      [35.0, 1.6], [42.0, 0.4], [47.2, -0.4], [55.0, -1.6]
-    ];
-    var blueRoute = [
-      [-21.0, -44.0], [-21.0, -37.2], [-20.5, -30.2], [-19.0, -23.0], [-15.8, -19.0],
-      [-11.2, -14.0], [-6.0, -9.0], [0.0, -2.2], [7.2, 1.2],
-      [14.5, 3.3], [21.0, 4.8], [26.5, 5.5], [29.3, 4.0],
-      [35.2, 2.4], [42.2, 1.2], [47.2, 0.4], [55.0, -0.8]
-    ];
-    function addGuide(points, color) {
-      var vertices = [], i;
-      for (i = 0; i < points.length; i++) vertices.push(points[i][0], 0.32, points[i][1]);
-      var geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      var line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.92 }));
-      line.renderOrder = 20; guideGroup.add(line);
-    }
-    addGuide(redRoute, 0xd13b32);
-    addGuide(blueRoute, 0x1677d2);
-  }
-
-  /* ---------- 穿园小溪：可控宽度的连续水道，桥下溪宽约 3.2m ---------- */
-  function windingStream(points, width, seed) {
-    var i, j, half = width / 2, bank = half + 0.62;
-    var waterLeft = [], waterRight = [], bedLeft = [], bedRight = [];
-    function offsetPoint(index, distance) {
-      var p = points[index];
-      var prev = points[Math.max(0, index - 1)], next = points[Math.min(points.length - 1, index + 1)];
-      var dx = next[0] - prev[0], dz = next[1] - prev[1], len = Math.sqrt(dx * dx + dz * dz) || 1;
-      return [p[0] - dz / len * distance, p[1] + dx / len * distance];
-    }
-    for (i = 0; i < points.length; i++) {
-      waterLeft.push(offsetPoint(i, half)); waterRight.push(offsetPoint(i, -half));
-      bedLeft.push(offsetPoint(i, bank)); bedRight.push(offsetPoint(i, -bank));
-    }
-    function shapeFrom(left, right) {
-      var shape = new THREE.Shape();
-      shape.moveTo(left[0][0], -left[0][1]);
-      for (j = 1; j < left.length; j++) shape.lineTo(left[j][0], -left[j][1]);
-      for (j = right.length - 1; j >= 0; j--) shape.lineTo(right[j][0], -right[j][1]);
-      shape.closePath();
-      return shape;
-    }
-    var bed = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(bedLeft, bedRight)), M.ink);
-    bed.rotation.x = -Math.PI / 2; bed.position.y = -0.14; bed.receiveShadow = true; S.scene.add(bed);
-    var water = new THREE.Mesh(new THREE.ShapeGeometry(shapeFrom(waterLeft, waterRight)), M.water);
-    water.rotation.x = -Math.PI / 2; water.position.y = 0.06; water.receiveShadow = true; S.scene.add(water);
-    var s = seed >>> 0;
-    for (i = 0; i < points.length - 1; i++) {
-      var a = points[i], b = points[i + 1], dx = b[0] - a[0], dz = b[1] - a[1];
-      var len = Math.sqrt(dx * dx + dz * dz) || 1, nx = -dz / len, nz = dx / len;
-      var count = Math.max(2, Math.round(len / 1.6));
-      for (j = 0; j <= count; j++) {
-        var t = j / count, cx = a[0] + dx * t, cz = a[1] + dz * t;
-        s = (s * 1664525 + 1013904223) >>> 0;
-        var side = (j + i) % 2 ? 1 : -1, jitter = ((s % 100) / 100 - 0.5) * 0.18;
-        var stone = new THREE.Mesh(blobGeo(0.16 + (s % 100) / 100 * 0.12, 0.22, 0.42, seed + i * 19 + j), M.rock);
-        stone.position.set(cx + nx * (bank + jitter) * side, 0.12, cz + nz * (bank + jitter) * side);
-        stone.rotation.y = Math.atan2(dz, dx) + (s % 100) / 100; stone.castShadow = stone.receiveShadow = true;
-        S.scene.add(stone);
-      }
     }
   }
 
