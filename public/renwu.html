@@ -69,7 +69,7 @@ button{font:inherit;color:inherit}#gallery{position:fixed;inset:0;display:block;
     { id: "overall", label: "人物厅全景", number: "00", meta: "总览", title: "人物厅全景", text: "从入口看俑阵、马踏飞燕、石狮与青铜鼎的完整展陈关系。" },
     { id: "pedestal", label: "展台基座", number: "01", meta: "1.5 m", title: "展台基座", text: "石质双层底、深木台身与铜箍台面；五件展品按底部尺寸分别落在独立基座上。" },
     { id: "warrior", label: "将军俑", number: "02", meta: "1.6 m", title: "将军俑", text: "秦代高级军吏俑，鱼鳞甲、鹖冠与束发轮廓作为近景检查重点，站在左侧独立展台上。" },
-    { id: "horse", label: "马踏飞燕", number: "03", meta: "1.6 m", title: "马踏飞燕", text: "东汉铜奔马三足腾空、一足踏燕；侧向摆放，让奔马轮廓和最小支点完整可见。" },
+    { id: "horse", label: "马踏飞燕", number: "03", meta: "1.6 m", title: "马踏飞燕", text: "东汉铜奔马三足腾空、一足踏燕；马首正对入口，让观众入场即见正面动势与最小支点。" },
     { id: "stone-lion", label: "石狮", number: "04", meta: "1.2 m", title: "石狮", text: "入口两侧成对布置，朝向厅内与观众；与中央展台保持观看距离，不遮挡主展品。" },
     { id: "bronze-ding", label: "青铜鼎", number: "05", meta: "1.1 m", title: "青铜鼎", text: "商代青铜方鼎，三足双耳与饕餮纹作为近景检查重点，安置在右侧独立展台上。" }
   ];
@@ -196,7 +196,7 @@ button{font:inherit;color:inherit}#gallery{position:fixed;inset:0;display:block;
       if (models.warrior) place("warrior", normalize(models.warrior, 1.6, "height"), -2.8, FLOOR + .8, -2.1, .04);
       var horseBase = models.pedestal ? normalize(models.pedestal, 1.02, "height") : new THREE.Group();
       place("horseBase", horseBase, 0, FLOOR, -4.9, 0, 1.65, 1.25);
-      if (models.horse) place("horse", normalize(models.horse, 1.6, "max"), 0, FLOOR + 1.02, -4.9, Math.PI / 2);
+      if (models.horse) place("horse", normalize(models.horse, 1.6, "max"), 0, FLOOR + 1.02, -4.9, -Math.PI / 2);
       var dingBase = models.pedestal ? normalize(models.pedestal, .86, "height") : new THREE.Group();
       place("dingBase", dingBase, 3.05, FLOOR, -2.1, 0);
       if (models["bronze-ding"]) place("bronze-ding", normalize(models["bronze-ding"], 1.1, "height"), 3.05, FLOOR + .86, -2.1, -.07);
