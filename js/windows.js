@@ -10,6 +10,10 @@
 window.MuseumWindows = (function () {
   /* 每个立面：axis 决定墙走向，at 是固定坐标，from~to 是墙面范围，
      ry 是格扇窗面板的朝向（0=朝 +z，PI=朝 −z，±PI/2 朝 ∓x/+x） */
+  /* 外景动态格扇窗暂时停用：避免与现有建筑墙体重叠。
+     保留替换接口，关闭后由 exterior-layout.js 继续生成原有静态窗。 */
+  var ENABLE_DYNAMIC_EXTERIOR_WINDOWS = false;
+
   var FACADES = [
     /* gap = 门口宽度的一半：正房门宽 2.6m + 门套，留 ±1.6m 不装窗，
        否则整排格扇窗会把正房大门挡住 */
@@ -40,6 +44,7 @@ window.MuseumWindows = (function () {
 
   /* 挂钩：命中就返回 true（告诉原型"这个窗我接管了"） */
   function replace(x, y, z, ry, scene) {
+    if (!ENABLE_DYNAMIC_EXTERIOR_WINDOWS) return false;
     for (var i = 0; i < FACADES.length; i++) {
       var f = FACADES[i];
       var along = f.axis === "x" ? x : z;
