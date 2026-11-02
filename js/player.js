@@ -201,7 +201,9 @@ window.MuseumPlayer = (function () {
       pitch = 0;   // 传送后平视
     },
     setSeated: function (active) {
-      eyeHeight = active ? 1.12 : 1.7;
+      var cfg = window.MuseumConfig;
+      var standing = (cfg && cfg.player && cfg.player.eyeHeight) || 1.7;
+      eyeHeight = active ? 1.12 : standing;
       eyeY = terrainAt(pos.x, pos.z) + eyeHeight;
       pos.y = eyeY;
     },
