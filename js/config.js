@@ -31,7 +31,7 @@ window.MuseumConfig = {
 
   /* ---------- 漫游参数（player.js 读取） ---------- */
   player: {
-    eyeHeight: 1.7,        // 视点高度（米）
+    eyeHeight: 0.9,        // 视点高度（米）—— 与第三人称人物（1.0m 高）眼高保持一致
     radius: 0.5,           // 碰撞体半径
     speed: 3.5,            // 前进速度（米/秒）
     turnSpeed: 1.9,        // 转向速度（弧度/秒）
