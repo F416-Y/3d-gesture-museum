@@ -1384,14 +1384,17 @@ window.MuseumExteriorLayout = (function () {
     var strip = box(0.86, 0.05, 0.07, S.lampGlow, 0, 2.32, 0.1, 0, g);
     strip.rotation.x = 0.5;
   }
-  /* 半壁廊墙：廊外侧重柱间封墙（墙脚石 + 纸筋白墙 + 墨瓦压顶）+ 每开间一幅立轴 */
-  function galleryWall(x, faceDir, topY) {    var len = 10.4, zc = 15.5, wallTop = topY || 3.58;   /* 南端收进内转角亭（z=22.4 一线），让出台基与侧墙 */
+  /* 半壁廊墙：廊外侧重柱间封墙（墙脚石 + 纸筋白墙 + 墨瓦压顶）。
+     画作只挂在一侧，另一侧留给正对画墙的美人靠。 */
+  function galleryWall(x, faceDir, topY, showPaintings) {    var len = 10.4, zc = 15.5, wallTop = topY || 3.58;   /* 南端收进内转角亭（z=22.4 一线），让出台基与侧墙 */
     box(0.2, 0.12, len + 0.1, M.stoneDark, x, 0.06, zc);
     box(0.15, wallTop - 0.12, len, M.paper, x, wallTop / 2, zc);
     box(0.22, 0.14, len + 0.1, M.ink, x, wallTop, zc);
-    /* 三幅画分别落在三开间中心，左右到柱边的距离一致。 */
-    var zs = [11.32, 14.95, 18.58], i;
-    for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0), undefined, undefined, 0.35);
+    if (showPaintings !== false) {
+      /* 三幅画分别落在三开间中心，左右到柱边的距离一致。 */
+      var zs = [11.32, 14.95, 18.58], i;
+      for (i = 0; i < zs.length; i++) hangingScroll(x + faceDir * 0.14, zs[i], faceDir, 350 + i * 7 + (x > 0 ? 100 : 0), undefined, undefined, 0.35);
+    }
   }
 
   /* 横向半壁廊墙（东长廊用，画面朝南）：同 galleryWall 做法，沿 x 展开 */
@@ -1542,7 +1545,8 @@ window.MuseumExteriorLayout = (function () {
     /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
     corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
     corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
-    galleryWall(-8.9, 1, 3.58);
+    /* 左侧为美人靠，取消左墙画作，确保座位与画墙相对。 */
+    galleryWall(-8.9, 1, 3.58, false);
     galleryWall(8.9, -1, 3.58);
     /* 美人靠放在画廊左侧，与右侧画墙相对；贴合外侧柱列，避免悬在画廊中线。 */
     gallerySeat(-8.7, 14.95, -1, 8.4);

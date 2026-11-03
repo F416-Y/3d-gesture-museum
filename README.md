@@ -67,7 +67,9 @@ npm run build
 
 > **完全离线可用**：Three.js、MediaPipe（wasm + 手部模型）都已随仓库分发，运行时**不访问任何 CDN**，断网也能启动手势识别与全部场景。
 
-**部署（GitHub Pages）**：把 `dist/` 推到 `gh-pages` 分支（或用 Actions 自动构建）→ 访问 `https://<用户名>.github.io/3d-gesture-museum/#/`。注意免费版 Pages 只支持**公开仓库**。
+**部署（GitHub Pages）**：仓库已配置 `.github/workflows/deploy-pages.yml`。合并到 `main` 后，GitHub Actions 会自动执行 `npm ci`、`npm run build`，并把 `dist/` 发布到 GitHub Pages；也可以在 Actions 页面手动运行 `Deploy to GitHub Pages`。首次使用时在仓库 `Settings → Pages → Build and deployment` 中选择 `GitHub Actions`。
+
+发布地址：`https://F416-Y.github.io/3d-gesture-museum/#/`。由于使用仓库子路径部署，Vite 配置保持 `base: "./"`。
 
 ## 三、质量门禁与验收
 
@@ -156,7 +158,7 @@ npm run build
 3. **书斋·茶室·文创·临摹背墙 8 幅立轴**：现为题名占位卷轴，放同名 `<id>.jpg` 到 `assets/images/` 即自动换真图
 4. **性能**：真机目标 ≥40fps（树 / 竹可做实例化）
 5. **第三人称"蛋小人"**：方案已给（`js/avatar.js` + 相机防穿墙 + `C` 键切换），未实现
-6. **部署**：目前只有 CI，尚未接 GitHub Pages
+6. **部署**：已接入 GitHub Pages 自动部署；合并 `main` 后由 `Deploy to GitHub Pages` 工作流发布
 7. **演示视频**：分镜与解说词已写好（[演示视频分镜与解说词](./docs/current/demo/演示视频-分镜与解说词.md)），待外观收尾后开拍
 
 ## 八、Supabase（登录 / 收藏 / 评论）

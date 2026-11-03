@@ -1,7 +1,7 @@
 /* ============================================================
  * intro.js —— 开场水墨加载页：呼吸墨团 + 宣纸肌理 + 以笔引墨
  * 来源：外观原型 tools/exterior-prototype.html（Kimi 原作），2026-10-04 由组长原样迁入。
- *  - 5 个预设：青铜鼎 / 石狮 / 马踏飞燕 / 太湖石 / 全园沙盘（现采主场景）
+ *  - 4 个预设：青铜鼎 / 石狮 / 马踏飞燕 / 外观整体（现采主场景）
  *  - 加载阶段不显示 3D 模型，只保留一团有湿边、飞白与渗化的水墨
  *  - 手势：原型用老版 MediaPipe Hands（window.Hands），主项目不分发该库，
  *          2026-10-09 已删除残留的 CDN 加载代码 → 序章固定走鼠标 / 触摸模式
@@ -312,11 +312,19 @@
     unfoldClock = 0;
     unfoldMix = 0;
     trailPoints = [];
+    introPresetIndex = 0;
+    introPresetClock = 0;
+    introPresetSequenceStarted = false;
+    introPresetSequenceDone = false;
+    cur = 0;
     pointer.ui = true;
     if (inkCursor) inkCursor.classList.remove('visible');
     overlay.classList.add('revealing');
     if (!store[PRESETS[cur].id]) modelReady = false;
-    loadPreset(PRESETS[cur]);
+    /* 首个预设决定开场能否启动，其余三个并行预加载，避免轮播时出现空帧。 */
+    for (var presetIndex = 0; presetIndex < introPresetCount; presetIndex++) {
+      loadPreset(PRESETS[presetIndex]);
+    }
     setStatus(reducedMotion ? '墨色化形' : '引笔绕墨 · 静候成形');
   }
 
@@ -617,15 +625,20 @@
     return out;
   }
 
-  /* ---------- 预设模型：本馆零件库（门楼已撤）+ 压轴全园鸟瞰 ---------- */
+  /* ---------- 预设模型：三件馆藏零件 + 实际园区外观 ---------- */
   var PRESETS = [
     { id: 'bronze-ding', fb: fbDing },
     { id: 'stone-lion', fb: fbLion },
     { id: 'horse', fb: fbHorse },
-    { id: 'taihu-rock', fb: fbRock },
-    { id: '__museum', fb: null }        /* 压轴必须是整体：自动播到时才现采 */
+    { id: '__museum', fb: null }        /* 第四段显示外观整体：从实际主场景采样 */
   ];
   var store = {}, cur = 0;
+  var introPresetCount = 4; /* 青铜鼎、石狮、铜奔马、外观整体；不再单独展示树/石头 */
+  var introPresetLabels = ['青铜方鼎', '石狮', '铜奔马', '园区外观'];
+  var introPresetIndex = 0;
+  var introPresetClock = 0;
+  var introPresetSequenceStarted = false;
+  var introPresetSequenceDone = false;
   var loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
   function applyPreset(P) {
     if (!store[P.id]) return;
@@ -649,14 +662,24 @@
   function loadPreset(P) {
     if (store[P.id]) { finishPreset(P); return; }
     if (P.id === '__museum') {
-      setStatus('正在生成全园粒子沙盘…');
-      setTimeout(function () {
+      setStatus('正在生成园区外观粒子…');
+      var museumTries = 0;
+      function captureMuseumWhenReady() {
+        /* 中心桥是异步 GLB；必须等桥挂入主场景后再采样，避免外观模型缺桥。 */
+        var root = (window.MuseumScene && window.MuseumScene.ctx && window.MuseumScene.ctx.scene) ||
+          (window.MuseumExteriorLayout && window.MuseumExteriorLayout.ctx && window.MuseumExteriorLayout.ctx.scene);
+        var bridgeReady = root && (root.getObjectByName('central-arch-bridge-glb') || root.getObjectByName('central-arch-bridge'));
+        if ((!root || !bridgeReady) && museumTries++ < 75) {
+          setTimeout(captureMuseumWhenReady, 80);
+          return;
+        }
         var pts = null;
         try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
         store[P.id] = pts || fbGate();
         finishPreset(P);
-        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '全园粒子沙盘就绪 · 移动鼠标旋转');
-      }, 30);
+        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
+      }
+      setTimeout(captureMuseumWhenReady, 30);
       return;
     }
     if (!loader) { store[P.id] = P.fb(); finishPreset(P); return; }
@@ -922,22 +945,49 @@
         cloud.scale.setScalar(0.72 + unfoldMix * 0.28);
         inkRevealBrush.style.opacity = (1 - unfoldMix).toFixed(3);
       }
-      if (unfoldStarted && unfoldProgress >= 1) {
-        revealDone = true;
-        orbitActive = false;
-        canvas.style.opacity = '1';
-        cloud.scale.setScalar(1);
-        inkRevealBrush.style.opacity = '0';
-        overlay.classList.add('ready');
-        enterBtn.disabled = false;
-        enterBtn.setAttribute('aria-disabled', 'false');
-        setStatus('园境已开 · 可入馆');
-        pointer.ui = false;
-        if (pointer.inside && inkCursor) {
-          var currentTarget = document.elementFromPoint(pointer.x, pointer.y);
-          var showCursor = !isUiTarget(currentTarget) && !brushCoversControls();
-          inkCursor.classList.toggle('visible', showCursor);
-          pointer.ui = !showCursor;
+      if (unfoldStarted && unfoldProgress >= 1 && !introPresetSequenceStarted) {
+        introPresetSequenceStarted = true;
+        introPresetClock = 0;
+        setStatus('墨色化形 · 四件馆藏轮番显影');
+      }
+      if (introPresetSequenceStarted && !introPresetSequenceDone) {
+        introPresetClock += rdt;
+        var presetInterval = reducedMotion ? 0.28 : 1.25;
+        if (introPresetClock >= presetInterval) {
+          introPresetClock = 0;
+          if (introPresetIndex < introPresetCount - 1) {
+            var nextPresetIndex = introPresetIndex + 1;
+            var nextPreset = PRESETS[nextPresetIndex];
+            if (!store[nextPreset.id]) {
+              modelReady = false;
+              loadPreset(nextPreset);
+              setStatus('墨色化形 · 正在载入' + introPresetLabels[nextPresetIndex]);
+            } else {
+              introPresetIndex = nextPresetIndex;
+              cur = introPresetIndex;
+              modelReady = true;
+              applyPreset(nextPreset);
+              setStatus('墨色化形 · ' + introPresetLabels[introPresetIndex]);
+            }
+          } else {
+            introPresetSequenceDone = true;
+            revealDone = true;
+            orbitActive = false;
+            canvas.style.opacity = '1';
+            cloud.scale.setScalar(1);
+            inkRevealBrush.style.opacity = '0';
+            overlay.classList.add('ready');
+            enterBtn.disabled = false;
+            enterBtn.setAttribute('aria-disabled', 'false');
+            setStatus('园境已开 · 可入馆');
+            pointer.ui = false;
+            if (pointer.inside && inkCursor) {
+              var currentTarget = document.elementFromPoint(pointer.x, pointer.y);
+              var showCursor = !isUiTarget(currentTarget) && !brushCoversControls();
+              inkCursor.classList.toggle('visible', showCursor);
+              pointer.ui = !showCursor;
+            }
+          }
         }
       }
     }
