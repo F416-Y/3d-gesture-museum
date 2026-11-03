@@ -4,11 +4,11 @@
     <div class="nav-halls">
           <a :href="exteriorHref('map')">平面图</a>
           <a :href="exteriorHref('hall/hall0')">序厅</a>
-          <a href="./shanshui.html">山水</a>
-          <a href="./huaniao.html">花鸟</a>
-          <a href="./renwu.html">人物</a>
-          <a href="./shuzhai.html">书斋</a>
-          <a href="./wenchuang.html">文创</a>
+          <a href="./shanshui.html" @click="saveExteriorReturnState">山水</a>
+          <a href="./huaniao.html" @click="saveExteriorReturnState">花鸟</a>
+          <a href="./renwu.html" @click="saveExteriorReturnState">人物</a>
+          <span class="nav-hall-closed" title="云墨修缮中，敬请期待">书斋 · 修缮中</span>
+          <span class="nav-hall-closed" title="云墨修缮中，敬请期待">文创 · 修缮中</span>
     </div>
     <div class="nav-user">
       <template v-if="user.isLoggedIn">
@@ -34,6 +34,12 @@ onMounted(() => user.restoreSession());
 
 function exteriorHref(route) {
   return `./index.html#/${route}`;
+}
+
+function saveExteriorReturnState() {
+  if (window.MuseumMain && window.MuseumMain.saveExteriorReturnState) {
+    window.MuseumMain.saveExteriorReturnState();
+  }
 }
 
 function onLogout() {

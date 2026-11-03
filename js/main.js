@@ -19,6 +19,7 @@ window.MuseumMain = (function () {
   var cameraOn = false;
   var hallDoorPrompt = { door: null, dismissed: null };
   var interiorExitPrompt = { armed: false, open: false, dismissed: false, hallId: null, x: 0, z: 0 };
+  var RETURN_STATE_KEY = "cloudink.exterior.return-state.v1";
   var seatPromptEl = null;
   var seated = null;
 
@@ -35,6 +36,33 @@ window.MuseumMain = (function () {
   // 对齐 Kimi 原型：未锁定指针时，也支持按住左键拖动转向。
   var dragLook = { active: false, x: 0, y: 0, moved: false };
   var suppressClickAfterDrag = false;
+
+  function saveExteriorReturnState() {
+    if (window.MuseumInteriorOnly || !window.MuseumPlayer || !window.sessionStorage) return;
+    var p = MuseumPlayer.getPosition();
+    try {
+      sessionStorage.setItem(RETURN_STATE_KEY, JSON.stringify({
+        x: p.x,
+        z: p.z,
+        yaw: MuseumPlayer.getYaw(),
+        savedAt: Date.now()
+      }));
+    } catch (e) { /* 存储不可用时仍允许正常跳转 */ }
+  }
+
+  function consumeExteriorReturnState() {
+    if (!window.sessionStorage) return null;
+    try {
+      var raw = sessionStorage.getItem(RETURN_STATE_KEY);
+      if (!raw) return null;
+      sessionStorage.removeItem(RETURN_STATE_KEY);
+      var state = JSON.parse(raw);
+      if (!state || !Number.isFinite(state.x) || !Number.isFinite(state.z) || !Number.isFinite(state.yaw)) return null;
+      return state;
+    } catch (e) {
+      return null;
+    }
+  }
 
   /* ---------- 初始化 ---------- */
   function init() {
@@ -73,7 +101,14 @@ window.MuseumMain = (function () {
     MuseumPlayer.init(camera);
     if (!window.MuseumInteriorOnly) {
       var returnHall = new URLSearchParams(location.search).get("returnHall");
-      if (returnHall) {
+      var restoredState = consumeExteriorReturnState();
+      if (restoredState) {
+        MuseumPlayer.teleport(restoredState.x, restoredState.z, restoredState.yaw);
+        if (returnHall) {
+          var restoredDoor = (MuseumScene.hallDoors || []).filter(function (d) { return d.hallId === returnHall; })[0];
+          if (restoredDoor) hallDoorPrompt.dismissed = restoredDoor;
+        }
+      } else if (returnHall) {
         var returnDoor = (MuseumScene.hallDoors || []).filter(function (d) { return d.hallId === returnHall; })[0];
         if (returnDoor) {
           var returnGap = 3.2;
@@ -293,6 +328,8 @@ window.MuseumMain = (function () {
     for (var i = 0; i < doors.length; i++) {
       var d = doors[i];
       if (!d.hallId) continue;
+      /* 书斋、文创暂不开放：保留实体闭门和碰撞，不提供进入弹窗。 */
+      if (d.hallId === 'hall4' || d.hallId === 'hall5') continue;
       var dx = p.x - d.x, dz = p.z - d.z;
       /* 只在门外触发；厅内通过路由进入，不重复弹窗。 */
       if (dx * d.nx + dz * d.nz <= 0) continue;
@@ -313,6 +350,7 @@ window.MuseumMain = (function () {
     MuseumUI.showHallPrompt(nearest.tag, function () {
       hallDoorPrompt.door = null;
       hallDoorPrompt.dismissed = null;
+      saveExteriorReturnState();
       var pages = {
         hall1: "shanshui.html",
         hall2: "huaniao.html",
@@ -513,6 +551,7 @@ window.MuseumMain = (function () {
 
   return {
     init: init,
+    saveExteriorReturnState: saveExteriorReturnState,
     setPanorama: setPanorama,
     togglePanorama: function () { setPanorama(!panorama.on); },
     isPanorama: function () { return panorama.on; },

@@ -2511,17 +2511,8 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    /* 北墙：山水画居中 + 两侧立轴（补展品 id，原先无 id 会显示空白题名纸）
-       南墙再排三幅，避免画全挤在北墙一面。
-       厅 16×14，门在西墙中间；东墙是窗格扇 + 书架，东西墙不再挂画。 */
-    addPainting(g, { x: 0, y: 2.6, z: -halfD + 0.2, ry: 0, lamp: [0, 0.9] }, 4.0, 1.8, "xishanxinglvtu");
-    buildPartVerticalScroll(g, -5.0, 2.6, -halfD + 0.25, 0, "fuchunshanjv");
-    buildPartVerticalScroll(g, 5.0, 2.6, -halfD + 0.25, 0, "qianlijiangshan");
+    /* 书斋墙面保持素雅：画作统一移至中轴画廊，避免同画重复出现。 */
     buildPartHallTitle(g, "书斋", "读书养心 · 品茗会友", 0, 3.8, -halfD + 0.3, 0);
-
-    addPainting(g, { x: -3.4, y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "hanxizai");
-    addPainting(g, { x: 0,    y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "luoshenfu");
-    addPainting(g, { x: 3.4,  y: 2.5, z: halfD - 0.22, ry: Math.PI, lamp: [0, -0.9] }, 2.2, 1.5, "buniantu");
 
     // 中央茶席长案 3.2m x 1m + 六方凳
     buildPartLongTable(g, 0, F, 0, 3.2, 1.0);
@@ -2571,17 +2562,8 @@ window.MuseumScene = (function () {
 
     buildPartCeilingBeams(g, W - 0.8, D - 0.8, WH);
 
-    /* 匾额 + 挂画分两面墙。
-       原来五幅 0.9m 小画全挤在北墙，密度过高、南墙全空。
-       厅 16×14：门在东墙中间，西墙是窗格扇 + 展示架，只在南北两面挂。
-         北墙 x −3 / 0 / 3 三幅
-         南墙 x −3 / 3 两幅 */
+    /* 文创墙面改为空墙与匾额：画作统一移至中轴画廊，避免与画廊重复。 */
     buildPartHallTitle(g, "文创雅集馆", "以画会友 · 以文养心", 0, 3.6, -halfD + 0.3, 0);
-    addPainting(g, { x: -3.0, y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.6, 1.5, "xieshengzhenqintu");
-    addPainting(g, { x: 0,    y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.9, 1.5, "qianlijiangshan");
-    addPainting(g, { x: 3.0,  y: 2.4, z: -halfD + 0.2, ry: 0, lamp: [0, 0.85] }, 1.6, 1.5, "fuchunshanjv");
-    addPainting(g, { x: -3.0, y: 2.4, z: halfD - 0.2, ry: Math.PI, lamp: [0, -0.85] }, 1.9, 1.5, "wuniutu");
-    addPainting(g, { x: 3.0,  y: 2.4, z: halfD - 0.2, ry: Math.PI, lamp: [0, -0.85] }, 1.9, 1.5, "xishanxinglvtu");
 
     // 中央 2-3 张临帖长案
     buildPartLongTable(g, -2.2, F, 0, 2.6, 0.9);
@@ -2964,16 +2946,6 @@ window.MuseumScene = (function () {
       ["xishanxinglvtu",     35.95, -19.68],
       ["wuniutu",            37.55, -19.68],
       ["molantu",            39.15, -19.68],
-      /* 书斋 / 茶室（立轴在正房背墙 x=40.84，面朝西） */
-      ["lantingjixu",        40.84, 10.0],
-      ["jizhiwengao",        40.84, 15.0],
-      ["hanshitie",          40.84, 24.0],
-      ["tingqintu",          40.84, 29.0],
-      /* 文创 / 临摹（立轴在正房背墙 x=-43.84，面朝东） */
-      ["huishanchahui",     -43.84, 12.0],
-      ["shimingtu",         -43.84, 17.0],
-      ["pinchatu",          -43.84, 26.0],
-      ["luyupengchatu",     -43.84, 31.0],
     ];
     var sculptures = [
       ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）

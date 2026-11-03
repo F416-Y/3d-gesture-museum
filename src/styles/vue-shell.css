@@ -41,6 +41,14 @@ body.vue-overlay { background: var(--paper); }
   background: var(--cinnabar);
   color: #fff;
 }
+.nav-hall-closed {
+  padding: 6px 12px;
+  color: #9b8978;
+  font-size: var(--fs-body);
+  letter-spacing: 0.04em;
+  cursor: not-allowed;
+  opacity: .72;
+}
 .nav-user {
   display: flex; gap: 8px; align-items: center;
   background: var(--panel-light);
