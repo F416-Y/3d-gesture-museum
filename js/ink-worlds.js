@@ -25,6 +25,8 @@ window.MuseumInkWorlds = (function () {
    * 组长接口若存在则优先使用；函数名以其最终定稿为准，这里只做探测。 */
   // 视频由 public/videos/ink/enter-painting.mp4 提供；版本参数避免浏览器继续复用旧占位视频。
   var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4?v=20261028-h264";
+  // 无水印的程序化转场优先使用；保留视频路径作为后续替换接口。
+  var USE_PROCEDURAL_TRANSITION = true;
   var INK_FALLBACK_MS = 2600;     // 墨雾占位转场的时长
   var VIDEO_STALL_MS = 12000;     // 穿画视频卡住超过这个时间直接放行
   var INK_WORLD_HANDSHAKE_MS = 12000; // 组长画境接口握手超时（见 enterLeaderPainting）
@@ -78,6 +80,7 @@ window.MuseumInkWorlds = (function () {
     raf: 0,
     stallTimer: 0,
     fallbackTimer: 0,
+    transitionRaf: 0,
   };
 
   /* ---------- 初始化 ---------- */
@@ -117,6 +120,7 @@ window.MuseumInkWorlds = (function () {
       '</button>' +
 
       '<div id="ink-video-layer" class="ink-layer ink-video-layer is-hidden" aria-hidden="true">' +
+        '<canvas id="ink-procedural-canvas" class="ink-procedural-canvas" aria-hidden="true"></canvas>' +
         '<video id="ink-transition-video" class="ink-transition-video" playsinline preload="auto"></video>' +
         '<div id="ink-fallback" class="ink-fallback is-hidden" aria-hidden="true">' +
           '<i></i><i></i><i></i><span class="ink-fallback-word">墨</span>' +
@@ -158,6 +162,7 @@ window.MuseumInkWorlds = (function () {
     el.root = root;
     el.gate = document.getElementById("ink-gate");
     el.videoLayer = document.getElementById("ink-video-layer");
+    el.proceduralCanvas = document.getElementById("ink-procedural-canvas");
     el.transitionVideo = document.getElementById("ink-transition-video");
     el.fallback = document.getElementById("ink-fallback");
     el.skip = document.getElementById("ink-skip");
@@ -303,6 +308,12 @@ window.MuseumInkWorlds = (function () {
       if (state.layer === "video") el.videoLayer.classList.add("is-opening");
     });
 
+    if (USE_PROCEDURAL_TRANSITION) {
+      startProceduralTransition(gateX, gateY);
+      MuseumUI.toast("云间入墨 · 毛笔泼墨入画");
+      return;
+    }
+
     var v = el.transitionVideo;
     try {
       v.pause();
@@ -341,12 +352,224 @@ window.MuseumInkWorlds = (function () {
     state.fallbackTimer = setTimeout(finishTransition, INK_FALLBACK_MS);
   }
 
+  /* ---------- 无水印程序化入画 ----------
+   * 轻触砚台 → 毛笔泼墨 → 墨粒聚拢成后母戊鼎。
+   * 这里用 Canvas 做稳定的网页转场，避免视频水印和中段跳帧。 */
+  function startProceduralTransition(originX, originY) {
+    var canvas = el.proceduralCanvas;
+    if (!canvas) { startInkFallback(); return; }
+    el.transitionVideo.classList.add("is-hidden");
+    el.fallback.classList.add("is-hidden");
+    canvas.classList.remove("is-hidden");
+    var ctx = canvas.getContext("2d");
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var start = performance.now();
+    var duration = 6500;
+    var particles = makeDingParticles(w, h, 620);
+    var splash = makeSplashParticles(w, h, 150);
+    var inkLine = [];
+    var lastX = w * 0.78;
+    var lastY = h * 0.70;
+
+    function draw(now) {
+      if (state.layer !== "video") return;
+      var t = Math.min(1, (now - start) / duration);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#f6f0e4";
+      ctx.fillRect(0, 0, w, h);
+      drawPaperWash(ctx, w, h, t);
+
+      var brush = brushPosition(t, w, h);
+      if (t > 0.17 && t < 0.48) {
+        var progress = easeInOut((t - 0.17) / 0.31);
+        var point = brushStrokePoint(progress, w, h);
+        inkLine.push(point);
+        if (inkLine.length > 28) inkLine.shift();
+        drawInkStroke(ctx, inkLine, progress);
+        drawSplash(ctx, splash, progress, w, h);
+      }
+      drawBrush(ctx, brush.x, brush.y, brush.angle, 1 - t * 0.55);
+      drawDingParticles(ctx, particles, t);
+
+      if (t >= 1) {
+        finishTransition();
+        return;
+      }
+      state.transitionRaf = requestAnimationFrame(draw);
+    }
+
+    cancelAnimationFrame(state.transitionRaf);
+    state.transitionRaf = requestAnimationFrame(draw);
+  }
+
+  function makeSplashParticles(w, h, count) {
+    var result = [];
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var r = 10 + Math.random() * 150;
+      result.push({
+        x: w * 0.38 + Math.cos(a) * r,
+        y: h * 0.54 + Math.sin(a) * r * 0.45,
+        size: 1 + Math.random() * 3.5,
+        delay: Math.random() * 0.18,
+      });
+    }
+    return result;
+  }
+
+  function makeDingParticles(w, h, count) {
+    var result = [];
+    var cx = w * 0.52;
+    var top = h * 0.26;
+    var bodyW = Math.min(w * 0.32, 420);
+    var bodyH = Math.min(h * 0.36, 270);
+    for (var i = 0; i < count; i++) {
+      var u = Math.random();
+      var x;
+      var y;
+      // 鼎身、双耳、四足、足间留白，保持可识别的后母戊鼎轮廓。
+      if (u < 0.62) {
+        x = cx + (Math.random() - 0.5) * bodyW;
+        y = top + Math.random() * bodyH;
+      } else if (u < 0.72) {
+        x = cx - bodyW * 0.58 + Math.random() * bodyW * 0.16;
+        y = top + Math.random() * bodyH * 0.35;
+      } else if (u < 0.82) {
+        x = cx + bodyW * 0.42 + Math.random() * bodyW * 0.16;
+        y = top + Math.random() * bodyH * 0.35;
+      } else {
+        var leg = i % 4;
+        x = cx - bodyW * 0.38 + leg * bodyW * 0.25 + (Math.random() - 0.5) * bodyW * 0.11;
+        y = top + bodyH * 0.78 + Math.random() * bodyH * 0.33;
+      }
+      result.push({
+        x: x, y: y,
+        sx: cx + (Math.random() - 0.5) * w * 0.72,
+        sy: h * 0.53 + (Math.random() - 0.5) * h * 0.50,
+        size: 0.7 + Math.random() * 2.2,
+        delay: Math.random() * 0.24,
+        warm: Math.random() > 0.78,
+      });
+    }
+    return result;
+  }
+
+  function drawDingParticles(ctx, particles, t) {
+    var form = easeInOut(clamp((t - 0.30) / 0.48, 0, 1));
+    var settle = clamp((t - 0.78) / 0.22, 0, 1);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      var local = easeOut(clamp((form - p.delay) / 0.76, 0, 1));
+      if (local <= 0) continue;
+      var x = p.sx + (p.x - p.sx) * local;
+      var y = p.sy + (p.y - p.sy) * local;
+      var alpha = 0.18 + local * 0.76;
+      var color = p.warm && settle > 0.2 ? "rgba(105, 103, 77," + alpha + ")" : "rgba(28, 26, 23," + alpha + ")";
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, p.size * (0.7 + local * 0.35), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (settle > 0) {
+      ctx.strokeStyle = "rgba(91, 88, 65," + (settle * 0.34) + ")";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(particles[0].x - 110, particles[0].y - 8, 220, 1);
+    }
+  }
+
+  function drawPaperWash(ctx, w, h, t) {
+    var g = ctx.createRadialGradient(w * 0.48, h * 0.48, 0, w * 0.48, h * 0.48, Math.max(w, h) * 0.72);
+    g.addColorStop(0, "rgba(255,255,255,0.25)");
+    g.addColorStop(1, "rgba(205,193,171,0.22)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    if (t > 0.35) {
+      ctx.fillStyle = "rgba(25,24,21," + Math.min(0.10, (t - 0.35) * 0.12) + ")";
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  function drawSplash(ctx, splash, progress, w, h) {
+    var n = Math.floor(splash.length * Math.min(1, progress * 1.35));
+    for (var i = 0; i < n; i++) {
+      var p = splash[i];
+      ctx.fillStyle = "rgba(24,22,19," + (0.25 + progress * 0.5) + ")";
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawInkStroke(ctx, points, progress) {
+    if (points.length < 2) return;
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(25, 23, 20, " + (0.55 + progress * 0.35) + ")";
+    ctx.lineWidth = 10 + progress * 18;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (var i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function brushStrokePoint(progress, w, h) {
+    return { x: w * (0.76 - progress * 0.40), y: h * (0.55 - Math.sin(progress * Math.PI) * h * 0.14) };
+  }
+
+  function brushPosition(t, w, h) {
+    if (t < 0.17) return { x: w * 0.78, y: h * (0.30 + t * 2.3), angle: 0.08 };
+    if (t < 0.48) {
+      var p = (t - 0.17) / 0.31;
+      return { x: w * (0.76 - p * 0.40), y: h * (0.55 - Math.sin(p * Math.PI) * 0.14), angle: -0.58 };
+    }
+    return { x: w * (0.36 + (t - 0.48) * 0.25), y: h * 0.24, angle: -0.82 };
+  }
+
+  function drawBrush(ctx, x, y, angle, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#8c5d36";
+    ctx.fillRect(-8, -120, 16, 92);
+    ctx.fillStyle = "#191614";
+    ctx.beginPath();
+    ctx.ellipse(0, -15, 17, 31, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#403b34";
+    ctx.beginPath();
+    ctx.moveTo(-15, 4); ctx.quadraticCurveTo(0, 58, 15, 4); ctx.quadraticCurveTo(0, 21, -15, 4);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function easeInOut(x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; }
+  function easeOut(x) { return 1 - Math.pow(1 - x, 3); }
+  function clamp(x, min, max) { return Math.max(min, Math.min(max, x)); }
+
   function finishTransition() {
     if (state.transitionDone || state.layer !== "video") return;
     state.transitionDone = true;
     clearTimeout(state.stallTimer);
     clearTimeout(state.fallbackTimer);
+    if (state.transitionRaf) cancelAnimationFrame(state.transitionRaf);
+    state.transitionRaf = 0;
     try { el.transitionVideo.pause(); } catch (err) { /* noop */ }
+    if (el.proceduralCanvas) {
+      el.proceduralCanvas.classList.add("is-hidden");
+      var proceduralContext = el.proceduralCanvas.getContext("2d");
+      if (proceduralContext) proceduralContext.clearRect(0, 0, el.proceduralCanvas.width, el.proceduralCanvas.height);
+    }
     // 先让不透明的四画层盖住 3D 园区，再收起视频层，避免结束瞬间露出一帧园区。
     showPaintingPicker();
     hide(el.videoLayer);
