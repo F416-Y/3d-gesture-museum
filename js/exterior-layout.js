@@ -1272,7 +1272,7 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 游廊：双列木柱 + 双坡瓦顶 + 坐槛，默认廊宽 2.2m（cw 可加宽），柱距约 3m ----------
      * gapBench：{side:±1, c:沿廊中心坐标, hw:半宽} 在该侧坐槛开一个过人口（檐枋不断）
      * cw：自定义廊宽（画廊式游廊加宽用，保证看画视距） */
-  function corridor(x0, z0, x1, z1, gapBench, cw, roofY, noPosts, postSide, bayCount) {
+  function corridor(x0, z0, x1, z1, gapBench, cw, roofY, noPosts, postSide, bayCount, postOutset) {
     var w = cw || 2.2;
     var eaveY = roofY || 3.6, postH = eaveY - 0.14, postY = 0.14 + postH / 2;
     var dx = x1 - x0, dz = z1 - z0;
@@ -1289,7 +1289,10 @@ window.MuseumExteriorLayout = (function () {
     for (i = 0; i <= bays; i++) {
       t = -len / 2 + len * i / bays;
       if (!noPosts) {
-        var postXs = postSide === -1 ? [-w / 2 + 0.2] : postSide === 1 ? [w / 2 - 0.2] : [-w / 2 + 0.2, w / 2 - 0.2];
+        var out = postOutset || 0;
+        var postXs = postSide === 'gallery'
+          ? [-w / 2 - out, w / 2 + out]
+          : postSide === -1 ? [-w / 2 + 0.2 - out] : postSide === 1 ? [w / 2 - 0.2 + out] : [-w / 2 + 0.2, w / 2 - 0.2];
         for (var pxi = 0; pxi < postXs.length; pxi++) {
           cyl(0.14, 0.17, 0.14, 8, M.stone, postXs[pxi], 0.07, t, g);
           cyl(0.09, 0.11, postH, 8, M.wood, postXs[pxi], postY, t, g);
@@ -1543,13 +1546,15 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
     /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
-    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
-    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
-    /* 左侧为美人靠，取消左墙画作，确保座位与画墙相对。 */
-    galleryWall(-8.9, 1, 3.58, false);
+    /* 两侧柱列都移到廊边：外侧在画墙外缘，内侧在美人靠靠背后方，
+       不落在座面，也不穿过美人靠与画墙之间的观画净空。 */
+    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, 'gallery', 3, 0.45);
+    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, 'gallery', 3, 0.45);
+    /* 左右画墙都保留三幅挂画，座位分别布置在对面的内侧边界。 */
+    galleryWall(-8.9, 1, 3.58);
     galleryWall(8.9, -1, 3.58);
-    /* 美人靠放在画廊左侧，与右侧画墙相对；贴合外侧柱列，避免悬在画廊中线。 */
-    gallerySeat(-8.7, 14.95, -1, 8.4);
+    gallerySeat(-3.9, 15.5, -1, 10.4);
+    gallerySeat(3.9, 15.5, 1, 10.4);
   }
 
   /* ---------- 中轴拱桥：序厅方向跨中心湖，桥长约 16m、宽约 2.2m ---------- */

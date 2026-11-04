@@ -25,7 +25,10 @@
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
   var inkFx = document.getElementById('introInkFx');
+  var trailFxCanvas = document.getElementById('introTrailFx');
+  var loadingVideo = document.getElementById('introLoadingVideo');
   var fx = inkFx ? inkFx.getContext('2d') : null;
+  var trailFx = trailFxCanvas ? trailFxCanvas.getContext('2d') : null;
   var statusEl = document.getElementById('introStatus');
   var inkCursor = document.getElementById('inkCursor');
   var inkRevealBrush = document.getElementById('inkRevealBrush');
@@ -34,6 +37,7 @@
   var reducedMotion = motionQuery.matches;
   var trailPoints = [];
   var lastTrail = 0;
+  var lastPointerSample = 0;
   var inkHover = 0;
   var inkPress = 0;
   var revealStarted = false;
@@ -47,6 +51,29 @@
   var pointer = { x: -100, y: -100, inside: false, pressed: false, ui: true };
   var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
+
+  /* 用户提供的开屏视频优先播放；结束后平滑露出 Canvas 粒子序章。 */
+  if (loadingVideo) {
+    overlay.classList.add('intro-video-active');
+    function finishVideoIntro() {
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+      setStatus('墨色已入 · 靠近墨团展开园境');
+    }
+    loadingVideo.addEventListener('ended', function () {
+      finishVideoIntro();
+    }, { once: true });
+    loadingVideo.addEventListener('error', function () {
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+      setStatus('开屏动画暂不可用 · 正在载入园境');
+    }, { once: true });
+    var loadingPlay = loadingVideo.play();
+    if (loadingPlay && loadingPlay.catch) loadingPlay.catch(function () {
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+    });
+  }
 
   function onMotionPreferenceChange(event) {
     reducedMotion = event.matches;
@@ -280,7 +307,7 @@
   var inkWashTexture = makeInkWashTexture();
 
   function resizeFx() {
-    if (!fx || !inkFx) return;
+    if (!fx || !inkFx || !trailFx || !trailFxCanvas) return;
     var ratio = Math.min(window.devicePixelRatio || 1, 1.75);
     var width = Math.round(window.innerWidth * ratio);
     var height = Math.round(window.innerHeight * ratio);
@@ -288,6 +315,11 @@
       inkFx.width = width;
       inkFx.height = height;
       fx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+    if (trailFxCanvas.width !== width || trailFxCanvas.height !== height) {
+      trailFxCanvas.width = width;
+      trailFxCanvas.height = height;
+      trailFx.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
   }
 
@@ -306,7 +338,8 @@
     if (revealStarted || !enterBtn) return;
     revealStarted = true;
     revealStartedAt = performance.now();
-    orbitActive = true;
+    /* 保留 Canvas 粒子层，但跳过毛笔绕墨团的前置动作。 */
+    orbitActive = false;
     orbitClock = 0;
     unfoldStarted = false;
     unfoldClock = 0;
@@ -325,7 +358,13 @@
     for (var presetIndex = 0; presetIndex < introPresetCount; presetIndex++) {
       loadPreset(PRESETS[presetIndex]);
     }
-    setStatus(reducedMotion ? '墨色化形' : '引笔绕墨 · 静候成形');
+    if (modelReady) {
+      unfoldStarted = true;
+      cloud.visible = true;
+      cloud.scale.setScalar(0.72);
+      canvas.style.opacity = '0';
+    }
+    setStatus(reducedMotion ? '墨色化形' : '墨团散开 · 轮廓渐显');
   }
 
   /* 淡墨远山三叠：大幅柔边墨团，缓慢漂移，衬出水墨纵深 */
@@ -657,6 +696,13 @@
     if (PRESETS[cur] !== P) return;
     modelReady = true;
     applyPreset(P);
+    if (revealStarted && !unfoldStarted) {
+      unfoldStarted = true;
+      unfoldClock = 0;
+      cloud.visible = true;
+      cloud.scale.setScalar(0.72);
+      canvas.style.opacity = '0';
+    }
     if (unfoldStarted) setStatus('墨色化形 · 轮廓渐显');
   }
   function loadPreset(P) {
@@ -738,10 +784,21 @@
     pointer.y = e.clientY;
     pointer.inside = true;
     pointer.ui = !cursorVisible;
-    if (cursorVisible && !reducedMotion && e.timeStamp - lastTrail > 34) {
-      trailPoints.push({ x: e.clientX, y: e.clientY, time: performance.now(), size: 1.6 + Math.random() * 2.6 });
-      if (trailPoints.length > 16) trailPoints.shift();
+    if (cursorVisible && !reducedMotion && !overlay.classList.contains('intro-video-active') && e.timeStamp - lastTrail > 24) {
+      var sampleNow = performance.now();
+      var sampleDelta = lastPointerSample ? Math.max(16, sampleNow - lastPointerSample) : 34;
+      var speed = Math.min(2.4, Math.hypot(dx, dy) / sampleDelta * 1.8);
+      trailPoints.push({
+        x: e.clientX,
+        y: e.clientY,
+        time: sampleNow,
+        speed: speed,
+        size: 3.4 + Math.random() * 2.8,
+        seed: Math.random()
+      });
+      if (trailPoints.length > 72) trailPoints.shift();
       lastTrail = e.timeStamp;
+      lastPointerSample = sampleNow;
     }
     if (handSeen || overUi) return;
     rotYT = (0.5 - e.clientX / window.innerWidth) * Math.PI * 2.2;
@@ -751,6 +808,7 @@
     pointer.inside = false;
     pointer.pressed = false;
     pointer.ui = true;
+    lastPointerSample = 0;
     if (inkCursor) inkCursor.classList.remove('visible');
   });
   overlay.addEventListener('pointerdown', function (e) {
@@ -766,11 +824,13 @@
   window.addEventListener('pointercancel', function () {
     pointer.pressed = false;
     pointer.inside = false;
+    lastPointerSample = 0;
     if (inkCursor) inkCursor.classList.remove('visible');
   });
   window.addEventListener('blur', function () {
     pointer.pressed = false;
     pointer.inside = false;
+    lastPointerSample = 0;
     if (inkCursor) inkCursor.classList.remove('visible');
   });
 
@@ -809,7 +869,7 @@
   });
 
   function drawInkFx(t) {
-    if (!fx) return;
+    if (!fx || !trailFx) return;
     var width = window.innerWidth;
     var height = window.innerHeight;
     var cx = width * 0.5;
@@ -817,6 +877,7 @@
     var now = performance.now();
 
     fx.clearRect(0, 0, width, height);
+    trailFx.clearRect(0, 0, width, height);
     if (unfoldMix >= 0.999) return;
     var baseSize = getInkBaseSize();
     var pointerDistance = Math.hypot(pointer.x - cx, pointer.y - cy);
@@ -880,25 +941,61 @@
 
     if (!reducedMotion && trailPoints.length) {
       trailPoints = trailPoints.filter(function (point) {
-        return now - point.time < 620;
+        return now - point.time < 1500;
       });
       for (var p = 1; p < trailPoints.length; p++) {
         var from = trailPoints[p - 1];
         var to = trailPoints[p];
-        var age = Math.max(0, 1 - (now - to.time) / 620);
-        fx.save();
-        fx.lineCap = 'round';
-        fx.strokeStyle = 'rgba(39,47,43,' + (0.12 * age * (1 - unfoldMix)).toFixed(3) + ')';
-        fx.lineWidth = Math.max(0.6, to.size * age);
-        fx.beginPath();
-        fx.moveTo(from.x, from.y);
-        fx.lineTo(to.x, to.y);
-        fx.stroke();
-        fx.fillStyle = 'rgba(38,45,41,' + (0.1 * age * (1 - unfoldMix)).toFixed(3) + ')';
-        fx.beginPath();
-        fx.arc(to.x + 2, to.y + 2, Math.max(0.6, to.size * 0.58), 0, Math.PI * 2);
-        fx.fill();
-        fx.restore();
+        var age = Math.max(0, 1 - (now - to.time) / 1500);
+        var slowInk = Math.max(0, 1 - to.speed / 2.4);
+        var strokeWidth = to.size * (0.78 + slowInk * 0.9) * (0.35 + age * 0.65);
+        var strokeAlpha = (0.06 + slowInk * 0.2) * age * (1 - unfoldMix);
+        var segmentSeed = Math.sin(to.seed * 91.7 + p * 12.3) * 0.5 + 0.5;
+        trailFx.save();
+        trailFx.lineCap = 'round';
+
+        /* 湿墨底晕：边缘柔、扩散慢，模拟墨水吸入宣纸。 */
+        trailFx.filter = 'blur(' + (1.8 + slowInk * 2.8).toFixed(1) + 'px)';
+        trailFx.strokeStyle = 'rgba(34,40,38,' + (strokeAlpha * 0.52).toFixed(3) + ')';
+        trailFx.lineWidth = Math.max(2, strokeWidth * (2.1 + slowInk * 0.8));
+        trailFx.beginPath();
+        trailFx.moveTo(from.x, from.y);
+        trailFx.lineTo(to.x, to.y);
+        trailFx.stroke();
+
+        /* 主笔锋：慢速更厚更浓，快速移动留下偏飞白的细线。 */
+        trailFx.filter = 'none';
+        trailFx.strokeStyle = 'rgba(31,38,36,' + strokeAlpha.toFixed(3) + ')';
+        trailFx.lineWidth = Math.max(0.8, strokeWidth);
+        trailFx.beginPath();
+        trailFx.moveTo(from.x, from.y);
+        trailFx.lineTo(to.x, to.y);
+        trailFx.stroke();
+
+        /* 飞白：快速掠过时切出几段浅色纸纹，不做成霓虹拖尾。 */
+        if (to.speed > 0.42) {
+          var dashCount = 1 + Math.floor(segmentSeed * 2);
+          var dxSeg = to.x - from.x;
+          var dySeg = to.y - from.y;
+          for (var dash = 0; dash < dashCount; dash++) {
+            var dashStart = 0.18 + ((segmentSeed + dash * 0.37) % 0.52);
+            var dashLength = 0.08 + ((segmentSeed + dash) % 0.12);
+            trailFx.strokeStyle = 'rgba(245,240,228,' + (0.16 * age * Math.min(1, to.speed / 1.4)).toFixed(3) + ')';
+            trailFx.lineWidth = Math.max(0.45, strokeWidth * 0.28);
+            trailFx.beginPath();
+            trailFx.moveTo(from.x + dxSeg * dashStart, from.y + dySeg * dashStart);
+            trailFx.lineTo(from.x + dxSeg * Math.min(0.98, dashStart + dashLength), from.y + dySeg * Math.min(0.98, dashStart + dashLength));
+            trailFx.stroke();
+          }
+        }
+
+        /* 笔尖墨点：每隔几段落下大小不一的浓淡墨点。 */
+        trailFx.filter = 'blur(' + (0.2 + (1 - slowInk) * 0.5).toFixed(1) + 'px)';
+        trailFx.fillStyle = 'rgba(30,37,35,' + (strokeAlpha * (0.55 + segmentSeed * 0.8)).toFixed(3) + ')';
+        trailFx.beginPath();
+        trailFx.arc(to.x + (segmentSeed - 0.5) * 4, to.y + (0.5 - segmentSeed) * 3, Math.max(0.7, strokeWidth * (0.3 + segmentSeed * 0.7)), 0, Math.PI * 2);
+        trailFx.fill();
+        trailFx.restore();
       }
     }
   }
