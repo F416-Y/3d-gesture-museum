@@ -2111,6 +2111,22 @@ window.MuseumExteriorLayout = (function () {
     /* 东南沿墙：石组 + 乔木（原狭长水池已撤） */
     rockery(45.2, 12.5, 1.1, 614);
     plantTree(44.6, 24.5, 1.05, 624);
+    /* 右上角空地：改成成片竹林与太湖石景，东侧仍留出铺装路和转身净空。 */
+    rockery(26.8, 31.6, 1.12, 625);
+    rockery(31.0, 34.2, 0.82, 628);
+    rockery(20.1, 36.4, 0.72, 632);
+    (function buildUpperRightBambooGrove() {
+      var groveSeed = 4620;
+      for (var gx = 17.8; gx <= 29.0; gx += 2.8) {
+        for (var gz = 29.2; gz <= 37.0; gz += 2.6) {
+          var jitterX = ((groveSeed * 17) % 9 - 4) * 0.10;
+          var jitterZ = ((groveSeed * 23) % 9 - 4) * 0.10;
+          var scale = 0.52 + (groveSeed % 4) * 0.07;
+          bambooClump(gx + jitterX, gz + jitterZ, groveSeed, S.scene, scale);
+          groveSeed += 1;
+        }
+      }
+    }());
   }
 
   /* ---------- 360° 远景山脉层 ----------
