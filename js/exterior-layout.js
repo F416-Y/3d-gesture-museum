@@ -2300,15 +2300,25 @@ window.MuseumExteriorLayout = (function () {
     plantTree(9.8, 4.5, 1.25, 991);
     plantTree(24.5, 19.6, 1.15, 992);
     plantTree(-14.5, -8.6, 1.1, 993);
-    /* 芭蕉：东西两侧对称布置，南北草坪各点几株，避免只有一边有绿 */
-    bananaPlant(20.5, 8.0, 231, S.scene, 1.05);
-    bananaPlant(22.4, 10.8, 232, S.scene, 0.88);
-    bananaPlant(-20.5, 8.0, 233, S.scene, 1.02);
-    bananaPlant(-22.6, 11.2, 234, S.scene, 0.86);
-    bananaPlant(28.8, 40.2, 235, S.scene, 0.96);
-    bananaPlant(-29.4, 39.6, 236, S.scene, 0.92);
-    bananaPlant(19.2, -21.0, 237, S.scene, 0.90);
-    bananaPlant(-19.6, -20.4, 238, S.scene, 0.88);
+    /* 水岸补垂柳：湖边用低垂树冠收边，避开中轴路和桥头视线。 */
+    plantTree(-12.8, 7.2, 1.0, 995);
+    plantTree(13.2, 7.4, 1.0, 996);
+    plantTree(-13.5, -6.4, 0.95, 997);
+    plantTree(14.0, -5.8, 0.95, 998);
+    /* 原芭蕉点位改为竹丛：保留绿化层次，但换成苏州园林更自然的竹景。 */
+    bambooClump(20.5, 8.0, 231, S.scene, 0.82);
+    bambooClump(22.4, 10.8, 232, S.scene, 0.72);
+    bambooClump(-20.5, 8.0, 233, S.scene, 0.82);
+    bambooClump(-22.6, 11.2, 234, S.scene, 0.72);
+    bambooClump(28.8, 40.2, 235, S.scene, 0.78);
+    bambooClump(-29.4, 39.6, 236, S.scene, 0.76);
+    bambooClump(19.2, -21.0, 237, S.scene, 0.76);
+    bambooClump(-19.6, -20.4, 238, S.scene, 0.74);
+    /* 展厅两侧再补竹景，集中在墙角和草地边，不侵入铺装路。 */
+    bambooClump(-24.0, 18.0, 239, S.scene, 0.72);
+    bambooClump(24.0, 18.0, 240, S.scene, 0.72);
+    bambooClump(-24.0, -18.0, 241, S.scene, 0.72);
+    bambooClump(24.0, -18.0, 242, S.scene, 0.72);
     /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
     deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
     deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
