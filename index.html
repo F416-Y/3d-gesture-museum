@@ -30,7 +30,23 @@
 <body>
 <!-- ===== 开场粒子序章覆盖层 ===== -->
 <div id="intro">
+  <svg class="intro-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <filter id="intro-paper-key" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feColorMatrix
+        in="SourceGraphic"
+        type="matrix"
+        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -0.2126 -0.7152 -0.0722 0 1.18"
+        result="keyed"
+      />
+      <feComponentTransfer in="keyed">
+        <feFuncA type="table" tableValues="0 0 0 0.1 0.55 1" />
+      </feComponentTransfer>
+    </filter>
+  </svg>
   <video id="introLoadingVideo" class="intro-loading-video" playsinline muted preload="auto" aria-label="云间入墨开屏动画">
+    <source src="./assets/animation/loading/brush-ink-loading-preview.mp4?v=20261104-v1" type="video/mp4" />
+  </video>
+  <video id="introLoadingVideoMain" class="intro-loading-video intro-loading-video-next" playsinline muted preload="auto" aria-hidden="true">
     <source src="./assets/animation/loading/brush-ding-loading.mp4?v=20261104-v3" type="video/mp4" />
   </video>
   <canvas id="introCanvas"></canvas>
