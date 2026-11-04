@@ -1290,7 +1290,9 @@ window.MuseumExteriorLayout = (function () {
       t = -len / 2 + len * i / bays;
       if (!noPosts) {
         var out = postOutset || 0;
-        var postXs = postSide === -1 ? [-w / 2 + 0.2 - out] : postSide === 1 ? [w / 2 - 0.2 + out] : [-w / 2 + 0.2, w / 2 - 0.2];
+        var postXs = postSide === 'gallery'
+          ? [-w / 2 - out, w / 2 + out]
+          : postSide === -1 ? [-w / 2 + 0.2 - out] : postSide === 1 ? [w / 2 - 0.2 + out] : [-w / 2 + 0.2, w / 2 - 0.2];
         for (var pxi = 0; pxi < postXs.length; pxi++) {
           cyl(0.14, 0.17, 0.14, 8, M.stone, postXs[pxi], 0.07, t, g);
           cyl(0.09, 0.11, postH, 8, M.wood, postXs[pxi], postY, t, g);
@@ -1544,9 +1546,10 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
     /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
-    /* 外侧柱列贴近画墙，内侧留给连续美人靠，避免柱子挡住坐席与观画视线。 */
-    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, -1, 3, 0.45);
-    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, 1, 3, 0.45);
+    /* 两侧柱列都移到廊边：外侧在画墙外缘，内侧在美人靠靠背后方，
+       不落在座面，也不穿过美人靠与画墙之间的观画净空。 */
+    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, 'gallery', 3, 0.45);
+    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, 'gallery', 3, 0.45);
     /* 左右画墙都保留三幅挂画，座位分别布置在对面的内侧边界。 */
     galleryWall(-8.9, 1, 3.58);
     galleryWall(8.9, -1, 3.58);
