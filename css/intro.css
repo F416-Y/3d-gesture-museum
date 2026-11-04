@@ -53,9 +53,17 @@
 }
 
 #intro.intro-video-active #introTitle,
-#intro.intro-video-active #introMark {
+#intro.intro-video-active #introMark,
+#intro.intro-video-active #introBR,
+#intro.intro-video-active #introTrailFx,
+#intro.intro-video-active #inkCursor {
   z-index: 26;
   visibility: visible;
+}
+
+#intro.intro-video-active #introTrailFx,
+#intro.intro-video-active #inkCursor {
+  pointer-events: none;
 }
 
 .intro-loading-video {
