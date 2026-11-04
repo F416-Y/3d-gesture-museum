@@ -1543,13 +1543,14 @@ window.MuseumExteriorLayout = (function () {
   /* ---------- 全馆游廊系统：中轴双廊（画廊加宽 3.2m）+ 东西横廊 + 南花园两廊 ---------- */
   function buildCorridors() {
     /* 只保留序厅后方中轴画廊，两侧展厅之间不再生成连廊。 */
-    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
-    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, undefined, 3);
-    /* 左侧为美人靠，取消左墙画作，确保座位与画墙相对。 */
-    galleryWall(-8.9, 1, 3.58, false);
+    /* 外侧柱列贴近画墙，内侧留给连续美人靠，避免柱子挡住坐席与观画视线。 */
+    corridor(-6.3, 9.5, -6.3, 20.4, undefined, 5.2, 3.6, false, -1, 3);
+    corridor(6.3, 9.5, 6.3, 20.4, undefined, 5.2, 3.6, false, 1, 3);
+    /* 左右画墙都保留三幅挂画，座位分别布置在对面的内侧边界。 */
+    galleryWall(-8.9, 1, 3.58);
     galleryWall(8.9, -1, 3.58);
-    /* 美人靠放在画廊左侧，与右侧画墙相对；贴合外侧柱列，避免悬在画廊中线。 */
-    gallerySeat(-8.7, 14.95, -1, 8.4);
+    gallerySeat(-3.9, 15.5, -1, 10.4);
+    gallerySeat(3.9, 15.5, 1, 10.4);
   }
 
   /* ---------- 中轴拱桥：序厅方向跨中心湖，桥长约 16m、宽约 2.2m ---------- */
