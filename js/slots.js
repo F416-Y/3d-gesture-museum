@@ -92,7 +92,14 @@ window.MuseumExteriorSlots = {
           var nearWater = (Math.abs(t.x) < 17 && t.z > -8 && t.z < 10) ||
                           (t.x > 12 && t.x < 30 && t.z > 3 && t.z < 21);
           if (t.z < -36 || Math.abs(t.x) > 44) { tpl = fir || tree || willow; size = 5.0 * t.s; name = '冷杉'; }
-          else if (nearWater) { tpl = willow || tree || fir; size = 4.2 * t.s; name = '垂柳'; }
+          else if (nearWater) {
+            /* 应用内优先用程序化柳树：老 willow.glb 的树冠偏窄且带盆状底座。 */
+            tpl = (window.MuseumFoliage && window.MuseumFoliage.willow)
+              ? window.MuseumFoliage.willow({ seed: t.seed, height: 4.8 })
+              : (willow || tree || fir);
+            size = 4.2 * t.s;
+            name = '垂柳';
+          }
           else { tpl = tree || willow || fir; size = 3.8 * t.s; name = '庭院树'; }
           var g = tpl && instantiate(tpl, { mode: 'h', size: size, x: t.x, y: 0, z: t.z, ry: t.seed * 0.9 });
           if (g) { t.group.visible = false; mark(name); }

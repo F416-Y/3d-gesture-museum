@@ -11,36 +11,10 @@
   overflow: hidden;
   isolation: isolate;
   color: #1b1d1a;
-  background:
-    radial-gradient(ellipse at 50% 53%, rgba(255, 253, 247, 0.97) 0%, rgba(250, 247, 239, 0.94) 42%, rgba(234, 230, 220, 0.9) 100%),
-    #f1ede3;
+  background: #f3efe7 url("../assets/ui/intro-paper-reference.png") center / cover no-repeat;
   font-family: "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
   cursor: none;
   transition: opacity 800ms ease;
-}
-
-#intro::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.36;
-  background:
-    repeating-linear-gradient(91deg, transparent 0 36px, rgba(79, 70, 56, 0.022) 37px, transparent 38px),
-    repeating-linear-gradient(2deg, transparent 0 45px, rgba(79, 70, 56, 0.018) 46px, transparent 48px),
-    repeating-linear-gradient(87deg, rgba(75, 68, 55, 0.018) 0 1px, transparent 1px 5px);
-}
-
-#intro::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at 50% 48%, transparent 34%, rgba(85, 75, 58, 0.06) 72%, rgba(62, 56, 47, 0.12) 100%),
-    linear-gradient(180deg, rgba(255, 253, 247, 0.32), transparent 18%, transparent 82%, rgba(240, 234, 220, 0.44));
 }
 
 #intro.bye {
@@ -74,9 +48,37 @@
   height: 100%;
   display: block;
   object-fit: cover;
-  background: #f1ede3;
+  background: transparent;
+  /* 浅色背景键出，直接露出参考宣纸；原始水墨与青铜鼎帧不被重编码。 */
+  filter: url("#intro-paper-key");
   opacity: 1;
   transition: opacity 420ms ease;
+}
+
+#introLoadingVideoMain {
+  z-index: 24;
+}
+
+.intro-loading-video-next {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.intro-loading-video-next.is-active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.intro-loading-video.intro-video-out {
+  opacity: 0;
+}
+
+.intro-filter-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 #intro.intro-video-ended .intro-loading-video {

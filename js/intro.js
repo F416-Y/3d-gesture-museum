@@ -35,6 +35,7 @@
   var inkFx = document.getElementById('introInkFx');
   var trailFxCanvas = document.getElementById('introTrailFx');
   var loadingVideo = document.getElementById('introLoadingVideo');
+  var loadingVideoMain = document.getElementById('introLoadingVideoMain');
   var fx = inkFx ? inkFx.getContext('2d') : null;
   var trailFx = trailFxCanvas ? trailFxCanvas.getContext('2d') : null;
   var statusEl = document.getElementById('introStatus');
@@ -66,28 +67,44 @@
     enterBtn.setAttribute('aria-disabled', 'false');
   }
 
-  /* 用户提供的开屏视频优先播放；结束后平滑露出 Canvas 粒子序章。 */
+  /* 开屏顺序：毛笔绕墨 → 青铜鼎成形 → Canvas 粒子序章。 */
   if (loadingVideo) {
     overlay.classList.add('intro-video-active');
+    var mainVideoStarted = false;
+    var videoIntroFinished = false;
     function finishVideoIntro() {
+      if (videoIntroFinished) return;
+      videoIntroFinished = true;
       overlay.classList.remove('intro-video-active');
       overlay.classList.add('intro-video-ended');
       beginReveal();
     }
+    function playMainVideo() {
+      if (mainVideoStarted) return;
+      mainVideoStarted = true;
+      if (!loadingVideoMain) {
+        finishVideoIntro();
+        return;
+      }
+      loadingVideo.classList.add('intro-video-out');
+      loadingVideoMain.classList.remove('intro-loading-video-next');
+      loadingVideoMain.classList.add('is-active');
+      loadingVideoMain.setAttribute('aria-hidden', 'false');
+      var mainPlay = loadingVideoMain.play();
+      if (mainPlay && mainPlay.catch) mainPlay.catch(finishVideoIntro);
+    }
     loadingVideo.addEventListener('ended', function () {
-      finishVideoIntro();
+      playMainVideo();
     }, { once: true });
     loadingVideo.addEventListener('error', function () {
-      overlay.classList.remove('intro-video-active');
-      overlay.classList.add('intro-video-ended');
-      beginReveal();
+      playMainVideo();
     }, { once: true });
+    if (loadingVideoMain) {
+      loadingVideoMain.addEventListener('ended', finishVideoIntro, { once: true });
+      loadingVideoMain.addEventListener('error', finishVideoIntro, { once: true });
+    }
     var loadingPlay = loadingVideo.play();
-    if (loadingPlay && loadingPlay.catch) loadingPlay.catch(function () {
-      overlay.classList.remove('intro-video-active');
-      overlay.classList.add('intro-video-ended');
-      beginReveal();
-    });
+    if (loadingPlay && loadingPlay.catch) loadingPlay.catch(playMainVideo);
   }
 
   function onMotionPreferenceChange(event) {
