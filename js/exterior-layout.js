@@ -2111,21 +2111,24 @@ window.MuseumExteriorLayout = (function () {
     /* 东南沿墙：石组 + 乔木（原狭长水池已撤） */
     rockery(45.2, 12.5, 1.1, 614);
     plantTree(44.6, 24.5, 1.05, 624);
-    /* 右上角空地：改成成片竹林与太湖石景，东侧仍留出铺装路和转身净空。 */
-    rockery(26.8, 31.6, 1.12, 625);
-    rockery(31.0, 34.2, 0.82, 628);
-    rockery(20.1, 36.4, 0.72, 632);
-    (function buildUpperRightBambooGrove() {
+    /* 花鸟厅左右空地：两片对称竹林，避开花鸟墙体、入口和中央游线。 */
+    rockery(-23.5, -34.0, 0.92, 625);
+    rockery(23.5, -34.0, 0.92, 628);
+    rockery(-23.0, -25.0, 0.68, 632);
+    rockery(23.0, -25.0, 0.68, 635);
+    (function buildHuaniaoSideBambooGroves() {
       var groveSeed = 4620;
-      for (var gx = 17.8; gx <= 29.0; gx += 2.8) {
-        for (var gz = 29.2; gz <= 37.0; gz += 2.6) {
-          var jitterX = ((groveSeed * 17) % 9 - 4) * 0.10;
-          var jitterZ = ((groveSeed * 23) % 9 - 4) * 0.10;
-          var scale = 0.52 + (groveSeed % 4) * 0.07;
-          bambooClump(gx + jitterX, gz + jitterZ, groveSeed, S.scene, scale);
-          groveSeed += 1;
+      [-1, 1].forEach(function (side) {
+        for (var gx = 14.5; gx <= 23.5; gx += 3.0) {
+          for (var gz = -35.0; gz <= -26.0; gz += 3.0) {
+            var jitterX = ((groveSeed * 17) % 9 - 4) * 0.10;
+            var jitterZ = ((groveSeed * 23) % 9 - 4) * 0.10;
+            var scale = 0.54 + (groveSeed % 4) * 0.07;
+            bambooClump(side * (gx + jitterX), gz + jitterZ, groveSeed, S.scene, scale);
+            groveSeed += 1;
+          }
         }
-      }
+      });
     }());
   }
 
