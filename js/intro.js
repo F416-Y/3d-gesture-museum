@@ -49,19 +49,13 @@
   var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
 
-  /* 用户提供的开屏视频优先播放；结束后直接淡出到已加载的园区，不再释放旧粒子序章。 */
+  /* 用户提供的开屏视频优先播放；结束后平滑露出 Canvas 粒子序章。 */
   if (loadingVideo) {
     overlay.classList.add('intro-video-active');
     function finishVideoIntro() {
-      overlay.classList.add('bye');
-      running = false;
-      pointer.inside = false;
-      pointer.ui = true;
-      if (inkCursor) inkCursor.classList.remove('visible');
-      window.setTimeout(function () {
-        overlay.style.display = 'none';
-        if (renderer && renderer.dispose) renderer.dispose();
-      }, 850);
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+      setStatus('墨色已入 · 靠近墨团展开园境');
     }
     loadingVideo.addEventListener('ended', function () {
       finishVideoIntro();
@@ -336,7 +330,8 @@
     if (revealStarted || !enterBtn) return;
     revealStarted = true;
     revealStartedAt = performance.now();
-    orbitActive = true;
+    /* 保留 Canvas 粒子层，但跳过毛笔绕墨团的前置动作。 */
+    orbitActive = false;
     orbitClock = 0;
     unfoldStarted = false;
     unfoldClock = 0;
@@ -355,7 +350,13 @@
     for (var presetIndex = 0; presetIndex < introPresetCount; presetIndex++) {
       loadPreset(PRESETS[presetIndex]);
     }
-    setStatus(reducedMotion ? '墨色化形' : '引笔绕墨 · 静候成形');
+    if (modelReady) {
+      unfoldStarted = true;
+      cloud.visible = true;
+      cloud.scale.setScalar(0.72);
+      canvas.style.opacity = '0';
+    }
+    setStatus(reducedMotion ? '墨色化形' : '墨团散开 · 轮廓渐显');
   }
 
   /* 淡墨远山三叠：大幅柔边墨团，缓慢漂移，衬出水墨纵深 */
@@ -687,6 +688,13 @@
     if (PRESETS[cur] !== P) return;
     modelReady = true;
     applyPreset(P);
+    if (revealStarted && !unfoldStarted) {
+      unfoldStarted = true;
+      unfoldClock = 0;
+      cloud.visible = true;
+      cloud.scale.setScalar(0.72);
+      canvas.style.opacity = '0';
+    }
     if (unfoldStarted) setStatus('墨色化形 · 轮廓渐显');
   }
   function loadPreset(P) {
