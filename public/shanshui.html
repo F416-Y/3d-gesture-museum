@@ -477,6 +477,44 @@
       font-size: 12px;
     }
 
+    .panel-preview {
+      position: relative;
+      display: block;
+      width: 100%;
+      margin: 20px 0 0;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid rgba(214, 190, 148, 0.38);
+      background: #11120f;
+      cursor: zoom-in;
+    }
+
+    .panel-preview img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+      background: #11120f;
+      transition: transform 220ms ease;
+    }
+
+    .panel-preview:hover img {
+      transform: scale(1.018);
+    }
+
+    .panel-preview span {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      padding: 6px 9px;
+      border: 1px solid rgba(240, 237, 226, 0.34);
+      background: rgba(16, 17, 15, 0.78);
+      color: rgba(248, 244, 232, 0.9);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 10px;
+      pointer-events: none;
+    }
+
     .panel-meta {
       display: grid;
       grid-template-columns: 58px 1fr;
@@ -532,6 +570,164 @@
       font-size: 13px;
       line-height: 2;
       text-align: justify;
+    }
+
+    .art-viewer {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+        max(16px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+      background:
+        radial-gradient(circle at 50% 42%, rgba(70, 75, 67, 0.2), transparent 48%),
+        rgba(10, 11, 9, 0.975);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 220ms ease, visibility 220ms;
+    }
+
+    .art-viewer.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .viewer-topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 58px;
+      padding: 2px 0 10px;
+    }
+
+    .viewer-kicker {
+      margin: 0 0 5px;
+      color: rgba(214, 188, 147, 0.66);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 9px;
+      text-transform: uppercase;
+    }
+
+    .viewer-title {
+      margin: 0;
+      color: #f5efe2;
+      font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+      font-size: clamp(20px, 2.6vw, 30px);
+      font-weight: 500;
+      line-height: 1.1;
+    }
+
+    .viewer-meta {
+      margin: 6px 0 0;
+      color: rgba(240, 237, 226, 0.48);
+      font-size: 11px;
+    }
+
+    .viewer-close {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(240, 237, 226, 0.28);
+      background: rgba(30, 31, 27, 0.7);
+      color: rgba(248, 244, 232, 0.86);
+      cursor: pointer;
+    }
+
+    .viewer-close:hover {
+      border-color: rgba(225, 199, 161, 0.72);
+      color: #fff9eb;
+    }
+
+    .viewer-close svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    .viewer-stage {
+      position: relative;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-top: 1px solid rgba(235, 230, 214, 0.12);
+      border-bottom: 1px solid rgba(235, 230, 214, 0.12);
+      touch-action: none;
+      cursor: default;
+    }
+
+    .viewer-stage.zoomed {
+      cursor: grab;
+    }
+
+    .viewer-stage.dragging {
+      cursor: grabbing;
+    }
+
+    .viewer-image {
+      display: block;
+      max-width: calc(100% - 44px);
+      max-height: calc(100% - 26px);
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-drag: none;
+      transform-origin: center;
+      transition: transform 180ms cubic-bezier(0.2, 0.75, 0.24, 1);
+      will-change: transform;
+    }
+
+    .viewer-image.is-adjusting {
+      transition: none;
+    }
+
+    .viewer-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 58px;
+      padding-top: 10px;
+    }
+
+    .viewer-tool {
+      min-width: 42px;
+      height: 38px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0 12px;
+      border: 1px solid rgba(240, 237, 226, 0.24);
+      background: rgba(30, 31, 27, 0.64);
+      color: rgba(248, 244, 232, 0.86);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .viewer-tool:hover {
+      border-color: rgba(225, 199, 161, 0.7);
+      background: rgba(70, 51, 37, 0.76);
+      color: #fff9eb;
+    }
+
+    .viewer-zoom-value {
+      min-width: 64px;
+      color: rgba(240, 237, 226, 0.58);
+      font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      font-size: 10px;
+      text-align: center;
     }
 
     .loading {
@@ -773,6 +969,28 @@
         font-size: 29px;
       }
 
+      .art-viewer {
+        padding-right: max(12px, env(safe-area-inset-right));
+        padding-left: max(12px, env(safe-area-inset-left));
+      }
+
+      .viewer-topbar {
+        min-height: 54px;
+      }
+
+      .viewer-title {
+        font-size: 21px;
+      }
+
+      .viewer-image {
+        max-width: calc(100% - 12px);
+        max-height: calc(100% - 12px);
+      }
+
+      .viewer-toolbar {
+        min-height: 54px;
+      }
+
       .part-caption {
         left: 18px;
         bottom: max(18px, env(safe-area-inset-bottom));
@@ -867,6 +1085,10 @@
       <p class="panel-kicker" id="panel-kicker">山水三帧 · 02</p>
       <h2 class="panel-title" id="panel-title">千里江山图</h2>
       <p class="panel-artist" id="panel-artist">王希孟 · 北宋</p>
+      <button class="panel-preview" id="panel-preview" type="button" aria-label="放大查看《千里江山图》">
+        <img id="panel-preview-image" src="./assets/images/qianlijiangshan.jpg" alt="千里江山图">
+        <span>放大查看</span>
+      </button>
       <dl class="panel-meta">
         <dt>年代</dt>
         <dd id="panel-era">约 1113 年</dd>
@@ -880,6 +1102,28 @@
       <p class="panel-note" id="panel-note"></p>
     </div>
   </aside>
+
+  <div class="art-viewer" id="art-viewer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="viewer-title">
+    <header class="viewer-topbar">
+      <div>
+        <p class="viewer-kicker">山水三帧 · 高清画作</p>
+        <h2 class="viewer-title" id="viewer-title">千里江山图</h2>
+        <p class="viewer-meta" id="viewer-meta">王希孟 · 北宋</p>
+      </div>
+      <button class="viewer-close" id="viewer-close" type="button" aria-label="关闭画作查看" title="关闭">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </header>
+    <div class="viewer-stage" id="viewer-stage">
+      <img class="viewer-image" id="viewer-image" src="./assets/images/qianlijiangshan.jpg" alt="千里江山图" draggable="false">
+    </div>
+    <div class="viewer-toolbar" aria-label="画作缩放工具">
+      <button class="viewer-tool" id="viewer-zoom-out" type="button" aria-label="缩小画作" title="缩小">−</button>
+      <span class="viewer-zoom-value" id="viewer-zoom-value">100%</span>
+      <button class="viewer-tool" id="viewer-zoom-in" type="button" aria-label="放大画作" title="放大">＋</button>
+      <button class="viewer-tool" id="viewer-fit" type="button" aria-label="适应窗口" title="适应窗口">适应</button>
+    </div>
+  </div>
 
   <div class="part-caption" aria-live="polite">
     <strong id="part-name">木柱与柱础</strong>
@@ -977,6 +1221,15 @@
       var loadingStatus = document.getElementById("loading-status");
       var reticle = document.getElementById("reticle");
       var panel = document.getElementById("art-panel");
+      var panelPreview = document.getElementById("panel-preview");
+      var panelPreviewImage = document.getElementById("panel-preview-image");
+      var artViewer = document.getElementById("art-viewer");
+      var viewerTitle = document.getElementById("viewer-title");
+      var viewerMeta = document.getElementById("viewer-meta");
+      var viewerStage = document.getElementById("viewer-stage");
+      var viewerImage = document.getElementById("viewer-image");
+      var viewerZoomValue = document.getElementById("viewer-zoom-value");
+      var viewerClose = document.getElementById("viewer-close");
       var gestureButton = document.getElementById("gesture-button");
       var camwrap = document.getElementById("camwrap");
       var cam = document.getElementById("cam");
@@ -1030,6 +1283,14 @@
       var lastPointerY = 0;
       var activeExhibit = "qianlijiangshan";
       var panelOpen = false;
+      var viewerOpen = false;
+      var viewerZoom = 1;
+      var viewerPanX = 0;
+      var viewerPanY = 0;
+      var viewerPointers = {};
+      var viewerDragStart = null;
+      var viewerPinchStart = null;
+      var viewerDidPan = false;
       var playerPosition = new THREE.Vector3(0, 0, 4.35);
       var playerYaw = 0;
       var playerPitch = 0.025;
@@ -1674,6 +1935,91 @@
         return null;
       }
 
+      function paintingImagePath(painting) {
+        return "./assets/images/" + painting.id + ".jpg";
+      }
+
+      function updateViewerTransform(animate) {
+        if (!viewerOpen) return;
+        viewerImage.classList.toggle("is-adjusting", animate === false);
+        var stageWidth = viewerStage.clientWidth || 1;
+        var stageHeight = viewerStage.clientHeight || 1;
+        var imageWidth = viewerImage.offsetWidth || 1;
+        var imageHeight = viewerImage.offsetHeight || 1;
+        var maxPanX = Math.max(0, (imageWidth * viewerZoom - stageWidth) / 2);
+        var maxPanY = Math.max(0, (imageHeight * viewerZoom - stageHeight) / 2);
+        viewerPanX = clamp(viewerPanX, -maxPanX, maxPanX);
+        viewerPanY = clamp(viewerPanY, -maxPanY, maxPanY);
+        viewerImage.style.transform =
+          "translate3d(" + viewerPanX + "px," + viewerPanY + "px,0) scale(" + viewerZoom + ")";
+        viewerStage.classList.toggle("zoomed", viewerZoom > 1.001);
+        viewerStage.classList.toggle("dragging", !!viewerDragStart);
+        viewerZoomValue.textContent = Math.round(viewerZoom * 100) + "%";
+      }
+
+      function setViewerZoom(value, animate) {
+        viewerZoom = clamp(value, 1, 5);
+        if (viewerZoom <= 1.001) {
+          viewerZoom = 1;
+          viewerPanX = 0;
+          viewerPanY = 0;
+        }
+        updateViewerTransform(animate);
+      }
+
+      function resetViewerZoom() {
+        viewerZoom = 1;
+        viewerPanX = 0;
+        viewerPanY = 0;
+        updateViewerTransform(false);
+      }
+
+      function openArtViewer(id) {
+        if (partMode) return;
+        var painting = findPainting(id);
+        if (!painting) return;
+        viewerOpen = true;
+        setActiveExhibit(id);
+        viewerTitle.textContent = painting.title;
+        viewerMeta.textContent = painting.artist + " · " + painting.dynasty;
+        viewerImage.src = paintingImagePath(painting);
+        viewerImage.alt = painting.title;
+        artViewer.classList.add("open");
+        artViewer.setAttribute("aria-hidden", "false");
+        document.body.classList.add("viewer-open");
+        viewerPointers = {};
+        viewerDragStart = null;
+        viewerPinchStart = null;
+        viewerDidPan = false;
+        resetViewerZoom();
+        window.requestAnimationFrame(function () {
+          resetViewerZoom();
+          viewerClose.focus({ preventScroll: true });
+        });
+      }
+
+      function closeArtViewer() {
+        viewerOpen = false;
+        viewerPointers = {};
+        viewerDragStart = null;
+        viewerPinchStart = null;
+        artViewer.classList.remove("open");
+        artViewer.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("viewer-open");
+      }
+
+      function viewerPointerPositions() {
+        return Object.keys(viewerPointers).map(function (key) {
+          return viewerPointers[key];
+        });
+      }
+
+      function viewerPointerDistance(points) {
+        var dx = points[0].x - points[1].x;
+        var dy = points[0].y - points[1].y;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
       function openPainting(id) {
         var painting = findPainting(id);
         if (!painting) return;
@@ -1687,6 +2033,9 @@
         document.getElementById("panel-collection").textContent = painting.collection;
         document.getElementById("panel-intro").textContent = painting.intro;
         document.getElementById("panel-note").textContent = painting.appreciation;
+        panelPreviewImage.src = paintingImagePath(painting);
+        panelPreviewImage.alt = painting.title;
+        panelPreview.setAttribute("aria-label", "放大查看《" + painting.title + "》");
         setPanel(true);
       }
 
@@ -1796,6 +2145,7 @@
         var paintingId = paintingAtEvent(event);
         if (!didDrag && paintingId) {
           openPainting(paintingId);
+          openArtViewer(paintingId);
         }
         isDragging = false;
         if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
@@ -1848,8 +2198,13 @@
       function handleGestureState(state, now) {
         if (partMode || !state) return;
         if (state.pinchPressed) {
-          if (panelOpen) setPanel(false);
-          else openPainting(activeExhibit);
+          if (viewerOpen) {
+            closeArtViewer();
+            setPanel(false);
+          } else {
+            openPainting(activeExhibit);
+            openArtViewer(activeExhibit);
+          }
         }
 
         if (Math.abs(state.turn) < 0.16) gestureTurnArmed = true;
@@ -1863,6 +2218,69 @@
       function applyGesture() {
         if (partMode || !gestureRunning || !window.MuseumGesture) return;
         handleGestureState(window.MuseumGesture.getState(), performance.now());
+      }
+
+      function onViewerPointerDown(event) {
+        if (!viewerOpen) return;
+        viewerPointers[event.pointerId] = { x: event.clientX, y: event.clientY };
+        viewerStage.setPointerCapture(event.pointerId);
+        var points = viewerPointerPositions();
+        if (points.length >= 2) {
+          viewerPinchStart = {
+            distance: Math.max(1, viewerPointerDistance(points)),
+            zoom: viewerZoom
+          };
+          viewerDragStart = null;
+          viewerDidPan = true;
+        } else if (viewerZoom > 1.001) {
+          viewerDragStart = {
+            x: event.clientX,
+            y: event.clientY,
+            panX: viewerPanX,
+            panY: viewerPanY
+          };
+          viewerDidPan = false;
+        }
+        viewerStage.classList.toggle("dragging", !!viewerDragStart);
+      }
+
+      function onViewerPointerMove(event) {
+        if (!viewerOpen || !viewerPointers[event.pointerId]) return;
+        viewerPointers[event.pointerId] = { x: event.clientX, y: event.clientY };
+        var points = viewerPointerPositions();
+        if (points.length >= 2 && viewerPinchStart) {
+          var distance = Math.max(1, viewerPointerDistance(points));
+          setViewerZoom(viewerPinchStart.zoom * (distance / viewerPinchStart.distance), false);
+          return;
+        }
+        if (!viewerDragStart) return;
+        var dx = event.clientX - viewerDragStart.x;
+        var dy = event.clientY - viewerDragStart.y;
+        if (Math.abs(dx) + Math.abs(dy) > 3) viewerDidPan = true;
+        viewerPanX = viewerDragStart.panX + dx;
+        viewerPanY = viewerDragStart.panY + dy;
+        updateViewerTransform(false);
+      }
+
+      function onViewerPointerEnd(event) {
+        if (!viewerPointers[event.pointerId]) return;
+        delete viewerPointers[event.pointerId];
+        if (viewerStage.hasPointerCapture(event.pointerId)) {
+          viewerStage.releasePointerCapture(event.pointerId);
+        }
+        var points = viewerPointerPositions();
+        if (points.length < 2) viewerPinchStart = null;
+        if (points.length === 1 && viewerZoom > 1.001) {
+          viewerDragStart = {
+            x: points[0].x,
+            y: points[0].y,
+            panX: viewerPanX,
+            panY: viewerPanY
+          };
+        } else if (!points.length) {
+          viewerDragStart = null;
+        }
+        viewerStage.classList.toggle("dragging", !!viewerDragStart);
       }
 
       function bindEvents() {
@@ -1879,6 +2297,24 @@
 
         window.addEventListener("keydown", function (event) {
           if (partMode) return;
+          if (viewerOpen) {
+            if (event.code === "Escape" || event.code === "KeyQ") {
+              closeArtViewer();
+            } else if (event.code === "ArrowLeft" || event.code === "ArrowRight") {
+              stepArtwork(event.code === "ArrowLeft" ? -1 : 1);
+              openArtViewer(activeExhibit);
+            } else if (event.code === "Equal" || event.code === "NumpadAdd") {
+              setViewerZoom(viewerZoom * 1.3, true);
+            } else if (event.code === "Minus" || event.code === "NumpadSubtract") {
+              setViewerZoom(viewerZoom / 1.3, true);
+            } else if (event.code === "Digit0") {
+              resetViewerZoom();
+            } else {
+              return;
+            }
+            event.preventDefault();
+            return;
+          }
           if (event.code === "Escape" || event.code === "KeyQ") {
             setPanel(false);
           } else if (event.code === "ArrowLeft") {
@@ -1906,6 +2342,37 @@
         document.getElementById("panel-close").addEventListener("click", function () {
           setPanel(false);
         });
+        panelPreview.addEventListener("click", function () {
+          openArtViewer(activeExhibit);
+        });
+        viewerClose.addEventListener("click", closeArtViewer);
+        document.getElementById("viewer-zoom-out").addEventListener("click", function () {
+          setViewerZoom(viewerZoom / 1.3, true);
+        });
+        document.getElementById("viewer-zoom-in").addEventListener("click", function () {
+          setViewerZoom(viewerZoom * 1.3, true);
+        });
+        document.getElementById("viewer-fit").addEventListener("click", resetViewerZoom);
+        viewerStage.addEventListener("pointerdown", onViewerPointerDown);
+        viewerStage.addEventListener("pointermove", onViewerPointerMove);
+        viewerStage.addEventListener("pointerup", onViewerPointerEnd);
+        viewerStage.addEventListener("pointercancel", onViewerPointerEnd);
+        viewerStage.addEventListener("wheel", function (event) {
+          if (!viewerOpen) return;
+          event.preventDefault();
+          setViewerZoom(viewerZoom * Math.exp(-event.deltaY * 0.0014), false);
+        }, { passive: false });
+        viewerImage.addEventListener("click", function () {
+          if (!viewerOpen) return;
+          if (viewerDidPan) {
+            viewerDidPan = false;
+            return;
+          }
+          setViewerZoom(viewerZoom > 1.001 ? 1 : 2.4, true);
+        });
+        viewerImage.addEventListener("load", function () {
+          if (viewerOpen) resetViewerZoom();
+        });
         document.getElementById("reset-button").addEventListener("click", resetView);
         gestureButton.addEventListener("click", toggleGesture);
 
@@ -1915,6 +2382,7 @@
           renderer.setSize(window.innerWidth, window.innerHeight, false);
           renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
           if (partMode) updatePartCamera(partDistance());
+          if (viewerOpen) updateViewerTransform(false);
         });
 
         window.addEventListener("blur", function () {
@@ -1960,6 +2428,8 @@
           paintings: PAINTINGS.map(function (painting) { return painting.id; }),
           reset: resetView,
           openPainting: openPainting,
+          openArtViewer: openArtViewer,
+          closeArtViewer: closeArtViewer,
           stepArtwork: stepArtwork,
           toggleGesture: toggleGesture,
           handleGestureState: handleGestureState,
@@ -1973,6 +2443,8 @@
               camera: camera.position.toArray(),
               activeExhibit: activeExhibit,
               panelOpen: panelOpen,
+              viewerOpen: viewerOpen,
+              viewerZoom: viewerZoom,
               gestureRunning: gestureRunning
             };
           }
