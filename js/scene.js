@@ -1988,7 +1988,9 @@ window.MuseumScene = (function () {
     }
     root.add(g);
     obstacles.push({ type: "circle", x: x, z: z, r: 0.8 });
-    if (window.MuseumModels) {
+    /* 垂柳已改为程序化细枝叶帘，保留它自己的分叉与颜色；
+       旧 willow.glb 的盆栽式底座会把这个效果盖掉。 */
+    if (window.MuseumModels && modelId !== "willow") {
       window.MuseumModels.attach(root, modelId || "willow", { x: x, z: z, ry: (x * 7 + z * 3) % 6.28 }, g);
     }
   }
