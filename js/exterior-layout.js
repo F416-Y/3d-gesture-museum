@@ -2111,6 +2111,25 @@ window.MuseumExteriorLayout = (function () {
     /* 东南沿墙：石组 + 乔木（原狭长水池已撤） */
     rockery(45.2, 12.5, 1.1, 614);
     plantTree(44.6, 24.5, 1.05, 624);
+    /* 花鸟厅左右空地：两片对称竹林，避开花鸟墙体、入口和中央游线。 */
+    rockery(-23.5, -34.0, 0.92, 625);
+    rockery(23.5, -34.0, 0.92, 628);
+    rockery(-23.0, -25.0, 0.68, 632);
+    rockery(23.0, -25.0, 0.68, 635);
+    (function buildHuaniaoSideBambooGroves() {
+      var groveSeed = 4620;
+      [-1, 1].forEach(function (side) {
+        for (var gx = 14.5; gx <= 23.5; gx += 3.0) {
+          for (var gz = -35.0; gz <= -26.0; gz += 3.0) {
+            var jitterX = ((groveSeed * 17) % 9 - 4) * 0.10;
+            var jitterZ = ((groveSeed * 23) % 9 - 4) * 0.10;
+            var scale = 0.80 + (groveSeed % 4) * 0.10;
+            bambooClump(side * (gx + jitterX), gz + jitterZ, groveSeed, S.scene, scale);
+            groveSeed += 1;
+          }
+        }
+      });
+    }());
   }
 
   /* ---------- 360° 远景山脉层 ----------
@@ -2319,6 +2338,7 @@ window.MuseumExteriorLayout = (function () {
     bambooClump(24.0, 18.0, 240, S.scene, 0.72);
     bambooClump(-24.0, -18.0, 241, S.scene, 0.72);
     bambooClump(24.0, -18.0, 242, S.scene, 0.72);
+    /* 之前误放在东侧空地的整片竹林已移除；竹景统一归入花鸟厅左右空地。 */
     /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
     deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
     deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
