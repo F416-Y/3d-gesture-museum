@@ -16,10 +16,11 @@ window.MuseumLighting = (function () {
             sun: 0xfff2e0, sunI: 1.45, hemiSky: 0xe4eef6, hemiGround: 0x8a9578, hemiI: 0.85,
             hallI: 1.10, lampRed: 0.50, lampPaper: 0.55, lampGlow: 1.15,
             water: 0x527a6e, waterSpec: 0xd8ecf2 };
-  var N = { bg: 0x15212f, fogNear: 55,  fogFar: 220, exposure: 1.08,
-            sun: 0xa9c1e4, sunI: 0.32, hemiSky: 0x33465e, hemiGround: 0x1f2620, hemiI: 0.38,
-            hallI: 1.80, lampRed: 2.00, lampPaper: 1.80, lampGlow: 2.00,
-            water: 0x24403c, waterSpec: 0xffd9a8 };
+  /* 夜景要有月色和灯火的层次，避免压成黑蓝色雾场。 */
+  var N = { bg: 0x304559, fogNear: 78,  fogFar: 310, exposure: 1.20,
+            sun: 0xc4d7ec, sunI: 0.62, hemiSky: 0x7089a3, hemiGround: 0x3e493f, hemiI: 0.82,
+            hallI: 1.48, lampRed: 1.25, lampPaper: 0.92, lampGlow: 1.80,
+            water: 0x315d58, waterSpec: 0xffe4bd };
 
   /* 灯笼点光群：位置对齐红灯笼 / 石灯（[x, y, z, 强度]，抄自原型） */
   var LAMPS = [

@@ -194,13 +194,9 @@ window.MuseumMain = (function () {
           MuseumUI.toast(third ? "已切换第三人称 · T 返回第一人称" : "已返回第一人称漫游");
         }
       }
-      if (e.code === "KeyN") { e.preventDefault(); if (window.MuseumLighting) window.MuseumLighting.toggle(); }
       if (e.code === "KeyE" && panorama.on) { e.preventDefault(); return; }
     });
     window.addEventListener("keyup", function (e) { keys[e.code] = false; });
-    var btnNight = document.getElementById("btn-night");
-    if (btnNight && window.MuseumLighting) btnNight.addEventListener("click", function () { window.MuseumLighting.toggle(); });
-
      // 鼠标：点画面 = 进入鼠标视角（锁定指针）；准星正对展品时，点一下 = 直接查看展品
     renderer.domElement.addEventListener("click", function () {
       if (window.MuseumInkWorlds && MuseumInkWorlds.isBlocking()) return; // 穿画/四画选择时不吃鼠标
