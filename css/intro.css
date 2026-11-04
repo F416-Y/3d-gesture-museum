@@ -48,8 +48,14 @@
   pointer-events: none;
 }
 
-#intro.intro-video-active > :not(.intro-loading-video) {
+#intro.intro-video-active > :not(.intro-loading-video):not(#introTitle):not(#introMark) {
   visibility: hidden;
+}
+
+#intro.intro-video-active #introTitle,
+#intro.intro-video-active #introMark {
+  z-index: 26;
+  visibility: visible;
 }
 
 .intro-loading-video {
