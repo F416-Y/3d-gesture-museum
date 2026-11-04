@@ -52,13 +52,19 @@
   var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
 
+  /* 进入按钮不等待粒子轮播或模型预加载，开屏阶段即可进入园区。 */
+  if (enterBtn) {
+    enterBtn.disabled = false;
+    enterBtn.setAttribute('aria-disabled', 'false');
+  }
+
   /* 用户提供的开屏视频优先播放；结束后平滑露出 Canvas 粒子序章。 */
   if (loadingVideo) {
     overlay.classList.add('intro-video-active');
     function finishVideoIntro() {
       overlay.classList.remove('intro-video-active');
       overlay.classList.add('intro-video-ended');
-      setStatus('墨色已入 · 靠近墨团展开园境');
+      beginReveal();
     }
     loadingVideo.addEventListener('ended', function () {
       finishVideoIntro();
@@ -66,12 +72,13 @@
     loadingVideo.addEventListener('error', function () {
       overlay.classList.remove('intro-video-active');
       overlay.classList.add('intro-video-ended');
-      setStatus('开屏动画暂不可用 · 正在载入园境');
+      beginReveal();
     }, { once: true });
     var loadingPlay = loadingVideo.play();
     if (loadingPlay && loadingPlay.catch) loadingPlay.catch(function () {
       overlay.classList.remove('intro-video-active');
       overlay.classList.add('intro-video-ended');
+      beginReveal();
     });
   }
 
@@ -784,7 +791,7 @@
     pointer.y = e.clientY;
     pointer.inside = true;
     pointer.ui = !cursorVisible;
-    if (cursorVisible && !reducedMotion && !overlay.classList.contains('intro-video-active') && e.timeStamp - lastTrail > 24) {
+    if (cursorVisible && !reducedMotion && e.timeStamp - lastTrail > 24) {
       var sampleNow = performance.now();
       var sampleDelta = lastPointerSample ? Math.max(16, sampleNow - lastPointerSample) : 34;
       var speed = Math.min(2.4, Math.hypot(dx, dy) / sampleDelta * 1.8);
@@ -1067,8 +1074,12 @@
               setStatus('墨色化形 · ' + introPresetLabels[introPresetIndex]);
             }
           } else {
-            introPresetSequenceDone = true;
-            revealDone = true;
+            /* 轮播不收场：最后一件之后回到第一件，粒子动画持续循环。 */
+            introPresetSequenceDone = false;
+            introPresetIndex = 0;
+            cur = 0;
+            modelReady = true;
+            applyPreset(PRESETS[0]);
             orbitActive = false;
             canvas.style.opacity = '1';
             cloud.scale.setScalar(1);
@@ -1076,7 +1087,7 @@
             overlay.classList.add('ready');
             enterBtn.disabled = false;
             enterBtn.setAttribute('aria-disabled', 'false');
-            setStatus('园境已开 · 可入馆');
+            setStatus('墨色化形 · ' + introPresetLabels[0]);
             pointer.ui = false;
             if (pointer.inside && inkCursor) {
               var currentTarget = document.elementFromPoint(pointer.x, pointer.y);
