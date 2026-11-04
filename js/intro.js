@@ -35,6 +35,7 @@
   var reducedMotion = motionQuery.matches;
   var trailPoints = [];
   var lastTrail = 0;
+  var lastPointerSample = 0;
   var inkHover = 0;
   var inkPress = 0;
   var revealStarted = false;
@@ -776,10 +777,21 @@
     pointer.y = e.clientY;
     pointer.inside = true;
     pointer.ui = !cursorVisible;
-    if (cursorVisible && !reducedMotion && e.timeStamp - lastTrail > 34) {
-      trailPoints.push({ x: e.clientX, y: e.clientY, time: performance.now(), size: 1.6 + Math.random() * 2.6 });
-      if (trailPoints.length > 16) trailPoints.shift();
+    if (cursorVisible && !reducedMotion && !overlay.classList.contains('intro-video-active') && e.timeStamp - lastTrail > 24) {
+      var sampleNow = performance.now();
+      var sampleDelta = lastPointerSample ? Math.max(16, sampleNow - lastPointerSample) : 34;
+      var speed = Math.min(2.4, Math.hypot(dx, dy) / sampleDelta * 1.8);
+      trailPoints.push({
+        x: e.clientX,
+        y: e.clientY,
+        time: sampleNow,
+        speed: speed,
+        size: 3.4 + Math.random() * 2.8,
+        seed: Math.random()
+      });
+      if (trailPoints.length > 72) trailPoints.shift();
       lastTrail = e.timeStamp;
+      lastPointerSample = sampleNow;
     }
     if (handSeen || overUi) return;
     rotYT = (0.5 - e.clientX / window.innerWidth) * Math.PI * 2.2;
@@ -789,6 +801,7 @@
     pointer.inside = false;
     pointer.pressed = false;
     pointer.ui = true;
+    lastPointerSample = 0;
     if (inkCursor) inkCursor.classList.remove('visible');
   });
   overlay.addEventListener('pointerdown', function (e) {
@@ -804,11 +817,13 @@
   window.addEventListener('pointercancel', function () {
     pointer.pressed = false;
     pointer.inside = false;
+    lastPointerSample = 0;
     if (inkCursor) inkCursor.classList.remove('visible');
   });
   window.addEventListener('blur', function () {
     pointer.pressed = false;
     pointer.inside = false;
+    lastPointerSample = 0;
     if (inkCursor) inkCursor.classList.remove('visible');
   });
 
@@ -918,23 +933,59 @@
 
     if (!reducedMotion && trailPoints.length) {
       trailPoints = trailPoints.filter(function (point) {
-        return now - point.time < 620;
+        return now - point.time < 1500;
       });
       for (var p = 1; p < trailPoints.length; p++) {
         var from = trailPoints[p - 1];
         var to = trailPoints[p];
-        var age = Math.max(0, 1 - (now - to.time) / 620);
+        var age = Math.max(0, 1 - (now - to.time) / 1500);
+        var slowInk = Math.max(0, 1 - to.speed / 2.4);
+        var strokeWidth = to.size * (0.78 + slowInk * 0.9) * (0.35 + age * 0.65);
+        var strokeAlpha = (0.06 + slowInk * 0.2) * age * (1 - unfoldMix);
+        var segmentSeed = Math.sin(to.seed * 91.7 + p * 12.3) * 0.5 + 0.5;
         fx.save();
         fx.lineCap = 'round';
-        fx.strokeStyle = 'rgba(39,47,43,' + (0.12 * age * (1 - unfoldMix)).toFixed(3) + ')';
-        fx.lineWidth = Math.max(0.6, to.size * age);
+
+        /* 湿墨底晕：边缘柔、扩散慢，模拟墨水吸入宣纸。 */
+        fx.filter = 'blur(' + (1.8 + slowInk * 2.8).toFixed(1) + 'px)';
+        fx.strokeStyle = 'rgba(34,40,38,' + (strokeAlpha * 0.52).toFixed(3) + ')';
+        fx.lineWidth = Math.max(2, strokeWidth * (2.1 + slowInk * 0.8));
         fx.beginPath();
         fx.moveTo(from.x, from.y);
         fx.lineTo(to.x, to.y);
         fx.stroke();
-        fx.fillStyle = 'rgba(38,45,41,' + (0.1 * age * (1 - unfoldMix)).toFixed(3) + ')';
+
+        /* 主笔锋：慢速更厚更浓，快速移动留下偏飞白的细线。 */
+        fx.filter = 'none';
+        fx.strokeStyle = 'rgba(31,38,36,' + strokeAlpha.toFixed(3) + ')';
+        fx.lineWidth = Math.max(0.8, strokeWidth);
         fx.beginPath();
-        fx.arc(to.x + 2, to.y + 2, Math.max(0.6, to.size * 0.58), 0, Math.PI * 2);
+        fx.moveTo(from.x, from.y);
+        fx.lineTo(to.x, to.y);
+        fx.stroke();
+
+        /* 飞白：快速掠过时切出几段浅色纸纹，不做成霓虹拖尾。 */
+        if (to.speed > 0.42) {
+          var dashCount = 1 + Math.floor(segmentSeed * 2);
+          var dxSeg = to.x - from.x;
+          var dySeg = to.y - from.y;
+          for (var dash = 0; dash < dashCount; dash++) {
+            var dashStart = 0.18 + ((segmentSeed + dash * 0.37) % 0.52);
+            var dashLength = 0.08 + ((segmentSeed + dash) % 0.12);
+            fx.strokeStyle = 'rgba(245,240,228,' + (0.16 * age * Math.min(1, to.speed / 1.4)).toFixed(3) + ')';
+            fx.lineWidth = Math.max(0.45, strokeWidth * 0.28);
+            fx.beginPath();
+            fx.moveTo(from.x + dxSeg * dashStart, from.y + dySeg * dashStart);
+            fx.lineTo(from.x + dxSeg * Math.min(0.98, dashStart + dashLength), from.y + dySeg * Math.min(0.98, dashStart + dashLength));
+            fx.stroke();
+          }
+        }
+
+        /* 笔尖墨点：每隔几段落下大小不一的浓淡墨点。 */
+        fx.filter = 'blur(' + (0.2 + (1 - slowInk) * 0.5).toFixed(1) + 'px)';
+        fx.fillStyle = 'rgba(30,37,35,' + (strokeAlpha * (0.55 + segmentSeed * 0.8)).toFixed(3) + ')';
+        fx.beginPath();
+        fx.arc(to.x + (segmentSeed - 0.5) * 4, to.y + (0.5 - segmentSeed) * 3, Math.max(0.7, strokeWidth * (0.3 + segmentSeed * 0.7)), 0, Math.PI * 2);
         fx.fill();
         fx.restore();
       }
