@@ -2123,7 +2123,7 @@ window.MuseumExteriorLayout = (function () {
           for (var gz = -35.0; gz <= -26.0; gz += 3.0) {
             var jitterX = ((groveSeed * 17) % 9 - 4) * 0.10;
             var jitterZ = ((groveSeed * 23) % 9 - 4) * 0.10;
-            var scale = 0.54 + (groveSeed % 4) * 0.07;
+            var scale = 0.80 + (groveSeed % 4) * 0.10;
             bambooClump(side * (gx + jitterX), gz + jitterZ, groveSeed, S.scene, scale);
             groveSeed += 1;
           }
@@ -2338,18 +2338,7 @@ window.MuseumExteriorLayout = (function () {
     bambooClump(24.0, 18.0, 240, S.scene, 0.72);
     bambooClump(-24.0, -18.0, 241, S.scene, 0.72);
     bambooClump(24.0, -18.0, 242, S.scene, 0.72);
-    /* 东侧空地改成竹林层：保留东侧通道和入口净空，其余草地用疏密相间的竹丛填满。 */
-    (function buildBambooGrove() {
-      var groveSeed = 3200;
-      for (var gx = 18; gx <= 30; gx += 3) {
-        for (var gz = 8; gz <= 20; gz += 3) {
-          var jitterX = ((groveSeed * 17) % 11 - 5) * 0.08;
-          var jitterZ = ((groveSeed * 23) % 11 - 5) * 0.08;
-          bambooClump(gx + jitterX, gz + jitterZ, groveSeed, S.scene, 0.50 + (groveSeed % 3) * 0.08);
-          groveSeed += 1;
-        }
-      }
-    }());
+    /* 之前误放在东侧空地的整片竹林已移除；竹景统一归入花鸟厅左右空地。 */
     /* 枯木：林缘与草坪边缘，作为低矮的水平向构件打破乔木的竖向节奏 */
     deadTrunk(26.0, -26.0, 242, S.scene, 0.75);
     deadTrunk(-31.0, 41.5, 243, S.scene, 0.8);
