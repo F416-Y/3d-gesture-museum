@@ -49,13 +49,22 @@
   var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
 
-  /* 用户提供的开屏视频优先播放；结束后才释放原有粒子序章。 */
+  /* 用户提供的开屏视频优先播放；结束后直接淡出到已加载的园区，不再释放旧粒子序章。 */
   if (loadingVideo) {
     overlay.classList.add('intro-video-active');
+    function finishVideoIntro() {
+      overlay.classList.add('bye');
+      running = false;
+      pointer.inside = false;
+      pointer.ui = true;
+      if (inkCursor) inkCursor.classList.remove('visible');
+      window.setTimeout(function () {
+        overlay.style.display = 'none';
+        if (renderer && renderer.dispose) renderer.dispose();
+      }, 850);
+    }
     loadingVideo.addEventListener('ended', function () {
-      overlay.classList.remove('intro-video-active');
-      overlay.classList.add('intro-video-ended');
-      setStatus('引笔近墨 · 园境将开');
+      finishVideoIntro();
     }, { once: true });
     loadingVideo.addEventListener('error', function () {
       overlay.classList.remove('intro-video-active');
