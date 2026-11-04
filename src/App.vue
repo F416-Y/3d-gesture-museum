@@ -2,7 +2,7 @@
   <!-- 顶部右侧导航：展厅直达 + 用户入口（叠在 3D 场景之上，不影响原有顶栏） -->
   <nav class="vue-nav">
     <div class="nav-halls">
-          <a :href="exteriorHref('map')">平面图</a>
+          <RouterLink to="/map">平面图</RouterLink>
           <a :href="exteriorHref('hall/hall0')">序厅</a>
           <a href="./shanshui.html" @click="saveExteriorReturnState">山水</a>
           <a href="./huaniao.html" @click="saveExteriorReturnState">花鸟</a>

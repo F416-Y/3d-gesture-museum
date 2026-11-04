@@ -11,7 +11,22 @@
       </header>
 
       <div class="map-stage">
-        <svg class="map-svg" viewBox="0 0 1000 820" role="img" aria-label="云间入墨园区实际坐标平面图">
+        <div class="map-figure" role="img" aria-label="云间入墨园区建筑总平面图">
+          <img class="map-plan-image" src="/assets/reference/site-plan/yunjian-campus-plan.png" alt="云间入墨建筑总平面图：序厅、中心湖、中轴画廊及五个展厅" />
+          <div class="map-hotspots" aria-label="园区热区">
+            <button v-for="h in mapHotspots" :key="h.id" type="button" class="map-hotspot"
+              :class="[`hotspot-${h.kind}`, { disabled: h.disabled }]"
+              :style="{ left: `${h.left}%`, top: `${h.top}%`, width: `${h.width}%`, height: `${h.height}%` }"
+              :aria-label="h.disabled ? `${h.name}，云墨修缮中` : h.action || h.name"
+              :disabled="h.disabled" @click="h.action && openInterior(h.action)">
+              <span class="hotspot-caption">{{ h.name }}</span>
+              <span v-if="h.disabled" class="hotspot-note">修缮中</span>
+            </button>
+          </div>
+          <div class="map-location-note">当前位置会在进入园区后同步显示</div>
+        </div>
+        <!-- 保留原坐标平面数据作为开发校准依据，正式展示使用上方总平面图底图。 -->
+        <svg class="map-svg map-calibration" viewBox="0 0 1000 820" aria-hidden="true">
           <defs>
             <pattern id="paper-grid" width="24" height="24" patternUnits="userSpaceOnUse">
               <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#d9cdbb" stroke-width="0.7" opacity=".28" />
@@ -133,6 +148,17 @@ const halls = [
   { id: "plaza", name: "前庭", x0: -16, z0: 34.5, x1: 16, z1: 36.8, fill: "#d9d0bd", interior: false },
 ];
 
+const mapHotspots = [
+  { id: "hall2", name: "花鸟展厅", action: "hall2", left: 33.5, top: 8.5, width: 24, height: 22, kind: "hall" },
+  { id: "hall1", name: "山水展厅", action: "hall1", left: 5.5, top: 25, width: 18, height: 25, kind: "hall" },
+  { id: "hall3", name: "人物展厅", action: "hall3", left: 65, top: 25, width: 19, height: 25, kind: "hall" },
+  { id: "hall5", name: "文创", left: 5.5, top: 53, width: 18, height: 27, kind: "closed", disabled: true },
+  { id: "hall4", name: "书斋", left: 68, top: 53, width: 17, height: 27, kind: "closed", disabled: true },
+  { id: "gallery", name: "中轴画廊", left: 34, top: 53, width: 27, height: 22, kind: "landmark" },
+  { id: "lake", name: "中心湖 · 拱桥", left: 36, top: 29, width: 24, height: 19, kind: "landmark" },
+  { id: "hall0", name: "序厅", action: "hall0", left: 34, top: 77, width: 27, height: 14, kind: "hall" },
+];
+
 const paving = [
   { id: "front-plaza", x0: -16, z0: 34.5, x1: 16, z1: 36.8 },
   { id: "hall0-apron", x0: -13.5, z0: 22.5, x1: 13.5, z1: 34.5 },
@@ -206,6 +232,20 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #628c70; box-shadow: 0 0 0 4px rgba(98,140,112,.15); }
 .map-stage { position: relative; padding: 10px; background: #efe5d6; border: 1px solid #d9c8b2; border-radius: 16px; overflow: hidden; }
 .map-svg { width: 100%; height: auto; display: block; border-radius: 11px; }
+.map-calibration { display: none; }
+.map-figure { position: relative; overflow: hidden; border-radius: 11px; background: #eee5d6; box-shadow: 0 12px 28px rgba(62,45,30,.12); }
+.map-plan-image { display: block; width: 100%; height: auto; }
+.map-hotspots { position: absolute; inset: 0; }
+.map-hotspot { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0; border: 1px solid transparent; border-radius: 12px; background: rgba(180,58,47,0); color: #7d3028; cursor: pointer; transition: background .18s, border-color .18s, box-shadow .18s, transform .18s; }
+.map-hotspot:hover, .map-hotspot:focus-visible { background: rgba(255,248,231,.22); border-color: rgba(163,54,43,.75); box-shadow: inset 0 0 0 2px rgba(255,248,231,.7), 0 4px 14px rgba(95,54,36,.18); outline: none; transform: translateY(-1px); }
+.map-hotspot.disabled { cursor: not-allowed; background: rgba(130,111,90,.04); color: #76695d; }
+.map-hotspot.disabled:hover, .map-hotspot.disabled:focus-visible { background: rgba(130,111,90,.12); border-color: rgba(118,105,93,.5); box-shadow: none; transform: none; }
+.hotspot-caption { opacity: 0; padding: 5px 9px; border-radius: 999px; background: rgba(255,250,239,.9); box-shadow: 0 2px 8px rgba(62,45,30,.14); font-family: "Noto Serif SC", "Songti SC", serif; font-size: 12px; font-weight: 700; letter-spacing: .08em; pointer-events: none; transition: opacity .18s; }
+.map-hotspot:hover .hotspot-caption, .map-hotspot:focus-visible .hotspot-caption, .map-hotspot.disabled .hotspot-caption { opacity: 1; }
+.hotspot-note { padding: 2px 6px; border-radius: 999px; background: rgba(118,105,93,.82); color: #fffaf0; font-size: 9px; letter-spacing: .08em; pointer-events: none; }
+.hotspot-landmark { border-radius: 50%; }
+.hotspot-landmark .hotspot-caption { color: #35645c; }
+.map-location-note { position: absolute; right: 16px; bottom: 14px; padding: 7px 10px; border: 1px solid rgba(112,87,62,.18); border-radius: 999px; background: rgba(255,250,239,.82); color: #806c59; font-size: 11px; letter-spacing: .04em; pointer-events: none; }
 .hall-zone { outline: none; }
 .hall-zone.clickable { cursor: pointer; }
 .hall-zone.clickable rect { transition: filter .18s, stroke-width .18s, fill-opacity .18s; }

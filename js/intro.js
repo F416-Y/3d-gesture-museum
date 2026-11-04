@@ -23,6 +23,14 @@
   }
   var overlay = document.getElementById('intro');
   if (!overlay || !window.THREE) return;
+  /* 开屏只属于一次项目会话：站内切换平面图 / 登录 / 收藏时不重复播放。 */
+  var INTRO_SEEN_KEY = 'cloudink.intro.seen.v1';
+  try {
+    if (window.sessionStorage && sessionStorage.getItem(INTRO_SEEN_KEY) === '1') {
+      overlay.style.display = 'none';
+      return;
+    }
+  } catch (e) { /* 存储不可用时继续正常显示开屏 */ }
   var canvas = document.getElementById('introCanvas');
   var inkFx = document.getElementById('introInkFx');
   var trailFxCanvas = document.getElementById('introTrailFx');
@@ -873,6 +881,9 @@
   var running = true;
   enterBtn.addEventListener('click', function () {
     if (enterBtn.disabled) return;
+    try {
+      if (window.sessionStorage) sessionStorage.setItem(INTRO_SEEN_KEY, '1');
+    } catch (e) { /* 私密模式或存储受限时不阻断进入 */ }
     overlay.classList.add('bye');
     running = false;
     pointer.inside = false;
