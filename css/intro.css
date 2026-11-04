@@ -77,7 +77,8 @@
 }
 
 #introCanvas,
-#introInkFx {
+#introInkFx,
+#introTrailFx {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -93,6 +94,11 @@
 
 #introInkFx {
   z-index: 2;
+  mix-blend-mode: multiply;
+}
+
+#introTrailFx {
+  z-index: 4;
   mix-blend-mode: multiply;
 }
 
