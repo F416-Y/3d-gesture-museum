@@ -25,8 +25,8 @@ window.MuseumInkWorlds = (function () {
    * 组长接口若存在则优先使用；函数名以其最终定稿为准，这里只做探测。 */
   // 视频由 public/videos/ink/enter-painting.mp4 提供；版本参数避免浏览器继续复用旧占位视频。
   var TRANSITION_VIDEO = "./videos/ink/enter-painting.mp4?v=20261028-h264";
-  // 无水印的程序化转场优先使用；保留视频路径作为后续替换接口。
-  var USE_PROCEDURAL_TRANSITION = true;
+  // 点击“入画”时优先使用已接入的视频，程序化 Canvas 作为加载失败兜底。
+  var USE_PROCEDURAL_TRANSITION = false;
   var INK_FALLBACK_MS = 2600;     // 墨雾占位转场的时长
   var VIDEO_STALL_MS = 12000;     // 穿画视频卡住超过这个时间直接放行
   var INK_WORLD_HANDSHAKE_MS = 12000; // 组长画境接口握手超时（见 enterLeaderPainting）
