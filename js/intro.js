@@ -25,6 +25,7 @@
   if (!overlay || !window.THREE) return;
   var canvas = document.getElementById('introCanvas');
   var inkFx = document.getElementById('introInkFx');
+  var loadingVideo = document.getElementById('introLoadingVideo');
   var fx = inkFx ? inkFx.getContext('2d') : null;
   var statusEl = document.getElementById('introStatus');
   var inkCursor = document.getElementById('inkCursor');
@@ -47,6 +48,26 @@
   var pointer = { x: -100, y: -100, inside: false, pressed: false, ui: true };
   var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
+
+  /* 用户提供的开屏视频优先播放；结束后才释放原有粒子序章。 */
+  if (loadingVideo) {
+    overlay.classList.add('intro-video-active');
+    loadingVideo.addEventListener('ended', function () {
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+      setStatus('引笔近墨 · 园境将开');
+    }, { once: true });
+    loadingVideo.addEventListener('error', function () {
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+      setStatus('开屏动画暂不可用 · 正在载入园境');
+    }, { once: true });
+    var loadingPlay = loadingVideo.play();
+    if (loadingPlay && loadingPlay.catch) loadingPlay.catch(function () {
+      overlay.classList.remove('intro-video-active');
+      overlay.classList.add('intro-video-ended');
+    });
+  }
 
   function onMotionPreferenceChange(event) {
     reducedMotion = event.matches;
