@@ -597,16 +597,8 @@
       out[k * 3 + 1] = tris[o + 1] * w + tris[o + 4] * u + tris[o + 7] * v;
       out[k * 3 + 2] = tris[o + 2] * w + tris[o + 5] * u + tris[o + 8] * v;
     }
-    var normalized = normalizePts(out, 3.4, count);
-    /* GLB 馆藏采样点数少于园区粒子缓冲区；补齐到 MAXN，避免残留上一预设的园区轮廓。 */
-    var full = new Float32Array(MAXN * 3), si;
-    for (var fi = 0; fi < MAXN; fi++) {
-      si = (fi % count) * 3;
-      full[fi * 3] = normalized[si];
-      full[fi * 3 + 1] = normalized[si + 1];
-      full[fi * 3 + 2] = normalized[si + 2];
-    }
-    return full;
+    /* 保留该模型自己的采样数量，不能用其他模型的点补齐。 */
+    return normalizePts(out, 3.4, count);
   }
 
   /* ---------- 压轴：整馆场景表面采样（两遍法，不占大内存） ----------
@@ -705,7 +697,7 @@
     { id: 'horse', fb: fbHorse },
     { id: '__museum', fb: null }        /* 第四段显示外观整体：从实际主场景采样 */
   ];
-  var store = {}, cur = 0;
+  var store = {}, presetPointCounts = {}, activePresetPointCount = MAXN, cur = 0;
   var introPresetCount = 4; /* 青铜鼎、石狮、铜奔马、外观整体；不再单独展示树/石头 */
   var introPresetLabels = ['青铜方鼎', '石狮', '铜奔马', '园区外观'];
   var introPresetIndex = 0;
@@ -715,6 +707,7 @@
   var loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
   function applyPreset(P) {
     if (!store[P.id]) return;
+    activePresetPointCount = presetPointCounts[P.id] || MAXN;
     /* 防止点数不同的预设把上一模型的尾部坐标留在 base 中。 */
     base.fill(0);
     base.set(store[P.id]);
@@ -766,6 +759,7 @@
             var pts = null;
             try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
             store[P.id] = pts || fbGate();
+            presetPointCounts[P.id] = MAXN;
             finishPreset(P);
             setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
           });
@@ -779,9 +773,11 @@
       var pts = null;
       try { pts = sampleObject(g.scene, 12000); } catch (e) { pts = null; }
       store[P.id] = pts || P.fb();
+      presetPointCounts[P.id] = pts ? 12000 : MAXN;
       finishPreset(P);
     }, undefined, function () {
       store[P.id] = P.fb();
+      presetPointCounts[P.id] = MAXN;
       finishPreset(P);
     });
   }
@@ -1149,7 +1145,7 @@
     cloud.rotation.y = spin + rotY;
     cloud.rotation.x = rotX * 0.7;
     if (cloud.visible) {
-      var n = density, i3, br;
+      var n = Math.min(density, activePresetPointCount), i3, br;
       for (var k = 0; k < n; k++) {
         i3 = k * 3;
         br = spread + Math.sin(t * 1.8 + phase[k]) * 0.035;
