@@ -703,7 +703,7 @@
     { id: 'horse', fb: fbHorse },
     { id: '__museum', fb: null }        /* 第四段显示外观整体：从实际主场景采样 */
   ];
-  var store = {}, presetPointCounts = {}, activePresetPointCount = MAXN, cur = 0;
+  var store = {}, presetPointCounts = {}, activePresetPointCount = MAXN, activeBase = base, cur = 0;
   var introPresetCount = 4; /* 青铜鼎、石狮、铜奔马、外观整体；不再单独展示树/石头 */
   var introPresetLabels = ['青铜方鼎', '石狮', '铜奔马', '园区外观'];
   var introPresetIndex = 0;
@@ -713,10 +713,9 @@
   var loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
   function applyPreset(P) {
     if (!store[P.id]) return;
-    activePresetPointCount = presetPointCounts[P.id] || MAXN;
-    /* 当前模型只使用自己的点数，清空上一模型留下的尾部坐标。 */
-    base.fill(0);
-    base.set(store[P.id]);
+    /* 直接切换当前模型自己的点数组，不复用上一模型的园区缓冲区。 */
+    activeBase = store[P.id];
+    activePresetPointCount = presetPointCounts[P.id] || Math.min(MAXN, Math.floor(activeBase.length / 3));
     spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
     if (P.id === '__museum') {
       rotXT = 0.55;               /* 三分俯视，呈现沙盘感 */
@@ -1155,9 +1154,9 @@
       for (var k = 0; k < n; k++) {
         i3 = k * 3;
         br = spread + Math.sin(t * 1.8 + phase[k]) * 0.035;
-        pos[i3] = base[i3] * br;
-        pos[i3 + 1] = base[i3 + 1] * br;
-        pos[i3 + 2] = base[i3 + 2] * br;
+        pos[i3] = activeBase[i3] * br;
+        pos[i3 + 1] = activeBase[i3 + 1] * br;
+        pos[i3 + 2] = activeBase[i3 + 2] * br;
         /* 只用墨黑与灰青的浓淡变化，不引入色相漂移。 */
         var inkLight = Math.max(0.075, Math.min(0.38, 0.22 + hueOff[k] * 0.72 + 0.025 * Math.sin(t * 1.7 + phase[k] * 2)));
         col[i3] = inkLight * 0.88;
