@@ -6,8 +6,10 @@
  * ============================================================ */
 window.MuseumExteriorSlots = {
   install: function (scene) {
+  var resolveReady;
+  window.MuseumExteriorSlots.ready = new Promise(function (resolve) { resolveReady = resolve; });
   (function upgradeParts() {
-      if (!THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) return;
+      if (!THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { resolveReady(); return; }
       var slots = window.MuseumExteriorLayout.slots;
       var loader = new THREE.GLTFLoader();
       var cache = {};
@@ -607,6 +609,7 @@ window.MuseumExteriorSlots = {
         var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6], venus: fs[7] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
+        resolveReady();
       });
     })();
   }

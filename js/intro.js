@@ -423,7 +423,8 @@
 
   /* ---------- 墨形粒子云（只在墨团显形后启用） ---------- */
   var tmpC = new THREE.Color(), i, r;
-  var MAXN = 30000;
+  /* 开场优先保证视频流畅；园区轮廓用 2.2 万点已足够辨识。 */
+  var MAXN = 22000;
   var pos = new Float32Array(MAXN * 3);
   var col = new Float32Array(MAXN * 3);
   var base = new Float32Array(MAXN * 3);
@@ -747,15 +748,24 @@
         var root = (window.MuseumScene && window.MuseumScene.ctx && window.MuseumScene.ctx.scene) ||
           (window.MuseumExteriorLayout && window.MuseumExteriorLayout.ctx && window.MuseumExteriorLayout.ctx.scene);
         var bridgeReady = root && (root.getObjectByName('central-arch-bridge-glb') || root.getObjectByName('central-arch-bridge'));
-        if ((!root || !bridgeReady) && museumTries++ < 75) {
+        if ((!root || !bridgeReady) && museumTries++ < 100) {
           setTimeout(captureMuseumWhenReady, 80);
           return;
         }
-        var pts = null;
-        try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
-        store[P.id] = pts || fbGate();
-        finishPreset(P);
-        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
+        if (window.MuseumExteriorSlots && window.MuseumExteriorSlots.ready) {
+          window.MuseumExteriorSlots.ready.then(captureMuseumWhenReady);
+          return;
+        }
+        /* 让视频先拿到一帧，再把重采样放入空闲帧，避免阻塞开场首帧。 */
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            var pts = null;
+            try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
+            store[P.id] = pts || fbGate();
+            finishPreset(P);
+            setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
+          });
+        });
       }
       setTimeout(captureMuseumWhenReady, 30);
       return;
