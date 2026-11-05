@@ -597,7 +597,16 @@
       out[k * 3 + 1] = tris[o + 1] * w + tris[o + 4] * u + tris[o + 7] * v;
       out[k * 3 + 2] = tris[o + 2] * w + tris[o + 5] * u + tris[o + 8] * v;
     }
-    return normalizePts(out, 3.4, count);
+    var normalized = normalizePts(out, 3.4, count);
+    /* GLB 馆藏采样点数少于园区粒子缓冲区；补齐到 MAXN，避免残留上一预设的园区轮廓。 */
+    var full = new Float32Array(MAXN * 3), si;
+    for (var fi = 0; fi < MAXN; fi++) {
+      si = (fi % count) * 3;
+      full[fi * 3] = normalized[si];
+      full[fi * 3 + 1] = normalized[si + 1];
+      full[fi * 3 + 2] = normalized[si + 2];
+    }
+    return full;
   }
 
   /* ---------- 压轴：整馆场景表面采样（两遍法，不占大内存） ----------
@@ -706,6 +715,8 @@
   var loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
   function applyPreset(P) {
     if (!store[P.id]) return;
+    /* 防止点数不同的预设把上一模型的尾部坐标留在 base 中。 */
+    base.fill(0);
     base.set(store[P.id]);
     spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
     if (P.id === '__museum') {
