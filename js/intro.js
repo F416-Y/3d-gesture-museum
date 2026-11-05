@@ -23,14 +23,6 @@
   }
   var overlay = document.getElementById('intro');
   if (!overlay || !window.THREE) return;
-  /* 开屏只属于一次项目会话：站内切换平面图 / 登录 / 收藏时不重复播放。 */
-  var INTRO_SEEN_KEY = 'cloudink.intro.seen.v1';
-  try {
-    if (window.sessionStorage && sessionStorage.getItem(INTRO_SEEN_KEY) === '1') {
-      overlay.style.display = 'none';
-      return;
-    }
-  } catch (e) { /* 存储不可用时继续正常显示开屏 */ }
   var canvas = document.getElementById('introCanvas');
   var inkFx = document.getElementById('introInkFx');
   var trailFxCanvas = document.getElementById('introTrailFx');
@@ -423,7 +415,8 @@
 
   /* ---------- 墨形粒子云（只在墨团显形后启用） ---------- */
   var tmpC = new THREE.Color(), i, r;
-  var MAXN = 30000;
+  /* 开场优先保证视频流畅；园区轮廓用 2.2 万点已足够辨识。 */
+  var MAXN = 22000;
   var pos = new Float32Array(MAXN * 3);
   var col = new Float32Array(MAXN * 3);
   var base = new Float32Array(MAXN * 3);
@@ -604,6 +597,7 @@
       out[k * 3 + 1] = tris[o + 1] * w + tris[o + 4] * u + tris[o + 7] * v;
       out[k * 3 + 2] = tris[o + 2] * w + tris[o + 5] * u + tris[o + 8] * v;
     }
+    /* 保留该模型自己的采样数量，不能用其他模型的点补齐。 */
     return normalizePts(out, 3.4, count);
   }
 
@@ -703,7 +697,7 @@
     { id: 'horse', fb: fbHorse },
     { id: '__museum', fb: null }        /* 第四段显示外观整体：从实际主场景采样 */
   ];
-  var store = {}, cur = 0;
+  var store = {}, presetPointCounts = {}, activePresetPointCount = MAXN, cur = 0;
   var introPresetCount = 4; /* 青铜鼎、石狮、铜奔马、外观整体；不再单独展示树/石头 */
   var introPresetLabels = ['青铜方鼎', '石狮', '铜奔马', '园区外观'];
   var introPresetIndex = 0;
@@ -713,14 +707,18 @@
   var loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
   function applyPreset(P) {
     if (!store[P.id]) return;
+    activePresetPointCount = presetPointCounts[P.id] || MAXN;
+    /* 防止点数不同的预设把上一模型的尾部坐标留在 base 中。 */
+    base.fill(0);
     base.set(store[P.id]);
     spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
     if (P.id === '__museum') {
       rotXT = 0.55;               /* 三分俯视，呈现沙盘感 */
-      if (density < 24000) {      /* 全园粒子多，自动提密度 */
-        density = 24000;
-        if (dEl) dEl.value = 24000;
-        if (dVal) dVal.textContent = '24000 粒';
+      var museumDensity = Math.min(MAXN, 22000);
+      if (density < museumDensity) { /* 全园粒子多，但不超过实际缓冲区 */
+        density = museumDensity;
+        if (dEl) dEl.value = museumDensity;
+        if (dVal) dVal.textContent = museumDensity + ' 粒';
       }
     }
   }
@@ -747,15 +745,25 @@
         var root = (window.MuseumScene && window.MuseumScene.ctx && window.MuseumScene.ctx.scene) ||
           (window.MuseumExteriorLayout && window.MuseumExteriorLayout.ctx && window.MuseumExteriorLayout.ctx.scene);
         var bridgeReady = root && (root.getObjectByName('central-arch-bridge-glb') || root.getObjectByName('central-arch-bridge'));
-        if ((!root || !bridgeReady) && museumTries++ < 75) {
+        if ((!root || !bridgeReady) && museumTries++ < 100) {
           setTimeout(captureMuseumWhenReady, 80);
           return;
         }
-        var pts = null;
-        try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
-        store[P.id] = pts || fbGate();
-        finishPreset(P);
-        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
+        if (window.MuseumExteriorSlots && window.MuseumExteriorSlots.ready) {
+          window.MuseumExteriorSlots.ready.then(captureMuseumWhenReady);
+          return;
+        }
+        /* 让视频先拿到一帧，再把重采样放入空闲帧，避免阻塞开场首帧。 */
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            var pts = null;
+            try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
+            store[P.id] = pts || fbGate();
+            presetPointCounts[P.id] = MAXN;
+            finishPreset(P);
+            setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
+          });
+        });
       }
       setTimeout(captureMuseumWhenReady, 30);
       return;
@@ -765,9 +773,11 @@
       var pts = null;
       try { pts = sampleObject(g.scene, 12000); } catch (e) { pts = null; }
       store[P.id] = pts || P.fb();
+      presetPointCounts[P.id] = pts ? 12000 : MAXN;
       finishPreset(P);
     }, undefined, function () {
       store[P.id] = P.fb();
+      presetPointCounts[P.id] = MAXN;
       finishPreset(P);
     });
   }
@@ -881,9 +891,6 @@
   var running = true;
   enterBtn.addEventListener('click', function () {
     if (enterBtn.disabled) return;
-    try {
-      if (window.sessionStorage) sessionStorage.setItem(INTRO_SEEN_KEY, '1');
-    } catch (e) { /* 私密模式或存储受限时不阻断进入 */ }
     overlay.classList.add('bye');
     running = false;
     pointer.inside = false;
@@ -1138,7 +1145,7 @@
     cloud.rotation.y = spin + rotY;
     cloud.rotation.x = rotX * 0.7;
     if (cloud.visible) {
-      var n = density, i3, br;
+      var n = Math.min(density, activePresetPointCount), i3, br;
       for (var k = 0; k < n; k++) {
         i3 = k * 3;
         br = spread + Math.sin(t * 1.8 + phase[k]) * 0.035;
