@@ -708,11 +708,7 @@
   function applyPreset(P) {
     if (!store[P.id]) return;
     activePresetPointCount = presetPointCounts[P.id] || MAXN;
-<<<<<<< Updated upstream
-    /* 防止点数不同的预设把上一模型的尾部坐标留在 base 中。 */
-=======
     /* 当前模型只使用自己的点数，清空上一模型留下的尾部坐标。 */
->>>>>>> Stashed changes
     base.fill(0);
     base.set(store[P.id]);
     spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
@@ -753,7 +749,6 @@
           setTimeout(captureMuseumWhenReady, 80);
           return;
         }
-<<<<<<< Updated upstream
         if (window.MuseumExteriorSlots && window.MuseumExteriorSlots.ready) {
           window.MuseumExteriorSlots.ready.then(captureMuseumWhenReady);
           return;
@@ -769,14 +764,6 @@
             setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
           });
         });
-=======
-        var pts = null;
-        try { pts = sampleMuseum(MAXN); } catch (e) { pts = null; }
-        store[P.id] = pts || fbGate();
-        presetPointCounts[P.id] = MAXN;
-        finishPreset(P);
-        setStatus(handSeen ? '手势追踪中 · 张开手掌让粒子散开' : '园区外观就绪 · 移动鼠标旋转');
->>>>>>> Stashed changes
       }
       setTimeout(captureMuseumWhenReady, 30);
       return;
