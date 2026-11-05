@@ -53,6 +53,13 @@
   var cursorMotion = { x: 0, y: 0, tilt: 0 };
   function setStatus(s) { statusEl.textContent = s; }
 
+  /* 开屏一出现就显示毛笔，避免视频层播放时用户误以为鼠标笔刷丢失。 */
+  if (inkCursor) {
+    inkCursor.style.left = (window.innerWidth * 0.5) + 'px';
+    inkCursor.style.top = (window.innerHeight * 0.55) + 'px';
+    inkCursor.classList.add('visible');
+  }
+
   /* 进入按钮不等待粒子轮播或模型预加载，开屏阶段即可进入园区。 */
   if (enterBtn) {
     enterBtn.disabled = false;
@@ -375,7 +382,6 @@
     introPresetSequenceDone = false;
     cur = 0;
     pointer.ui = true;
-    if (inkCursor) inkCursor.classList.remove('visible');
     overlay.classList.add('revealing');
     if (!store[PRESETS[cur].id]) modelReady = false;
     /* 首个预设决定开场能否启动，其余三个并行预加载，避免轮播时出现空帧。 */
@@ -708,7 +714,7 @@
   function applyPreset(P) {
     if (!store[P.id]) return;
     activePresetPointCount = presetPointCounts[P.id] || MAXN;
-    /* 防止点数不同的预设把上一模型的尾部坐标留在 base 中。 */
+    /* 当前模型只使用自己的点数，清空上一模型留下的尾部坐标。 */
     base.fill(0);
     base.set(store[P.id]);
     spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
