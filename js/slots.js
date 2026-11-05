@@ -9,7 +9,7 @@ window.MuseumExteriorSlots = {
   var resolveReady;
   window.MuseumExteriorSlots.ready = new Promise(function (resolve) { resolveReady = resolve; });
   (function upgradeParts() {
-      if (!THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { resolveReady(); return; }
+      if (window.MuseumRenderQuality === "low" || !THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { resolveReady(); return; }
       var slots = window.MuseumExteriorLayout.slots;
       var loader = new THREE.GLTFLoader();
       var cache = {};

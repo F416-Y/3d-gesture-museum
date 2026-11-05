@@ -2861,6 +2861,7 @@ window.MuseumScene = (function () {
       var openAngle = isEdge ? (ry > 0 ? 0.12 : -0.12) : 0;
 
       var door = new _g.Group();
+      door.userData.noStaticBatch = true;
       door.position.set(x, y0, cz);
       door.rotation.y = ry + openAngle;
       // 注册微风动画：基础角度 + 随机相位

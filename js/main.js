@@ -22,6 +22,10 @@ window.MuseumMain = (function () {
   var RETURN_STATE_KEY = "cloudink.exterior.return-state.v1";
   var seatPromptEl = null;
   var seated = null;
+  var sceneActive = false;
+  var quality = null;
+  var batchStats = null;
+  var lowFpsStreak = 0;
 
   /* ---------- 全景俯瞰模式 ----------
    * player.js 每帧把相机锁在 1.6m 人眼高度、俯仰角为 0，所以只能第一人称。
@@ -64,6 +68,94 @@ window.MuseumMain = (function () {
     }
   }
 
+  /* ---------- 渲染预算与静态合批 ---------- */
+  function detectRenderBudget() {
+    var dpr = Math.max(1, window.devicePixelRatio || 1);
+    var width = window.innerWidth || 1280;
+    var height = window.innerHeight || 720;
+    var pixels = width * height * dpr * dpr;
+    var memory = Number(navigator.deviceMemory) || 8;
+    var cores = Number(navigator.hardwareConcurrency) || 8;
+    var coarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    var level = "high";
+    if (coarse || width <= 900 || pixels > 4100000 || memory <= 4 || cores <= 4) level = "low";
+    else if (pixels > 2400000 || memory <= 8 || cores <= 6) level = "medium";
+    var forced = new URLSearchParams(location.search).get("quality");
+    if (forced === "low" || forced === "medium" || forced === "high") level = forced;
+    var cap = level === "low" ? 1.0 : level === "medium" ? 1.25 : 1.5;
+    return {
+      level: level,
+      basePixelRatio: Math.min(dpr, cap),
+      renderScale: level === "low" ? 0.85 : 1,
+      shadows: level !== "low",
+      shadowSize: level === "medium" ? 512 : 1024,
+    };
+  }
+
+  function applyRendererSize() {
+    if (!renderer || !camera) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(quality.basePixelRatio * quality.renderScale);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  function applyShadowBudget() {
+    if (!renderer || !scene) return;
+    renderer.shadowMap.enabled = !!quality.shadows;
+    scene.traverse(function (node) {
+      if (!node.isDirectionalLight || !node.castShadow) return;
+      node.shadow.mapSize.set(quality.shadowSize, quality.shadowSize);
+      if (node.shadow.map) {
+        node.shadow.map.dispose();
+        node.shadow.map = null;
+      }
+    });
+  }
+
+  function updateAdaptiveQuality(fps) {
+    if (!quality || !renderer) return;
+    if (fps < 26) lowFpsStreak++;
+    else lowFpsStreak = 0;
+    if (lowFpsStreak < 2) return;
+    lowFpsStreak = 0;
+    var oldScale = quality.renderScale;
+    quality.renderScale = Math.max(0.62, quality.renderScale - 0.12);
+    if (fps < 28 && quality.shadows) {
+      quality.shadows = false;
+      applyShadowBudget();
+    }
+    if (quality.renderScale !== oldScale || !quality.shadows) {
+      applyRendererSize();
+      console.warn("[性能] 自动降级画质：FPS=" + fps + "，渲染比例=" + quality.renderScale.toFixed(2) + "，阴影=" + (quality.shadows ? "开" : "关"));
+    }
+  }
+
+  function scheduleStaticBatch() {
+    if (!scene || !window.MuseumStaticBatcher) return Promise.resolve(null);
+    var started = Date.now();
+    function modelsSettled() {
+      if (!window.MuseumModels || !window.MuseumModels.stats) return true;
+      var stats = window.MuseumModels.stats();
+      return !stats.requested || stats.ready >= stats.requested || Date.now() - started > 12000;
+    }
+    return new Promise(function (resolve) {
+      function run() {
+        if (!modelsSettled()) { setTimeout(run, 300); return; }
+        window.MuseumStaticBatcher.optimize(scene).then(function (result) {
+          batchStats = result;
+          console.info("[性能] 静态合批完成：" + result.beforeMeshes + " → " + result.afterMeshes + " meshes，共 " + result.batches + " 批");
+          resolve(result);
+        }).catch(function (error) {
+          console.warn("[性能] 静态合批失败，继续使用原场景：", error && error.message ? error.message : error);
+          resolve(null);
+        });
+      }
+      var ready = window.MuseumExteriorSlots && window.MuseumExteriorSlots.ready;
+      if (ready && typeof ready.then === "function") ready.then(run).catch(run);
+      else run();
+    });
+  }
   /* ---------- 初始化 ---------- */
   function init() {
     // 必须先初始化 UI：getStage() / getVideo() 依赖 init() 里缓存的 DOM 引用
@@ -71,17 +163,38 @@ window.MuseumMain = (function () {
     seatPromptEl = document.getElementById("seat-prompt");
 
     // 渲染器
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    quality = detectRenderBudget();
+    window.MuseumRenderQuality = quality.level;
+    renderer = new THREE.WebGLRenderer({
+      antialias: quality.level === "high",
+      powerPreference: "high-performance",
+    });
+    renderer.setPixelRatio(quality.basePixelRatio * quality.renderScale);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
     // 色调映射：把超过 1.0 的高光压回来，避免地面/墙面一片死白（此前中轴道路会被曝成浅灰）
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // 曝光：走外观原型布局时按原型的 1.12，其余保持 1.0
   renderer.toneMappingExposure = (window.MuseumExteriorLayout && window.MuseumExteriorLayout.build) ? 1.12 : 1.0;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = quality.shadows;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     MuseumUI.getStage().appendChild(renderer.domElement);
+    renderer.domElement.addEventListener("webglcontextlost", function (event) {
+      event.preventDefault();
+      sceneActive = false;
+      console.warn("[性能] WebGL 上下文丢失，已暂停渲染等待恢复");
+      if (MuseumUI && MuseumUI.toast) MuseumUI.toast("显卡渲染负载过高，正在恢复画面…", 3200);
+    });
+    renderer.domElement.addEventListener("webglcontextrestored", function () {
+      if (quality) {
+        quality.shadows = false;
+        quality.renderScale = Math.min(quality.renderScale, 0.75);
+        applyShadowBudget();
+        applyRendererSize();
+      }
+      setSceneActive(true);
+      console.warn("[性能] WebGL 上下文已恢复，已切换到低负载模式");
+    });
 
     // 颜色管理：r147 默认 legacy 模式会把十六进制颜色当线性值，再经 sRGB 输出被整体提亮
     //（道路材质 rgb(87,81,74) 会被渲染成 rgb(200,195,185)，草坪绿也会褪成灰绿）。
@@ -95,6 +208,9 @@ window.MuseumMain = (function () {
 
     // 初始化各模块
     MuseumScene.init({ scene: scene, camera: camera });
+    applyShadowBudget();
+    var optimization = scheduleStaticBatch();
+    if (window.MuseumScene) window.MuseumScene.optimization = optimization;
     if (window.MuseumAvatar) MuseumAvatar.init(scene);
     /* 昼夜氛围：接原型的 applyNight（js/lighting.js），场景建好后初始化 */
     if (window.MuseumLighting) window.MuseumLighting.init(renderer, scene, window.MuseumExteriorLayout);
@@ -157,8 +273,13 @@ window.MuseumMain = (function () {
       MuseumUI.toast("欢迎来到云间入墨 · 伸出手掌开始漫游");
     }, 400);
 
-    // 自动尝试开启手势（失败自动降级为键盘）
-    toggleCamera(true);
+    // 摄像头手势改为用户主动开启，避免 MediaPipe 与 3D 场景同时运行导致卡顿。
+    MuseumUI.setCameraButton(false);
+    MuseumUI.showCam(false);
+
+    // 开屏页显示期间暂停主场景更新/渲染，避免两个 WebGL 场景同时占用 GPU。
+    var intro = document.getElementById("intro");
+    sceneActive = !intro || intro.classList.contains("bye") || getComputedStyle(intro).display === "none";
 
     // 启动主循环
     animate();
@@ -391,11 +512,15 @@ window.MuseumMain = (function () {
   }
 
   function resize() {
-    window.addEventListener("resize", function () {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    window.addEventListener("resize", applyRendererSize);
+  }
+
+  function setSceneActive(active) {
+    sceneActive = !!active;
+    if (!sceneActive) return;
+    clock.getDelta();
+    fpsFrames = 0;
+    fpsStamp = (typeof performance !== "undefined" ? performance.now() : Date.now());
   }
 
   /* ---------- 摄像头开关 ---------- */
@@ -479,6 +604,55 @@ window.MuseumMain = (function () {
     MuseumUI.toast("已重置视角");
   }
 
+  /* ---------- 运行时资源快照（低帧率诊断用） ---------- */
+  function getRuntimeStats() {
+    if (!renderer || !scene) return null;
+    var counts = { objects: 0, meshes: 0, instancedMeshes: 0, lights: 0, pointLights: 0, shadowCasters: 0 };
+    var geometries = new Set(), materials = new Set(), textures = new Set();
+    scene.traverse(function (node) {
+      counts.objects++;
+      if (node.isLight) {
+        counts.lights++;
+        if (node.isPointLight) counts.pointLights++;
+      }
+      if (!node.isMesh) return;
+      counts.meshes++;
+      if (node.isInstancedMesh) counts.instancedMeshes++;
+      if (node.castShadow) counts.shadowCasters++;
+      if (node.geometry) geometries.add(node.geometry.uuid);
+      if (node.material) {
+        var list = Array.isArray(node.material) ? node.material : [node.material];
+        for (var i = 0; i < list.length; i++) {
+          var m = list[i];
+          materials.add(m.uuid);
+          ["map", "normalMap", "roughnessMap", "metalnessMap", "alphaMap", "emissiveMap"].forEach(function (key) {
+            if (m[key]) textures.add(m[key].uuid);
+          });
+        }
+      }
+    });
+    counts.geometries = geometries.size;
+    counts.materials = materials.size;
+    counts.textures = textures.size;
+    return {
+      scene: counts,
+      quality: quality,
+      batching: batchStats,
+      active: sceneActive,
+      renderer: {
+        calls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        points: renderer.info.render.points,
+        geometries: renderer.info.memory.geometries,
+        textures: renderer.info.memory.textures,
+        pixelRatio: renderer.getPixelRatio(),
+        drawingBuffer: [renderer.domElement.width, renderer.domElement.height],
+        cssSize: [renderer.domElement.clientWidth, renderer.domElement.clientHeight],
+        shadows: renderer.shadowMap.enabled,
+        antialias: renderer.getContext().getContextAttributes().antialias,
+      },
+    };
+  }
   /* ---------- 统一输入合成 ---------- */
   function composeInput(gs) {
     return {
@@ -498,12 +672,15 @@ window.MuseumMain = (function () {
 
   function animate() {
     requestAnimationFrame(animate);
+    if (!sceneActive) return;
     var dt = Math.min(clock.getDelta(), 0.05);
 
     fpsFrames++;
     var nowMs = (typeof performance !== "undefined" ? performance.now() : Date.now());
     if (nowMs - fpsStamp >= 2000) {
-      console.info("[帧率] " + Math.round(fpsFrames * 1000 / (nowMs - fpsStamp)) + " fps");
+      var fps = Math.round(fpsFrames * 1000 / (nowMs - fpsStamp));
+      console.info("[帧率] " + fps + " fps");
+      updateAdaptiveQuality(fps);
       fpsFrames = 0; fpsStamp = nowMs;
     }
 
@@ -551,6 +728,8 @@ window.MuseumMain = (function () {
     setPanorama: setPanorama,
     togglePanorama: function () { setPanorama(!panorama.on); },
     isPanorama: function () { return panorama.on; },
+    getRuntimeStats: getRuntimeStats,
+    setSceneActive: setSceneActive,
   };
 })();
 

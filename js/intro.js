@@ -144,7 +144,7 @@
   }
 
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (window.innerWidth * window.innerHeight > 2000000 ? 1.25 : 1.5)));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x000000, 0);   /* 透明底，露出 CSS 宣纸渐变 */
   renderer.outputEncoding = THREE.sRGBEncoding;
@@ -746,6 +746,8 @@
     if (P.id === '__museum') {
       setStatus('正在生成园区外观粒子…');
       var museumTries = 0;
+      var museumSlotsWaitStarted = false;
+      var museumOptimizationWaitStarted = false;
       function captureMuseumWhenReady() {
         /* 中心桥是异步 GLB；必须等桥挂入主场景后再采样，避免外观模型缺桥。 */
         var root = (window.MuseumScene && window.MuseumScene.ctx && window.MuseumScene.ctx.scene) ||
@@ -755,8 +757,16 @@
           setTimeout(captureMuseumWhenReady, 80);
           return;
         }
-        if (window.MuseumExteriorSlots && window.MuseumExteriorSlots.ready) {
+        if (window.MuseumExteriorSlots && window.MuseumExteriorSlots.ready && !museumSlotsWaitStarted) {
+          museumSlotsWaitStarted = true;
           window.MuseumExteriorSlots.ready.then(captureMuseumWhenReady);
+          return;
+        }
+        if (window.MuseumScene && window.MuseumScene.optimization && !museumOptimizationWaitStarted) {
+          museumOptimizationWaitStarted = true;
+          window.MuseumScene.optimization.then(function () {
+            setTimeout(captureMuseumWhenReady, 0);
+          });
           return;
         }
         /* 让视频先拿到一帧，再把重采样放入空闲帧，避免阻塞开场首帧。 */
@@ -905,6 +915,14 @@
     setTimeout(function () {
       overlay.style.display = 'none';
       renderer.dispose();
+      if (renderer.forceContextLoss) renderer.forceContextLoss();
+      if (canvas && canvas.parentNode) canvas.remove();
+      overlay.querySelectorAll('video').forEach(function (video) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      });
+      if (window.MuseumMain && MuseumMain.setSceneActive) MuseumMain.setSceneActive(true);
     }, 850);
   });
 
