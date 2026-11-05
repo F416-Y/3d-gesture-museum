@@ -8,8 +8,16 @@ window.MuseumExteriorSlots = {
   install: function (scene) {
   var resolveReady;
   window.MuseumExteriorSlots.ready = new Promise(function (resolve) { resolveReady = resolve; });
+  var readySettled = false;
+  function finishReady() {
+    if (readySettled) return;
+    readySettled = true;
+    resolveReady();
+  }
+  /* 真模型是渐进替换，不能让开场粒子永远等待某个大 GLB。 */
+  setTimeout(finishReady, 4500);
   (function upgradeParts() {
-      if (!THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { resolveReady(); return; }
+      if (!THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { finishReady(); return; }
       var slots = window.MuseumExteriorLayout.slots;
       var loader = new THREE.GLTFLoader();
       var cache = {};
@@ -609,7 +617,7 @@ window.MuseumExteriorSlots = {
         var L = { table: fs[0], shelf: fs[1], display: fs[2], stool: fs[3], lamp: fs[4], warrior: fs[5], horse: fs[6], venus: fs[7] };
         slots.hall.forEach(function (h) { furnishHall(h, L); });
         report();
-        resolveReady();
+        finishReady();
       });
     })();
   }

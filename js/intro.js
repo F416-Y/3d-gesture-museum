@@ -895,15 +895,18 @@
   /* ---------- 进入博物馆：收场并释放资源 ---------- */
   var running = true;
   enterBtn.addEventListener('click', function () {
-    if (enterBtn.disabled) return;
+    /* 进入园区不依赖粒子轮播、视频结束或模型预加载。 */
+    enterBtn.disabled = false;
+    enterBtn.setAttribute('aria-disabled', 'false');
     overlay.classList.add('bye');
+    overlay.style.pointerEvents = 'none';
     running = false;
     pointer.inside = false;
     pointer.ui = true;
     if (inkCursor) inkCursor.classList.remove('visible');
     setTimeout(function () {
       overlay.style.display = 'none';
-      renderer.dispose();
+      if (renderer && renderer.dispose) renderer.dispose();
     }, 850);
   });
 
