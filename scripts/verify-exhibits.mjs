@@ -126,6 +126,29 @@ for (const ex of snapshot.exhibits) {
   if (!hallIds.has(ex.hall)) problems.push(ex.id + " 的 hall 不存在：" + ex.hall);
   if ([...ex.intro].length < 80) problems.push(ex.id + " 的 intro 少于 80 字");
   if ([...ex.appreciation].length < 120) problems.push(ex.id + " 的 appreciation 少于 120 字");
+  if (ex.features != null) {
+    if (!Array.isArray(ex.features) || !ex.features.length) problems.push(ex.id + " 的 features 必须是非空数组");
+    else if (ex.features.some((item) => typeof item !== "string" || !item.trim())) problems.push(ex.id + " 的 features 存在空项");
+  }
+  if (ex.hotspots != null) {
+    if (!Array.isArray(ex.hotspots) || !ex.hotspots.length) problems.push(ex.id + " 的 hotspots 必须是非空数组");
+    else {
+      const hotspotIds = new Set();
+      for (const hotspot of ex.hotspots) {
+        if (!hotspot || typeof hotspot.id !== "string" || !hotspot.id.trim()) problems.push(ex.id + " 存在缺少 id 的画作热点");
+        else if (hotspotIds.has(hotspot.id)) problems.push(ex.id + " 存在重复画作热点 id：" + hotspot.id);
+        else hotspotIds.add(hotspot.id);
+        if (typeof hotspot.label !== "string" || !hotspot.label.trim()) problems.push(ex.id + " 的画作热点缺少 label");
+        if (typeof hotspot.text !== "string" || [...hotspot.text].length < 20) problems.push(ex.id + " 的画作热点文案过短：" + (hotspot.id || "unknown"));
+        if (!Number.isFinite(Number(hotspot.x)) || Number(hotspot.x) < 0 || Number(hotspot.x) > 100) problems.push(ex.id + " 的画作热点 x 越界：" + (hotspot.id || "unknown"));
+        if (!Number.isFinite(Number(hotspot.y)) || Number(hotspot.y) < 0 || Number(hotspot.y) > 100) problems.push(ex.id + " 的画作热点 y 越界：" + (hotspot.id || "unknown"));
+      }
+    }
+  }
+}
+const wuniutu = snapshot.exhibits.find((ex) => ex.id === "wuniutu");
+if (!wuniutu || !Array.isArray(wuniutu.hotspots) || wuniutu.hotspots.length !== 6) {
+  problems.push("五牛图必须包含 5 个头牛热点和 1 个收藏印热点");
 }
 
 const spotById = new Map();

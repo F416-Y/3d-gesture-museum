@@ -150,6 +150,149 @@ window.MuseumUI = (function () {
     if (cancel) cancel.addEventListener("click", function () { hidePanel(); if (onCancel) onCancel(); });
   }
 
+  /* ---------- 展品分层信息与画作局部热点 ---------- */
+  function hasHotspots(ex) {
+    return !!(ex && Array.isArray(ex.hotspots) && ex.hotspots.length);
+  }
+
+  function renderArtVisual(ex) {
+    if (ex.model) {
+      return '<div class="p-model-viewer" data-model-url="' + esc(ex.model) + '">' +
+        '<canvas class="p-model-canvas" aria-label="' + esc(ex.title) + ' 360度模型预览"></canvas>' +
+        '<div class="p-model-hint">拖动旋转 · 滚轮缩放 · 双击复位</div>' +
+      '</div>';
+    }
+    if (!ex.image) return '<div class="p-art-ph"><span>' + esc(ex.title) + '</span></div>';
+    if (!hasHotspots(ex)) return '<img class="p-art-img" src="' + esc(ex.image) + '" alt="' + esc(ex.title) + ' 画作" />';
+
+    var markers = '';
+    for (var i = 0; i < ex.hotspots.length; i++) {
+      var spot = ex.hotspots[i] || {};
+      var x = Math.max(0, Math.min(100, Number(spot.x) || 0));
+      var y = Math.max(0, Math.min(100, Number(spot.y) || 0));
+      var marker = spot.kind === "seal" ? "印" : String(i + 1);
+      markers += '<button type="button" class="p-hotspot" data-hotspot-index="' + i + '" ' +
+        'style="left:' + x + '%;top:' + y + '%" aria-label="查看' + esc(spot.label || ("局部 " + (i + 1))) + '" aria-pressed="false">' +
+        marker + '</button>';
+    }
+    return '<div class="p-art-frame">' +
+      '<img class="p-art-img" src="' + esc(ex.image) + '" alt="' + esc(ex.title) + ' 画作" />' +
+      '<div class="p-hotspots" role="group" aria-label="画作局部热点">' + markers + '</div>' +
+      '<div class="p-hotspot-tip">点击画中数字查看局部</div>' +
+      '<div class="p-hotspot-detail" id="p-hotspot-detail" aria-live="polite" hidden>' +
+        '<button type="button" class="p-hotspot-close" id="p-hotspot-close" aria-label="关闭局部说明">×</button>' +
+        '<strong id="p-hotspot-title"></strong>' +
+        '<p id="p-hotspot-copy"></p>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function sentencesOf(text) {
+    var parts = String(text || "").match(/[^。！？]+[。！？]?/g) || [];
+    return parts.map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  function featureItems(ex) {
+    if (ex && Array.isArray(ex.features) && ex.features.length) return ex.features;
+    var parts = sentencesOf(ex && ex.appreciation);
+    if (parts.length > 1) return [parts.slice(0, Math.min(2, parts.length - 1)).join("")];
+    return [ex && ex.appreciation ? ex.appreciation : "暂无作品特点摘要。"];
+  }
+
+  function detailCopy(ex) {
+    if (ex && Array.isArray(ex.features) && ex.features.length) return ex.appreciation || "";
+    var parts = sentencesOf(ex && ex.appreciation);
+    return parts.length > 2 ? parts.slice(2).join("") : (ex && ex.appreciation) || "";
+  }
+
+  function renderExhibitTabs(ex) {
+    var features = featureItems(ex).map(function (item) {
+      return '<li>' + esc(item) + '</li>';
+    }).join("");
+    var details = detailCopy(ex);
+    return '<div class="p-tabs" role="tablist" aria-label="展品信息层级">' +
+        '<button type="button" class="p-tab is-active" role="tab" aria-selected="true" aria-controls="p-panel-basic" data-exhibit-tab="basic">基础信息</button>' +
+        '<button type="button" class="p-tab" role="tab" aria-selected="false" aria-controls="p-panel-features" data-exhibit-tab="features" tabindex="-1">作品特点</button>' +
+        '<button type="button" class="p-tab" role="tab" aria-selected="false" aria-controls="p-panel-details" data-exhibit-tab="details" tabindex="-1">细节赏析</button>' +
+      '</div>' +
+      '<div class="p-tab-panels">' +
+        '<section class="p-tab-panel" id="p-panel-basic" role="tabpanel" data-exhibit-panel="basic">' +
+          '<div class="p-meta">' +
+            metaItem("作者", ex.artist) + metaItem("年代", ex.dynasty + (ex.era ? " · " + ex.era : "")) +
+            metaItem("形制", ex.medium) + metaItem("馆藏", ex.collection) +
+          '</div>' +
+          '<p class="p-desc">' + esc(ex.intro) + '</p>' +
+        '</section>' +
+        '<section class="p-tab-panel" id="p-panel-features" role="tabpanel" data-exhibit-panel="features" hidden>' +
+          '<ul class="p-feature-list">' + features + '</ul>' +
+        '</section>' +
+        '<section class="p-tab-panel" id="p-panel-details" role="tabpanel" data-exhibit-panel="details" hidden>' +
+          '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(details) + '</p></div>' +
+          (hasHotspots(ex) ? '<p class="p-hotspot-hint">点击左侧画中的数字热点，可查看五头牛与收藏信息的局部解读。</p>' : '') +
+        '</section>' +
+      '</div>';
+  }
+
+  function activateExhibitTab(name) {
+    if (!el.panelBody) return;
+    var tabs = el.panelBody.querySelectorAll("[data-exhibit-tab]");
+    var panels = el.panelBody.querySelectorAll("[data-exhibit-panel]");
+    for (var i = 0; i < tabs.length; i++) {
+      var active = tabs[i].getAttribute("data-exhibit-tab") === name;
+      tabs[i].classList.toggle("is-active", active);
+      tabs[i].setAttribute("aria-selected", active ? "true" : "false");
+      tabs[i].tabIndex = active ? 0 : -1;
+    }
+    for (var j = 0; j < panels.length; j++) panels[j].hidden = panels[j].getAttribute("data-exhibit-panel") !== name;
+  }
+
+  function bindExhibitTabs() {
+    if (!el.panelBody) return;
+    var tabs = el.panelBody.querySelectorAll("[data-exhibit-tab]");
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].addEventListener("click", function () { activateExhibitTab(this.getAttribute("data-exhibit-tab")); });
+      tabs[i].addEventListener("keydown", function (e) {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        e.preventDefault(); e.stopPropagation();
+        var current = Array.prototype.indexOf.call(tabs, this);
+        var next = (current + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+        activateExhibitTab(tabs[next].getAttribute("data-exhibit-tab"));
+        tabs[next].focus();
+      });
+    }
+  }
+
+  function bindHotspots(ex) {
+    if (!el.panelBody || !hasHotspots(ex)) return;
+    var buttons = el.panelBody.querySelectorAll("[data-hotspot-index]");
+    var detail = document.getElementById("p-hotspot-detail");
+    var title = document.getElementById("p-hotspot-title");
+    var copy = document.getElementById("p-hotspot-copy");
+    var close = document.getElementById("p-hotspot-close");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function () {
+        var index = Number(this.getAttribute("data-hotspot-index"));
+        var spot = ex.hotspots[index];
+        if (!spot) return;
+        for (var j = 0; j < buttons.length; j++) {
+          var on = buttons[j] === this;
+          buttons[j].classList.toggle("is-active", on);
+          buttons[j].setAttribute("aria-pressed", on ? "true" : "false");
+        }
+        if (title) title.textContent = spot.label || "局部解读";
+        if (copy) copy.textContent = spot.text || "";
+        if (detail) detail.hidden = false;
+        activateExhibitTab("details");
+      });
+    }
+    if (close) close.addEventListener("click", function () {
+      if (detail) detail.hidden = true;
+      for (var j = 0; j < buttons.length; j++) {
+        buttons[j].classList.remove("is-active");
+        buttons[j].setAttribute("aria-pressed", "false");
+      }
+    });
+  }
   /* ---------- 鉴赏弹窗（含收藏 + 评论区） ---------- */
   function showExhibit(ex) {
     if (!el.panel || !el.panelBody) return;
@@ -159,29 +302,15 @@ window.MuseumUI = (function () {
     social.favLoading = false;
     social.comments = [];
 
-    var artVisual = ex.model
-      ? '<div class="p-model-viewer" data-model-url="' + esc(ex.model) + '">' +
-          '<canvas class="p-model-canvas" aria-label="' + esc(ex.title) + ' 360度模型预览"></canvas>' +
-          '<div class="p-model-hint">拖动旋转 · 滚轮缩放 · 双击复位</div>' +
-        '</div>'
-      : ex.image
-      ? '<img class="p-art-img" src="' + ex.image + '" alt="' + esc(ex.title) + ' 画作" />'
-      : '<div class="p-art-ph"><span>' + esc(ex.title) + '</span></div>';
-    var artCol = '<div class="p-art">' + artVisual + paintingNav(ex) + '</div>';
+    var artVisual = renderArtVisual(ex);
+    var artCol = '<div class="p-art' + (hasHotspots(ex) ? ' has-hotspots' : '') + '">' + artVisual + paintingNav(ex) + '</div>';
     el.panelBody.innerHTML =
       '<div class="panel-card">' +
         '<h2>' + esc(ex.title) + '</h2>' +
         '<div class="p-body">' +
           artCol +
           '<div class="p-info">' +
-            '<div class="p-meta">' +
-              metaItem("作者", ex.artist) +
-              metaItem("年代", ex.dynasty + (ex.era ? " · " + ex.era : "")) +
-              metaItem("形制", ex.medium) +
-              metaItem("馆藏", ex.collection) +
-            '</div>' +
-            '<p class="p-desc">' + esc(ex.intro) + '</p>' +
-            '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(ex.appreciation) + '</p></div>' +
+            renderExhibitTabs(ex) +
             renderSocial() +
           '</div>' +
         '</div>' +
@@ -190,6 +319,8 @@ window.MuseumUI = (function () {
     el.panel.classList.add("open");
     el.panel.setAttribute("aria-hidden", "false");
     if (ex.model) initModelViewer(ex.model);
+    bindExhibitTabs();
+    bindHotspots(ex);
 
     var favBtn = document.getElementById("p-fav-btn");
     if (favBtn) favBtn.addEventListener("click", function () { toggleFav(ex); });

@@ -9,6 +9,7 @@
     "build": "vite build && node scripts/postbuild.mjs",
     "preview": "vite preview",
     "verify:exhibits": "node scripts/verify-exhibits.mjs",
+    "record:exhibit-demo": "node scripts/record-exhibit-detail-demo.mjs",
     "verify:art-viewer": "node scripts/verify-art-viewer.mjs"
   },
   "dependencies": {
