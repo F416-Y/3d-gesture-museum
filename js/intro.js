@@ -721,10 +721,11 @@
     spread = 0.35; spreadT = 1;   /* 换模型时先聚后散，有重塑感 */
     if (P.id === '__museum') {
       rotXT = 0.55;               /* 三分俯视，呈现沙盘感 */
-      if (density < 24000) {      /* 全园粒子多，自动提密度 */
-        density = 24000;
-        if (dEl) dEl.value = 24000;
-        if (dVal) dVal.textContent = '24000 粒';
+      var museumDensity = Math.min(MAXN, 22000);
+      if (density < museumDensity) { /* 全园粒子多，但不超过实际缓冲区 */
+        density = museumDensity;
+        if (dEl) dEl.value = museumDensity;
+        if (dVal) dVal.textContent = museumDensity + ' 粒';
       }
     }
   }
