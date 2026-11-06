@@ -456,6 +456,7 @@ button { font-family: inherit; cursor: pointer; }
   line-height: 1.65;
 }
 .panel-card .p-art.has-hotspots { flex: 0 0 50%; align-self: flex-start; }
+.panel-card .p-art.is-long-scroll { flex-basis: 100%; }
 .panel-card .p-art-frame {
   position: relative;
   width: 100%;
@@ -463,6 +464,14 @@ button { font-family: inherit; cursor: pointer; }
   overflow: hidden;
   background: var(--paper-deep);
   border: 1px solid var(--gold);
+}
+.panel-card .p-art.is-long-scroll .p-art-frame {
+  aspect-ratio: 12 / 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.panel-card .p-art.is-long-scroll .p-art-img {
+  object-fit: contain;
 }
 .panel-card .p-art-frame .p-art-img {
   display: block;

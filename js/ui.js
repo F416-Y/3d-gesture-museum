@@ -303,7 +303,7 @@ window.MuseumUI = (function () {
     social.comments = [];
 
     var artVisual = renderArtVisual(ex);
-    var artCol = '<div class="p-art' + (hasHotspots(ex) ? ' has-hotspots' : '') + '">' + artVisual + paintingNav(ex) + '</div>';
+    var artCol = '<div class="p-art' + (hasHotspots(ex) ? ' has-hotspots' : '') + (ex.id === 'wuniutu' ? ' is-long-scroll' : '') + '">' + artVisual + paintingNav(ex) + '</div>';
     el.panelBody.innerHTML =
       '<div class="panel-card">' +
         '<h2>' + esc(ex.title) + '</h2>' +
