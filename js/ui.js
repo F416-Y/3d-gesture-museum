@@ -176,10 +176,10 @@ window.MuseumUI = (function () {
         marker + '</button>';
     }
     return '<div class="p-art-frame' + (ex.layout === "scroll" ? ' is-scroll' : '') + '">' +
-      '<div class="p-art-media">' +
+      '<div class="p-art-media has-clickable-hotspots">' +
         '<img class="p-art-img" src="' + esc(ex.image) + '" alt="' + esc(ex.title) + ' 画作" />' +
         '<div class="p-hotspots" role="group" aria-label="画作局部热点">' + markers + '</div>' +
-        '<div class="p-hotspot-tip">点击画中数字查看局部</div>' +
+        '<div class="p-hotspot-tip">点击编号或作品区域查看局部</div>' +
       '</div>' +
       '<div class="p-hotspot-detail" id="p-hotspot-detail" aria-live="polite" hidden>' +
         '<button type="button" class="p-hotspot-close" id="p-hotspot-close" aria-label="关闭局部说明">×</button>' +
@@ -230,7 +230,7 @@ window.MuseumUI = (function () {
         '</section>' +
         '<section class="p-tab-panel" id="p-panel-details" role="tabpanel" data-exhibit-panel="details" hidden>' +
           '<div class="p-appr"><h4>艺术赏析</h4><p>' + esc(details) + '</p></div>' +
-          (hasHotspots(ex) ? '<p class="p-hotspot-hint">点击左侧画中的数字热点，可查看五头牛与收藏信息的局部解读。</p>' : '') +
+          (hasHotspots(ex) ? '<p class="p-hotspot-hint">点击画中的编号，或直接点击牛身和收藏印，可查看对应局部解读。</p>' : '') +
         '</section>' +
       '</div>';
   }
@@ -267,26 +267,57 @@ window.MuseumUI = (function () {
   function bindHotspots(ex) {
     if (!el.panelBody || !hasHotspots(ex)) return;
     var buttons = el.panelBody.querySelectorAll("[data-hotspot-index]");
+    var media = el.panelBody.querySelector(".p-art-media");
     var detail = document.getElementById("p-hotspot-detail");
     var title = document.getElementById("p-hotspot-title");
     var copy = document.getElementById("p-hotspot-copy");
     var close = document.getElementById("p-hotspot-close");
+
+    function showHotspot(index, activeButton) {
+      var spot = ex.hotspots[index];
+      if (!spot) return;
+      for (var j = 0; j < buttons.length; j++) {
+        var on = buttons[j] === activeButton;
+        buttons[j].classList.toggle("is-active", on);
+        buttons[j].setAttribute("aria-pressed", on ? "true" : "false");
+      }
+      if (title) title.textContent = spot.label || "局部解读";
+      if (copy) copy.textContent = spot.text || "";
+      if (detail) detail.hidden = false;
+      activateExhibitTab("details");
+    }
+
     for (var i = 0; i < buttons.length; i++) {
-      buttons[i].addEventListener("click", function () {
-        var index = Number(this.getAttribute("data-hotspot-index"));
-        var spot = ex.hotspots[index];
-        if (!spot) return;
-        for (var j = 0; j < buttons.length; j++) {
-          var on = buttons[j] === this;
-          buttons[j].classList.toggle("is-active", on);
-          buttons[j].setAttribute("aria-pressed", on ? "true" : "false");
-        }
-        if (title) title.textContent = spot.label || "局部解读";
-        if (copy) copy.textContent = spot.text || "";
-        if (detail) detail.hidden = false;
-        activateExhibitTab("details");
+      buttons[i].addEventListener("click", function (event) {
+        event.stopPropagation();
+        showHotspot(Number(this.getAttribute("data-hotspot-index")), this);
       });
     }
+
+    if (media) {
+      media.addEventListener("click", function (event) {
+        if (event.target && event.target.closest && event.target.closest(".p-hotspot")) return;
+        var rect = media.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        var nx = ((event.clientX - rect.left) / rect.width) * 100;
+        var ny = ((event.clientY - rect.top) / rect.height) * 100;
+        var bestIndex = -1, bestScore = Infinity;
+        for (var h = 0; h < ex.hotspots.length; h++) {
+          var spot = ex.hotspots[h] || {};
+          var rx = Number(spot.hitWidth) || 5;
+          var ry = Number(spot.hitHeight) || 10;
+          var dx = (nx - Number(spot.x)) / rx;
+          var dy = (ny - Number(spot.y)) / ry;
+          var score = dx * dx + dy * dy;
+          if (score <= 1 && score < bestScore) {
+            bestScore = score;
+            bestIndex = h;
+          }
+        }
+        if (bestIndex >= 0) showHotspot(bestIndex, buttons[bestIndex]);
+      });
+    }
+
     if (close) close.addEventListener("click", function () {
       if (detail) detail.hidden = true;
       for (var j = 0; j < buttons.length; j++) {

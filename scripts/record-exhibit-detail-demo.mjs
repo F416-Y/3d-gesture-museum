@@ -143,6 +143,14 @@ try {
   if (!(await page.locator('[data-exhibit-panel="details"]').isVisible())) problems.push("细节赏析标签无法切换");
   await page.screenshot({ path: path.join(ROOT, "docs", "current", "demo", "五牛图-细节赏析.png") });
 
+  const mediaBox = await page.locator(".p-art-media").boundingBox();
+  if (!mediaBox) problems.push("找不到五牛图画作区域");
+  else {
+    await page.mouse.click(mediaBox.x + mediaBox.width * 0.309, mediaBox.y + mediaBox.height * 0.70);
+    await page.waitForTimeout(800);
+    if (!(await page.locator("#p-hotspot-title").innerText()).includes("第二牛")) problems.push("直接点击牛身未触发第二牛热点");
+  }
+
   const hotspots = page.locator("[data-hotspot-index]");
   if (await hotspots.count() !== 6) problems.push("五牛图热点数量不是 6 个");
   await hotspots.nth(0).click({ force: true });

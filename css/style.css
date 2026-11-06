@@ -460,6 +460,7 @@ button { font-family: inherit; cursor: pointer; }
 .panel-card .p-art.has-hotspots.is-scroll { flex: 1 0 100%; width: 100%; align-self: stretch; }
 .panel-card .p-art.is-scroll + .p-info { flex: 1 0 100%; }
 .panel-card .p-art-media { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.panel-card .p-art-media.has-clickable-hotspots { cursor: crosshair; }
 .panel-card .p-art-frame.is-scroll { aspect-ratio: auto; }
 .panel-card .p-art-frame.is-scroll .p-art-media { height: auto; overflow: visible; }
 .panel-card .p-art-frame.is-scroll .p-art-img { width: 100%; height: auto; min-height: 0; object-fit: contain; }
