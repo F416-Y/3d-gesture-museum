@@ -328,7 +328,7 @@ button { font-family: inherit; cursor: pointer; }
 .hall-prompt-card .p-hall-cancel:hover { color: var(--ink); background: rgba(74, 69, 64, 0.08); }
 
 /* ===== 弹窗内 · 左画右介绍 两栏（组员5） ===== */
-.panel-card .p-body { display: flex; gap: 24px; align-items: stretch; margin-top: 18px; }
+.panel-card .p-body { display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch; margin-top: 18px; }
 .panel-card .p-art { flex: 0 0 46%; }
 .panel-card .p-art { position: relative; }
 .panel-card .p-art-img {
@@ -455,7 +455,20 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 12px;
   line-height: 1.65;
 }
+.panel-card.has-scroll-art { width: min(1040px, 96vw); }
 .panel-card .p-art.has-hotspots { flex: 0 0 50%; align-self: flex-start; }
+.panel-card .p-art.has-hotspots.is-scroll { flex: 1 0 100%; width: 100%; align-self: stretch; }
+.panel-card .p-art.is-scroll + .p-info { flex: 1 0 100%; }
+.panel-card .p-art-media { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.panel-card .p-art-frame.is-scroll { aspect-ratio: auto; }
+.panel-card .p-art-frame.is-scroll .p-art-media { height: auto; overflow: visible; }
+.panel-card .p-art-frame.is-scroll .p-art-img { width: 100%; height: auto; min-height: 0; object-fit: contain; }
+.panel-card .p-art-frame.is-scroll .p-hotspot-detail {
+  position: relative;
+  left: auto; right: auto; bottom: auto;
+  margin: 9px 0 0;
+  max-height: none;
+}
 .panel-card .p-art-frame {
   position: relative;
   width: 100%;

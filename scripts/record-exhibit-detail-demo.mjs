@@ -148,7 +148,7 @@ try {
   await hotspots.nth(0).click({ force: true });
   await page.waitForTimeout(1000);
   if (!(await page.locator("#p-hotspot-detail").isVisible())) problems.push("点击牛身热点后局部说明未显示");
-  if (!(await page.locator("#p-hotspot-title").innerText()).includes("左一")) problems.push("首个牛身热点内容不匹配");
+  if (!(await page.locator("#p-hotspot-title").innerText()).includes("第一牛")) problems.push("首个牛身热点内容不匹配");
 
   await hotspots.nth(4).click({ force: true });
   await page.waitForTimeout(1200);

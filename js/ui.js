@@ -175,10 +175,12 @@ window.MuseumUI = (function () {
         'style="left:' + x + '%;top:' + y + '%" aria-label="查看' + esc(spot.label || ("局部 " + (i + 1))) + '" aria-pressed="false">' +
         marker + '</button>';
     }
-    return '<div class="p-art-frame">' +
-      '<img class="p-art-img" src="' + esc(ex.image) + '" alt="' + esc(ex.title) + ' 画作" />' +
-      '<div class="p-hotspots" role="group" aria-label="画作局部热点">' + markers + '</div>' +
-      '<div class="p-hotspot-tip">点击画中数字查看局部</div>' +
+    return '<div class="p-art-frame' + (ex.layout === "scroll" ? ' is-scroll' : '') + '">' +
+      '<div class="p-art-media">' +
+        '<img class="p-art-img" src="' + esc(ex.image) + '" alt="' + esc(ex.title) + ' 画作" />' +
+        '<div class="p-hotspots" role="group" aria-label="画作局部热点">' + markers + '</div>' +
+        '<div class="p-hotspot-tip">点击画中数字查看局部</div>' +
+      '</div>' +
       '<div class="p-hotspot-detail" id="p-hotspot-detail" aria-live="polite" hidden>' +
         '<button type="button" class="p-hotspot-close" id="p-hotspot-close" aria-label="关闭局部说明">×</button>' +
         '<strong id="p-hotspot-title"></strong>' +
@@ -303,9 +305,9 @@ window.MuseumUI = (function () {
     social.comments = [];
 
     var artVisual = renderArtVisual(ex);
-    var artCol = '<div class="p-art' + (hasHotspots(ex) ? ' has-hotspots' : '') + '">' + artVisual + paintingNav(ex) + '</div>';
+    var artCol = '<div class="p-art' + (hasHotspots(ex) ? ' has-hotspots' : '') + (ex.layout === "scroll" ? ' is-scroll' : '') + '">' + artVisual + paintingNav(ex) + '</div>';
     el.panelBody.innerHTML =
-      '<div class="panel-card">' +
+      '<div class="panel-card' + (ex.layout === "scroll" ? ' has-scroll-art' : '') + '">' +
         '<h2>' + esc(ex.title) + '</h2>' +
         '<div class="p-body">' +
           artCol +
