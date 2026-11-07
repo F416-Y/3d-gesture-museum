@@ -31,6 +31,7 @@ window.MuseumAvatar = (function () {
     scene = root;
     holder = new THREE.Group();
     holder.name = "third-person-avatar";
+    holder.userData.noStaticBatch = true;
     holder.visible = false;
     scene.add(holder);
     if (!THREE.GLTFLoader) return;

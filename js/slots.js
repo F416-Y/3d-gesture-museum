@@ -17,7 +17,7 @@ window.MuseumExteriorSlots = {
   /* 真模型是渐进替换，不能让开场粒子永远等待某个大 GLB。 */
   setTimeout(finishReady, 4500);
   (function upgradeParts() {
-      if (!THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { finishReady(); return; }
+      if (window.MuseumRenderQuality === "low" || !THREE.GLTFLoader || !window.MuseumExteriorLayout.slots) { finishReady(); return; }
       var slots = window.MuseumExteriorLayout.slots;
       var loader = new THREE.GLTFLoader();
       var cache = {};

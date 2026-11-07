@@ -2861,6 +2861,7 @@ window.MuseumScene = (function () {
       var openAngle = isEdge ? (ry > 0 ? 0.12 : -0.12) : 0;
 
       var door = new _g.Group();
+      door.userData.noStaticBatch = true;
       door.position.set(x, y0, cz);
       door.rotation.y = ry + openAngle;
       // 注册微风动画：基础角度 + 随机相位
@@ -2988,6 +2989,15 @@ window.MuseumScene = (function () {
       ["xishanxinglvtu",     35.95, -19.68],
       ["wuniutu",            37.55, -19.68],
       ["molantu",            39.15, -19.68],
+      /* 书斋 / 茶室 / 文创 / 临摹四区：按 tools/exhibit-anchors.json 的权威落位接入。 */
+      ["lantingjixu",        40.84,  10.00],
+      ["jizhiwengao",        40.84,  15.00],
+      ["hanshitie",          40.84,  24.00],
+      ["tingqintu",          40.84,  29.00],
+      ["huishanchahui",     -43.84,  12.00],
+      ["shimingtu",         -43.84,  17.00],
+      ["pinchatu",          -43.84,  26.00],
+      ["luyupengchatu",     -43.84,  31.00],
     ];
     var sculptures = [
       ["houmuwuding",   0,      29.5],   // 序厅（原型 slots.ding 落点）

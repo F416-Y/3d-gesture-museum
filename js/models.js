@@ -78,10 +78,10 @@ window.MuseumModels = (function () {
   }
 
   /* 开发开关：URL 带 ?noGLB=1 时不加载任何 GLB，用来和纯程序化版本做 A/B 对比 */
-  var DISABLED = typeof location !== "undefined" && /(^|[?&])noGLB=1/.test(location.search);
+  function glbDisabled() { return (typeof location !== "undefined" && /(^|[?&])noGLB=1/.test(location.search)) || window.MuseumRenderQuality === "low"; }
 
   function load(id, cb) {
-    if (DISABLED) { cb(null); return; }
+    if (glbDisabled()) { cb(null); return; }
     if (templates[id]) { cb(templates[id]); return; }
     if (failed[id]) { cb(null); return; }
     if (pending[id]) { pending[id].push(cb); return; }
