@@ -90,7 +90,11 @@ window.MuseumLighting = (function () {
     /* 展厅内透 + 灯笼点光 */
     var i;
     for (i = 0; i < hallLights.length; i++) hallLights[i].intensity = lerpN(D.hallI, N.hallI, k);
-    for (i = 0; i < lampLights.length; i++) lampLights[i].intensity = lampLights[i].userData.full * k;
+    for (i = 0; i < lampLights.length; i++) {
+      lampLights[i].intensity = lampLights[i].userData.full * k;
+      /* 白天关闭灯源，避免 10 盏无效 PointLight 仍参与每个片元的着色循环。 */
+      lampLights[i].visible = k > 0.01;
+    }
     syncBtn();
   }
 
