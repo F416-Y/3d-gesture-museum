@@ -17,7 +17,7 @@
             <button v-for="h in mapHotspots" :key="h.id" type="button" class="map-hotspot"
               :class="[`hotspot-${h.kind}`, { disabled: h.disabled }]"
               :style="{ left: `${h.left}%`, top: `${h.top}%`, width: `${h.width}%`, height: `${h.height}%` }"
-              :aria-label="h.disabled ? `${h.name}，云墨修缮中` : h.action || h.name"
+              :aria-label="h.disabled ? `${h.name}，云墨修缮中` : `进入${h.name}`"
               :disabled="h.disabled" @click="h.action && openInterior(h.action)">
               <span class="hotspot-caption">{{ h.name }}</span>
               <span v-if="h.disabled" class="hotspot-note">修缮中</span>
@@ -201,6 +201,7 @@ const playerSvg = ref({ x: toX(0), y: toY(37) });
 let timer = null;
 
 function openInterior(hallId) {
+  if (hallId === "hall4" || hallId === "hall5") return;
   if (hallId === "hall0" || hallId === "courtyard" || hallId === "plaza") {
     window.location.href = "./index.html#/hall/plaza";
     return;

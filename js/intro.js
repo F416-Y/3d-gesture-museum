@@ -23,6 +23,13 @@
   }
   var overlay = document.getElementById('intro');
   if (!overlay || !window.THREE) return;
+  /* 平面图是园区内的导航页，刷新或进入它时不应再次播放项目开屏。 */
+  if (/^#\/map(?:$|[?])/.test(window.location.hash || '')) {
+    overlay.classList.add('bye');
+    overlay.style.display = 'none';
+    overlay.style.pointerEvents = 'none';
+    return;
+  }
   var canvas = document.getElementById('introCanvas');
   var inkFx = document.getElementById('introInkFx');
   var trailFxCanvas = document.getElementById('introTrailFx');
