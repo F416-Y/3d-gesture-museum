@@ -1374,7 +1374,10 @@ window.MuseumExteriorLayout = (function () {
       new THREE.TextureLoader().load("assets/images/" + _id + ".jpg", function (tex) {
         if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
         tex.anisotropy = 8;
-        paint.material = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, side: THREE.DoubleSide });
+        var displayTexture = (window.MuseumGallery && window.MuseumGallery.portraitTexture)
+          ? window.MuseumGallery.portraitTexture(tex)
+          : tex;
+        paint.material = new THREE.MeshStandardMaterial({ map: displayTexture, roughness: 0.92, side: THREE.DoubleSide });
         paint.material.needsUpdate = true;
       }, undefined, function () { /* 图片缺失：保留程序化画芯 */ });
     }

@@ -7,13 +7,14 @@
  * ============================================================ */
 window.MuseumGallery = (function () {
   var MAP = {
-    350: "hanxizai",
-    357: "qianlijiangshan",
-    364: "fuchunshanjv",
+    /* 中轴画廊：六幅竖向展陈作品，左右各三幅。 */
+    350: "xishanxinglvtu",
+    357: "molantu",
+    364: "buniantu",
     371: "xishanxinglvtu",
-    450: "buniantu",
-    457: "xieshengzhenqintu",
-    464: "wuniutu",
+    450: "xieshengzhenqintu",
+    457: "luoshenfu",
+    464: "hanxizai",
     471: "molantu",
     601: "lantingjixu",
     602: "jizhiwengao",
@@ -98,9 +99,30 @@ window.MuseumGallery = (function () {
     return texById(MAP[seed]);
   }
 
+  /* 竖幅画轴使用等比例裁切，避免横卷被直接拉伸成竖画。 */
+  function portraitTexture(imageTexture) {
+    if (!imageTexture || !imageTexture.image || typeof document === "undefined" || typeof THREE === "undefined") return imageTexture;
+    var source = imageTexture.image;
+    var cv = document.createElement("canvas");
+    cv.width = 360;
+    cv.height = 720;
+    var ctx = cv.getContext("2d");
+    ctx.fillStyle = "#efe7d6";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    var scale = Math.max(cv.width / source.width, cv.height / source.height);
+    var dw = source.width * scale;
+    var dh = source.height * scale;
+    ctx.drawImage(source, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+    var out = new THREE.CanvasTexture(cv);
+    if (THREE.sRGBEncoding) out.encoding = THREE.sRGBEncoding;
+    out.anisotropy = 8;
+    return out;
+  }
+
   return {
     tex: tex,
     texById: texById,
+    portraitTexture: portraitTexture,
     map: MAP,
     list: function () {
       var out = [];
