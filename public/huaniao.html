@@ -1086,7 +1086,7 @@
       <h2 class="panel-title" id="panel-title">五牛图</h2>
       <p class="panel-artist" id="panel-artist">韩滉 · 唐</p>
       <button class="panel-preview" id="panel-preview" type="button" aria-label="放大查看《五牛图》">
-        <img id="panel-preview-image" src="./assets/images/wuniutu.jpg" alt="五牛图">
+        <img id="panel-preview-image" src="../assets/images/wuniutu.jpg" alt="五牛图">
         <span>放大查看</span>
       </button>
       <dl class="panel-meta">
@@ -1115,7 +1115,7 @@
       </button>
     </header>
     <div class="viewer-stage" id="viewer-stage">
-      <img class="viewer-image" id="viewer-image" src="./assets/images/wuniutu.jpg" alt="五牛图" draggable="false">
+      <img class="viewer-image" id="viewer-image" src="../assets/images/wuniutu.jpg" alt="五牛图" draggable="false">
     </div>
     <div class="viewer-toolbar" aria-label="画作缩放工具">
       <button class="viewer-tool" id="viewer-zoom-out" type="button" aria-label="缩小画作" title="缩小">−</button>
@@ -1139,10 +1139,10 @@
     </div>
   </div>
 
-  <script src="./js/vendor/three.min.js"></script>
-  <script src="./js/vendor/GLTFLoader.js"></script>
-  <script src="./js/config.js"></script>
-  <script src="./js/gesture.js"></script>
+  <script src="../js/vendor/three.min.js"></script>
+  <script src="../js/vendor/GLTFLoader.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/gesture.js"></script>
   <script>
     (function () {
       "use strict";
@@ -1155,10 +1155,10 @@
         "painting-frame": { name: "挂画木框", size: "1.100 × 1.600 × 0.136 m", front: "+Z", origin: "底面中心" }
       };
       var PART_URLS = {
-        column: "./assets/models/parts/opt/column.glb",
-        "lattice-window": "./assets/models/parts/opt/lattice-window.glb",
-        skylight: "./assets/models/parts/opt/skylight.glb",
-        "painting-frame": "./assets/models/parts/opt/painting-frame.glb"
+        column: "../assets/models/parts/opt/column.glb",
+        "lattice-window": "../assets/models/parts/opt/lattice-window.glb",
+        skylight: "../assets/models/parts/opt/skylight.glb",
+        "painting-frame": "../assets/models/parts/opt/painting-frame.glb"
       };
 
       var PAINTINGS = [
@@ -1714,7 +1714,7 @@
           paintingMeshes.push(art);
 
           loader.load(
-            "./assets/images/" + painting.id + ".jpg",
+            "../assets/images/" + painting.id + ".jpg",
             function (texture) {
               texture.encoding = THREE.sRGBEncoding;
               texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
@@ -1936,7 +1936,7 @@
       }
 
       function paintingImagePath(painting) {
-        return "./assets/images/" + painting.id + ".jpg";
+        return "../assets/images/" + painting.id + ".jpg";
       }
 
       function updateViewerTransform(animate) {
