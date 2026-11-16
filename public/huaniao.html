@@ -1782,6 +1782,13 @@
 
       function loadPart(id) {
         return new Promise(function (resolve, reject) {
+          if (window.location.protocol === "file:") {
+            console.warn("[花鸟厅] 本地文件模式无法读取 GLB，使用交互占位构件：" + id);
+            var fallback = createFallbackPart(id);
+            templates[id] = prepareModel(fallback);
+            resolve(templates[id]);
+            return;
+          }
           var loader = new THREE.GLTFLoader();
           loader.load(
             PART_URLS[id],
@@ -1793,6 +1800,30 @@
             reject
           );
         });
+      }
+
+      function createFallbackPart(id) {
+        var group = new THREE.Group();
+        group.name = "fallback:" + id;
+        if (id === "column") {
+          addBox(0.28, 4.2, 0.28, 0, 2.1, 0, materials.timber, group);
+          addBox(0.58, 0.18, 0.58, 0, 0.09, 0, materials.stone, group);
+        } else if (id === "lattice-window") {
+          addBox(1.82, 2.2, 0.12, 0, 1.1, 0, materials.timber, group);
+          for (var x = -0.55; x <= 0.55; x += 0.55) {
+            addBox(0.045, 2.0, 0.15, x, 1.1, -0.02, materials.ink, group);
+          }
+          for (var y = 0.55; y <= 1.65; y += 0.55) {
+            addBox(1.6, 0.045, 0.15, 0, y, -0.02, materials.ink, group);
+          }
+        } else if (id === "skylight") {
+          addBox(6.0, 0.18, 6.0, 0, 0.09, 0, materials.timber, group);
+          addBox(5.4, 0.2, 5.4, 0, 0.19, 0, materials.ceiling, group);
+        } else {
+          addBox(1.1, 1.6, 0.08, 0, 0.8, 0, materials.timber, group);
+          addBox(0.9, 1.4, 0.09, 0, 0.8, -0.055, materials.stone, group);
+        }
+        return group;
       }
 
       function buildHall() {
