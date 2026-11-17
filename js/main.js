@@ -475,10 +475,11 @@ window.MuseumMain = (function () {
         hall4: "shuzhai.html",
         hall5: "wenchuang.html"
       };
+      var hallBase = location.protocol === "file:" ? "./public/" : "./";
       if (nearest.hallId === "hall0") {
         location.href = "./index.html#/hall/plaza";
       } else {
-        location.href = "./" + (pages[nearest.hallId] || "index.html#/hall/plaza");
+        location.href = hallBase + (pages[nearest.hallId] || "index.html#/hall/plaza");
       }
     }, function () {
       hallDoorPrompt.door = null;
