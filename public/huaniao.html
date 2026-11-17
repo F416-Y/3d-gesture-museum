@@ -73,6 +73,9 @@
       cursor: pointer;
     }
 
+    .local-painting-layer { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+    .local-painting-layer img { position: absolute; display: block; object-fit: cover; object-position: center; }
+
     .museum-ui {
       position: fixed;
       inset: 0;
@@ -693,6 +696,16 @@
       transition: none;
     }
 
+    .viewer-hotspot-info {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+      width: min(360px, calc(100% - 48px)); box-sizing: border-box; padding: 20px 44px 20px 20px; color: #f4ead8;
+      background: rgba(30, 27, 23, .94); border: 1px solid rgba(235, 230, 214, .3);
+      line-height: 1.7;
+    }
+    .viewer-hotspot-info h3 { margin: 0 0 6px; font-size: 18px; }
+    .viewer-hotspot-info p { margin: 0; font-size: 14px; }
+    .viewer-hotspot-close { position: absolute; top: 8px; right: 10px; border: 0; background: transparent; color: inherit; font-size: 26px; cursor: pointer; }
+
     .viewer-toolbar {
       display: flex;
       align-items: center;
@@ -1017,6 +1030,7 @@
 </head>
 <body data-ready="false">
   <canvas id="gallery" aria-label="花鸟厅三维展厅"></canvas>
+  <div class="local-painting-layer" id="local-painting-layer" aria-hidden="true"></div>
 
   <div class="museum-ui">
     <header class="identity">
@@ -1117,6 +1131,10 @@
     <div class="viewer-stage" id="viewer-stage">
       <img class="viewer-image" id="viewer-image" src="../assets/images/wuniutu.jpg" alt="五牛图" draggable="false">
     </div>
+    <div class="viewer-hotspot-info" id="viewer-hotspot-info" role="status" hidden>
+      <button class="viewer-hotspot-close" id="viewer-hotspot-close" type="button" aria-label="关闭牛的介绍">×</button>
+      <h3 id="viewer-hotspot-title"></h3><p id="viewer-hotspot-text"></p>
+    </div>
     <div class="viewer-toolbar" aria-label="画作缩放工具">
       <button class="viewer-tool" id="viewer-zoom-out" type="button" aria-label="缩小画作" title="缩小">−</button>
       <span class="viewer-zoom-value" id="viewer-zoom-value">100%</span>
@@ -1139,10 +1157,12 @@
     </div>
   </div>
 
-  <script src="../js/vendor/three.min.js"></script>
-  <script src="../js/vendor/GLTFLoader.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/gesture.js"></script>
+  <script>
+    var hallResourceBase = location.protocol === "file:" || /\/public\//.test(location.pathname) ? "../" : "./";
+    ["js/vendor/three.min.js", "js/vendor/GLTFLoader.js", "js/config.js", "js/gesture.js"].forEach(function (path) {
+      document.write('<script src="' + hallResourceBase + path + '"><\/script>');
+    });
+  </script>
   <script>
     (function () {
       "use strict";
@@ -1155,10 +1175,10 @@
         "painting-frame": { name: "挂画木框", size: "1.100 × 1.600 × 0.136 m", front: "+Z", origin: "底面中心" }
       };
       var PART_URLS = {
-        column: "../assets/models/parts/opt/column.glb",
-        "lattice-window": "../assets/models/parts/opt/lattice-window.glb",
-        skylight: "../assets/models/parts/opt/skylight.glb",
-        "painting-frame": "../assets/models/parts/opt/painting-frame.glb"
+        column: hallResourceBase + "assets/models/parts/opt/column.glb",
+        "lattice-window": hallResourceBase + "assets/models/parts/opt/lattice-window.glb",
+        skylight: hallResourceBase + "assets/models/parts/opt/skylight.glb",
+        "painting-frame": hallResourceBase + "assets/models/parts/opt/painting-frame.glb"
       };
 
       var PAINTINGS = [
@@ -1236,6 +1256,8 @@
       var camNote = document.getElementById("cam-note");
       var toastEl = document.getElementById("toast");
       var partParam = new URLSearchParams(window.location.search).get("part");
+      var resourceBase = hallResourceBase;
+      var localPaintingLayer = document.getElementById("local-painting-layer");
       var partMode = PART_IDS.indexOf(partParam) !== -1;
       var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -1713,11 +1735,26 @@
           room.add(art);
           paintingMeshes.push(art);
 
-          loader.load(
-            "../assets/images/" + painting.id + ".jpg",
+          if (window.location.protocol === "file:") {
+            var localImage = document.createElement("img");
+            localImage.src = paintingImagePath(painting);
+            localImage.alt = "";
+            localPaintingLayer.appendChild(localImage);
+            art.userData.localImage = localImage;
+          } else loader.load(
+            paintingImagePath(painting),
             function (texture) {
               texture.encoding = THREE.sRGBEncoding;
               texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+              var imageRatio = texture.image.width / texture.image.height;
+              var frameRatio = painting.artWidth / painting.artHeight;
+              if (imageRatio > frameRatio) {
+                texture.repeat.x = frameRatio / imageRatio;
+                texture.offset.x = (1 - texture.repeat.x) / 2;
+              } else {
+                texture.repeat.y = imageRatio / frameRatio;
+                texture.offset.y = (1 - texture.repeat.y) / 2;
+              }
               artMaterial.map = texture;
               artMaterial.color.setHex(0xffffff);
               artMaterial.needsUpdate = true;
@@ -1967,7 +2004,25 @@
       }
 
       function paintingImagePath(painting) {
-        return "../assets/images/" + painting.id + ".jpg";
+        return resourceBase + "assets/images/" + painting.id + ".jpg";
+      }
+
+      function updateLocalPaintings() {
+        if (window.location.protocol !== "file:") return;
+        camera.updateMatrixWorld();
+        paintingMeshes.forEach(function (mesh) {
+          var image = mesh.userData.localImage;
+          if (!image) return;
+          var width = mesh.geometry.parameters.width * mesh.scale.x;
+          var height = mesh.geometry.parameters.height * mesh.scale.y;
+          var topLeft = new THREE.Vector3(mesh.position.x - width / 2, mesh.position.y + height / 2, mesh.position.z).project(camera);
+          var bottomRight = new THREE.Vector3(mesh.position.x + width / 2, mesh.position.y - height / 2, mesh.position.z).project(camera);
+          image.style.display = topLeft.z < 1 && bottomRight.z < 1 ? "block" : "none";
+          image.style.left = ((topLeft.x + 1) * window.innerWidth / 2) + "px";
+          image.style.top = ((1 - topLeft.y) * window.innerHeight / 2) + "px";
+          image.style.width = ((bottomRight.x - topLeft.x) * window.innerWidth / 2) + "px";
+          image.style.height = ((topLeft.y - bottomRight.y) * window.innerHeight / 2) + "px";
+        });
       }
 
       function updateViewerTransform(animate) {
@@ -2010,6 +2065,7 @@
         var painting = findPainting(id);
         if (!painting) return;
         viewerOpen = true;
+        document.getElementById("viewer-hotspot-info").hidden = true;
         setActiveExhibit(id);
         viewerTitle.textContent = painting.title;
         viewerMeta.textContent = painting.artist + " · " + painting.dynasty;
@@ -2377,6 +2433,9 @@
           openArtViewer(activeExhibit);
         });
         viewerClose.addEventListener("click", closeArtViewer);
+        document.getElementById("viewer-hotspot-close").addEventListener("click", function () {
+          document.getElementById("viewer-hotspot-info").hidden = true;
+        });
         document.getElementById("viewer-zoom-out").addEventListener("click", function () {
           setViewerZoom(viewerZoom / 1.3, true);
         });
@@ -2393,12 +2452,36 @@
           event.preventDefault();
           setViewerZoom(viewerZoom * Math.exp(-event.deltaY * 0.0014), false);
         }, { passive: false });
-        viewerImage.addEventListener("click", function () {
+        viewerStage.addEventListener("click", function (event) {
           if (!viewerOpen) return;
           if (viewerDidPan) {
             viewerDidPan = false;
             return;
           }
+          if (activeExhibit === "wuniutu" && window.MuseumConfig) {
+            var rect = viewerImage.getBoundingClientRect();
+            var x = (event.clientX - rect.left) / rect.width * 100;
+            var y = (event.clientY - rect.top) / rect.height * 100;
+            var exhibit = window.MuseumConfig.exhibits.find(function (item) { return item.id === "wuniutu"; });
+            // Bounds cover the full silhouettes, including horns, tails and hooves.
+            var oxBounds = [[5.5, 23.2, 16, 94], [24.8, 40.5, 9, 98], [45.3, 52.5, 5, 99], [55.8, 78.2, 9, 99], [79.5, 98, 5, 94]];
+            var oxIndex = oxBounds.findIndex(function (bounds) {
+              return x >= bounds[0] && x <= bounds[1] && y >= bounds[2] && y <= bounds[3];
+            });
+            var hotspot = exhibit && oxIndex !== -1 && exhibit.hotspots.find(function (item) { return item.id === "ox-" + (oxIndex + 1); });
+            if (hotspot) {
+              var bounds = oxBounds[oxIndex];
+              viewerZoom = clamp(80 / (bounds[1] - bounds[0]), 1, 5);
+              viewerPanX = (0.5 - (bounds[0] + bounds[1]) / 200) * viewerImage.offsetWidth * viewerZoom;
+              viewerPanY = (0.5 - (bounds[2] + bounds[3]) / 200) * viewerImage.offsetHeight * viewerZoom;
+              updateViewerTransform(true);
+              document.getElementById("viewer-hotspot-title").textContent = hotspot.label;
+              document.getElementById("viewer-hotspot-text").textContent = hotspot.text;
+              document.getElementById("viewer-hotspot-info").hidden = false;
+              return;
+            }
+          }
+          if (event.target !== viewerImage) return;
           setViewerZoom(viewerZoom > 1.001 ? 1 : 2.4, true);
         });
         viewerImage.addEventListener("load", function () {
@@ -2447,6 +2530,7 @@
         }
 
         renderer.render(scene, camera);
+        updateLocalPaintings();
       }
 
       function markReady() {
